@@ -1,0 +1,12 @@
+exchanges:
+  - name: binance
+    symbols:
+      - bnbbusd
+
+  - name: bitkub
+    symbols:
+      - thb_bnb
+
+  - name: satang
+    symbols:
+      - bnb_thb
