@@ -1,0 +1,3 @@
+package autotp
+
+func Trade() {}

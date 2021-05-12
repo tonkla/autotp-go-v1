@@ -19,7 +19,7 @@ func TestGetName(t *testing.T) {
 func TestGetTicker(t *testing.T) {
 	ex := New()
 	ticker := ex.GetTicker(symbol)
-	if ticker.Price == 0 || ticker.Quantity == 0 {
+	if ticker.Price == 0 || ticker.Qty == 0 {
 		t.Fail()
 	}
 }

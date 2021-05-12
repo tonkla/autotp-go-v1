@@ -55,9 +55,9 @@ func (b Bitkub) GetOrderBook(symbol string, limit int) common.OrderBook {
 	for _, bid := range orders.Get("bids").Array() {
 		b := bid.Array()
 		ord := common.Order{
-			Side:     "BUY",
-			Price:    b[0].Float(),
-			Quantity: b[1].Float()}
+			Side:  "BUY",
+			Price: b[0].Float(),
+			Qty:   b[1].Float()}
 		bids = append(bids, ord)
 	}
 
@@ -65,9 +65,9 @@ func (b Bitkub) GetOrderBook(symbol string, limit int) common.OrderBook {
 	for _, ask := range orders.Get("asks").Array() {
 		a := ask.Array()
 		ord := common.Order{
-			Side:     "SELL",
-			Price:    a[0].Float(),
-			Quantity: a[1].Float()}
+			Side:  "SELL",
+			Price: a[0].Float(),
+			Qty:   a[1].Float()}
 		asks = append(asks, ord)
 	}
 

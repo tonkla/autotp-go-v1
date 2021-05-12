@@ -54,9 +54,9 @@ func main() {
 	}
 
 	bidPrice := bestBid.Bids[0].Price
-	bidQty := bestBid.Bids[0].Quantity
+	bidQty := bestBid.Bids[0].Qty
 	askPrice := bestAsk.Asks[0].Price
-	askQty := bestAsk.Asks[0].Quantity
+	askQty := bestAsk.Asks[0].Qty
 
 	buyFee := bestAsk.Asks[0].Price * 0.0025
 	sellFee := bestBid.Bids[0].Price * 0.0025

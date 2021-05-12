@@ -3,6 +3,7 @@ package common
 import (
 	"io"
 	"net/http"
+	"time"
 )
 
 // Get calls a URL with HTTP GET
@@ -20,4 +21,6 @@ func Get(url string) ([]byte, error) {
 }
 
 // Post calls a URL with HTTP POST
-func Post() {}
+func Post(url string, data string) TradeResult {
+	return TradeResult{Time: time.Now().Unix(), Symbol: "", Side: "", Price: 0, Qty: 0}
+}

@@ -7,9 +7,10 @@ const (
 )
 
 type Ticker struct {
+	Exchange Exchange
 	Symbol   string
 	Price    float64
-	Quantity float64
+	Qty      float64
 }
 
 type HisPrice struct {
@@ -26,9 +27,9 @@ type Exchange struct {
 }
 
 type Order struct {
-	Side     string
-	Price    float64
-	Quantity float64
+	Side  string
+	Price float64
+	Qty   float64
 }
 
 type OrderBook struct {
@@ -38,10 +39,17 @@ type OrderBook struct {
 	Asks     []Order
 }
 
+type Advice struct {
+	Symbol string
+	Side   string
+	Price  float64
+	Qty    float64
+}
+
 type TradeResult struct {
-	Time     int64
-	Symbol   string
-	Side     string
-	Price    float64
-	Quantity float64
+	Time   int64
+	Symbol string
+	Side   string
+	Price  float64
+	Qty    float64
 }
