@@ -1,11 +1,9 @@
 package macd
 
-import (
-	"github.com/tonkla/autotp/common"
-)
+import "github.com/tonkla/autotp/types"
 
-func OnTick(ticker common.Ticker) *common.Advice {
-	advice := &common.Advice{
+func OnTick(ticker types.Ticker) *types.Advice {
+	advice := &types.Advice{
 		Symbol: ticker.Symbol,
 		Side:   "",
 		Price:  0,

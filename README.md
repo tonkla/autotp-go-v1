@@ -12,15 +12,16 @@ AutoTP aims to be an automated trading platform that supports multiple exchanges
 ## Usage
 
 ```
-$ autotp trade --apiKey 0123456789 --exchange BINANCE --symbol BNBBUSD --bot kzm --database autotp.db
-$ autotp trade -k 0123456789 -e BINANCE -s BNBBUSD -b kzm -d autotp.db
+$ autotp trade --apiKey API_KEY --secret SECRET --exchange BINANCE --symbol BNBBUSD --bot kzm --database autotp.db
+$ autotp trade -k API_KEY -x SECRET -e BINANCE -s BNBBUSD -b kzm -d autotp.db
 ```
 
 Or using a config file,
 
 ```
-$ autotp trade --config config.toml
-$ autotp trade -c config.toml
+$ autotp trade --config config.yml
+$ autotp trade -c config.yml
+$ autotp trade -k API_KEY -x SECRET -c config.yml
 ```
 
 ### (Work-in-Progress) Supported Exchanges

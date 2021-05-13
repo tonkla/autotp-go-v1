@@ -3,28 +3,28 @@ package exchange
 import (
 	"strings"
 
-	"github.com/tonkla/autotp/common"
-	"github.com/tonkla/autotp/exchange/binance"
+	binance "github.com/tonkla/autotp/exchange/binance/spot"
+	"github.com/tonkla/autotp/types"
 )
 
 type Exchangeable interface {
 	GetName() string
-	GetTicker(symbol string) common.Ticker
-	GetHistoricalPrices(symbol string, interval string, limit int) []common.HisPrice
-	OpenOrder(common.Order) *common.TradeResult
-	CloseOrder(common.Order) *common.TradeResult
-	CloseOrderByID(string) *common.TradeResult
+	GetTicker(symbol string) types.Ticker
+	GetHistoricalPrices(symbol string, interval string, limit int) []types.HisPrice
+	OpenOrder(types.Order) *types.TradeResult
+	CloseOrder(types.Order) *types.TradeResult
+	CloseOrderByID(string) *types.TradeResult
 }
 
 func New(name string) Exchangeable {
 	var ex Exchangeable
 	_name := strings.ToUpper(name)
-	if _name == common.EXC_BINANCE {
+	if _name == types.EXC_BINANCE {
 		ex = binance.New()
 	}
-	//  else if _name == common.EXC_BITKUB {
+	//  else if _name == types.EXC_BITKUB {
 	// 		ex = bitkub.New()
-	// 	} else if _name == common.EXC_SATANG {
+	// 	} else if _name == types.EXC_SATANG {
 	// 		ex = satang.New()
 	// 	}
 	return ex

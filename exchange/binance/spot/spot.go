@@ -1,4 +1,4 @@
-package binance
+package spot
 
 import (
 	"fmt"
@@ -8,11 +8,12 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/tonkla/autotp/common"
+	"github.com/tonkla/autotp/types"
 )
 
 const (
 	urlBase = "https://api.binance.com/api/v3"
-	// urlTestnet   = "https://testnet.binance.vision/api/v3"
+	// urlTest   = "https://testnet.binance.vision/api/v3"
 	pathDepth    = "/depth?symbol=%s&limit=%d"
 	pathHisPrice = "/klines?symbol=%s&interval=%s&limit=%d"
 	pathTicker   = "/ticker/24hr?symbol=%s"
@@ -34,22 +35,22 @@ func sanitizeSymbol(symbol string) string {
 
 // GetName returns "BINANCE"
 func (b Binance) GetName() string {
-	return common.EXC_BINANCE
+	return types.EXC_BINANCE
 }
 
 // GetTicker returns the latest ticker of the symbol
-func (b Binance) GetTicker(symbol string) common.Ticker {
+func (b Binance) GetTicker(symbol string) types.Ticker {
 	_symbol := sanitizeSymbol(symbol)
 	path := fmt.Sprintf(pathTicker, _symbol)
 	url := fmt.Sprintf("%s%s", urlBase, path)
 	data, err := common.Get(url)
 	if err != nil {
 		log.Println(err)
-		return common.Ticker{}
+		return types.Ticker{}
 	}
 
 	r := gjson.Parse(string(data))
-	return common.Ticker{
+	return types.Ticker{
 		Symbol: _symbol,
 		Price:  r.Get("lastPrice").Float(),
 		Qty:    r.Get("lastQty").Float(),
@@ -57,7 +58,7 @@ func (b Binance) GetTicker(symbol string) common.Ticker {
 }
 
 // GetHistoricalPrices returns a list of k-lines/candlesticks of the symbol
-func (b Binance) GetHistoricalPrices(symbol string, interval string, limit int) []common.HisPrice {
+func (b Binance) GetHistoricalPrices(symbol string, interval string, limit int) []types.HisPrice {
 	_symbol := sanitizeSymbol(symbol)
 	path := fmt.Sprintf(pathHisPrice, _symbol, interval, limit)
 	url := fmt.Sprintf("%s%s", urlBase, path)
@@ -67,10 +68,10 @@ func (b Binance) GetHistoricalPrices(symbol string, interval string, limit int) 
 		return nil
 	}
 
-	var hPrices []common.HisPrice
+	var hPrices []types.HisPrice
 	for _, data := range gjson.Parse(string(data)).Array() {
 		d := data.Array()
-		p := common.HisPrice{
+		p := types.HisPrice{
 			Symbol: _symbol,
 			Time:   d[0].Int() / 1000,
 			Open:   d[1].Float(),
@@ -84,7 +85,7 @@ func (b Binance) GetHistoricalPrices(symbol string, interval string, limit int) 
 }
 
 // GetOrderBook returns an order book of the symbol
-func (b Binance) GetOrderBook(symbol string, limit int) common.OrderBook {
+func (b Binance) GetOrderBook(symbol string, limit int) types.OrderBook {
 	_symbol := sanitizeSymbol(symbol)
 	path := fmt.Sprintf(pathDepth, _symbol, limit)
 	url := fmt.Sprintf("%s%s", urlBase, path)
@@ -92,60 +93,60 @@ func (b Binance) GetOrderBook(symbol string, limit int) common.OrderBook {
 	data, err := common.Get(url)
 	if err != nil {
 		log.Println(err)
-		return common.OrderBook{}
+		return types.OrderBook{}
 	}
 
 	orders := gjson.Parse(string(data))
 
-	var bids []common.Order
+	var bids []types.Order
 	for _, bid := range orders.Get("bids").Array() {
 		b := bid.Array()
-		ord := common.Order{
+		ord := types.Order{
 			Side:  "BUY",
 			Price: b[0].Float(),
 			Qty:   b[1].Float()}
 		bids = append(bids, ord)
 	}
 
-	var asks []common.Order
+	var asks []types.Order
 	for _, ask := range orders.Get("asks").Array() {
 		a := ask.Array()
-		ord := common.Order{
+		ord := types.Order{
 			Side:  "SELL",
 			Price: a[0].Float(),
 			Qty:   a[1].Float()}
 		asks = append(asks, ord)
 	}
 
-	return common.OrderBook{
-		Exchange: common.Exchange{Name: common.EXC_BINANCE},
+	return types.OrderBook{
+		Exchange: types.Exchange{Name: types.EXC_BINANCE},
 		Symbol:   _symbol,
 		Bids:     bids,
 		Asks:     asks}
 }
 
-func (b Binance) GetOpenOrders() []common.Order {
-	return []common.Order{}
+func (b Binance) GetOpenOrders() []types.Order {
+	return []types.Order{}
 }
 
-func (b Binance) GetOrderHistory() []common.Order {
-	return []common.Order{}
+func (b Binance) GetOrderHistory() []types.Order {
+	return []types.Order{}
 }
 
-func (b Binance) OpenOrder(order common.Order) *common.TradeResult {
+func (b Binance) OpenOrder(order types.Order) *types.TradeResult {
 	url := ""
 	data := ""
 	common.Post(url, data)
 	return nil
 }
 
-func (b Binance) CloseOrder(order common.Order) *common.TradeResult {
+func (b Binance) CloseOrder(order types.Order) *types.TradeResult {
 	url := ""
 	data := ""
 	common.Post(url, data)
 	return nil
 }
 
-func (b Binance) CloseOrderByID(id string) *common.TradeResult {
+func (b Binance) CloseOrderByID(id string) *types.TradeResult {
 	return nil
 }

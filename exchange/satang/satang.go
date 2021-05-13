@@ -7,6 +7,7 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/tonkla/autotp/common"
+	"github.com/tonkla/autotp/types"
 )
 
 const (
@@ -25,20 +26,20 @@ func New() *Satang {
 
 // GetName returns "SATANG"
 func (s Satang) GetName() string {
-	return common.EXC_SATANG
+	return types.EXC_SATANG
 }
 
 // GetTicker returns the latest ticker of the symbol
-func (s Satang) GetTicker(symbol string) common.Ticker {
+func (s Satang) GetTicker(symbol string) types.Ticker {
 	path := fmt.Sprintf(pathTicker, symbol)
 	url := fmt.Sprintf("%s%s", urlBase, path)
 	data, err := common.Get(url)
 	if err != nil {
 		log.Println(err)
-		return common.Ticker{}
+		return types.Ticker{}
 	}
 	r := gjson.Parse(string(data))
-	return common.Ticker{
+	return types.Ticker{
 		Symbol: symbol,
 		Price:  r.Get("lastPrice").Float(),
 		Qty:    r.Get("lastQty").Float(),
@@ -46,7 +47,7 @@ func (s Satang) GetTicker(symbol string) common.Ticker {
 }
 
 // GetHistoricalPrices returns a list of k-lines/candlesticks of the symbol
-func (s Satang) GetHistoricalPrices(symbol string, interval string, limit int) []common.HisPrice {
+func (s Satang) GetHistoricalPrices(symbol string, interval string, limit int) []types.HisPrice {
 	path := fmt.Sprintf(pathHisPrice, symbol, interval, limit)
 	url := fmt.Sprintf("%s%s", urlBase, path)
 	data, err := common.Get(url)
@@ -55,10 +56,10 @@ func (s Satang) GetHistoricalPrices(symbol string, interval string, limit int) [
 		return nil
 	}
 
-	var hPrices []common.HisPrice
+	var hPrices []types.HisPrice
 	for _, data := range gjson.Parse(string(data)).Array() {
 		d := data.Array()
-		p := common.HisPrice{
+		p := types.HisPrice{
 			Symbol: symbol,
 			Time:   d[0].Int() / 1000,
 			Open:   d[1].Float(),
@@ -72,40 +73,40 @@ func (s Satang) GetHistoricalPrices(symbol string, interval string, limit int) [
 }
 
 // GetOrderBook returns an order book of the symbol
-func (s Satang) GetOrderBook(symbol string, limit int) common.OrderBook {
+func (s Satang) GetOrderBook(symbol string, limit int) types.OrderBook {
 	path := fmt.Sprintf(pathDepth, symbol, limit)
 	url := fmt.Sprintf("%s%s", urlBase, path)
 
 	data, err := common.Get(url)
 	if err != nil {
 		log.Println(err)
-		return common.OrderBook{}
+		return types.OrderBook{}
 	}
 
 	orders := gjson.Parse(string(data))
 
-	var bids []common.Order
+	var bids []types.Order
 	for _, bid := range orders.Get("bids").Array() {
 		b := bid.Array()
-		ord := common.Order{
+		ord := types.Order{
 			Side:  "BUY",
 			Price: b[0].Float(),
 			Qty:   b[1].Float()}
 		bids = append(bids, ord)
 	}
 
-	var asks []common.Order
+	var asks []types.Order
 	for _, ask := range orders.Get("asks").Array() {
 		a := ask.Array()
-		ord := common.Order{
+		ord := types.Order{
 			Side:  "SELL",
 			Price: a[0].Float(),
 			Qty:   a[1].Float()}
 		asks = append(asks, ord)
 	}
 
-	return common.OrderBook{
-		Exchange: common.Exchange{Name: common.EXC_SATANG},
+	return types.OrderBook{
+		Exchange: types.Exchange{Name: types.EXC_SATANG},
 		Symbol:   symbol,
 		Bids:     bids,
 		Asks:     asks}

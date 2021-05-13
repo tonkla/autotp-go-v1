@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/tonkla/autotp/common"
 	"github.com/tonkla/autotp/exchange/bitkub"
 	"github.com/tonkla/autotp/exchange/satang"
+	"github.com/tonkla/autotp/types"
 )
 
 func main() {
 	var wg sync.WaitGroup
-	ch := make(chan common.OrderBook, 2)
+	ch := make(chan types.OrderBook, 2)
 
 	wg.Add(2)
 
@@ -32,13 +32,13 @@ func main() {
 		ch <- ex.GetOrderBook("bnb_thb", 5)
 	}()
 
-	var bitkub common.OrderBook
-	var satang common.OrderBook
+	var bitkub types.OrderBook
+	var satang types.OrderBook
 
 	for book := range ch {
-		if book.Exchange.Name == common.EXC_BITKUB {
+		if book.Exchange.Name == types.EXC_BITKUB {
 			bitkub = book
-		} else if book.Exchange.Name == common.EXC_SATANG {
+		} else if book.Exchange.Name == types.EXC_SATANG {
 			satang = book
 		}
 	}

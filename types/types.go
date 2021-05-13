@@ -1,4 +1,4 @@
-package common
+package types
 
 const (
 	EXC_BINANCE = "BINANCE"
