@@ -6,7 +6,7 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"github.com/tonkla/autotp/common"
+	"github.com/tonkla/autotp/helper"
 	"github.com/tonkla/autotp/types"
 )
 
@@ -44,7 +44,7 @@ func (b Bitkub) GetOrderBook(symbol string, limit int) types.OrderBook {
 	path := fmt.Sprintf(pathDepth, symbol, limit)
 	url := fmt.Sprintf("%s%s", urlBase, path)
 
-	data, err := common.Get(url)
+	data, err := helper.Get(url)
 	if err != nil {
 		log.Println(err)
 		return types.OrderBook{}

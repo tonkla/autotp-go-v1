@@ -4,6 +4,9 @@ const (
 	EXC_BINANCE = "BINANCE"
 	EXC_BITKUB  = "BITKUB"
 	EXC_SATANG  = "SATANG"
+
+	SIDE_BUY  = "Buy"
+	SIDE_SELL = "Sell"
 )
 
 type Ticker struct {
@@ -27,9 +30,11 @@ type Exchange struct {
 }
 
 type Order struct {
-	Side  string
-	Price float64
-	Qty   float64
+	Symbol string
+	Side   string
+	Price  float64
+	Qty    float64
+	TP     float64
 }
 
 type OrderBook struct {
@@ -39,17 +44,10 @@ type OrderBook struct {
 	Asks     []Order
 }
 
-type Advice struct {
-	Symbol string
-	Side   string
-	Price  float64
-	Qty    float64
+type Record struct {
 }
 
 type TradeResult struct {
-	Time   int64
-	Symbol string
-	Side   string
-	Price  float64
-	Qty    float64
+	Time  int64
+	RefID string
 }

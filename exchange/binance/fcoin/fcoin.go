@@ -3,7 +3,7 @@ package fcoin
 import (
 	"fmt"
 
-	"github.com/tonkla/autotp/common"
+	"github.com/tonkla/autotp/helper"
 )
 
 const (
@@ -14,5 +14,5 @@ const (
 func Trade() {
 	url := fmt.Sprintf("%s%s", urlBase, pathTrade)
 	data := ""
-	common.Post(url, data)
+	helper.Post(url, data)
 }

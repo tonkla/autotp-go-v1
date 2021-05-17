@@ -1,11 +1,8 @@
-package common
+package helper
 
 import (
 	"io"
 	"net/http"
-	"time"
-
-	"github.com/tonkla/autotp/types"
 )
 
 // Get calls a URL with HTTP GET
@@ -23,6 +20,6 @@ func Get(url string) ([]byte, error) {
 }
 
 // Post calls a URL with HTTP POST
-func Post(url string, data string) types.TradeResult {
-	return types.TradeResult{Time: time.Now().Unix(), Symbol: "", Side: "", Price: 0, Qty: 0}
+func Post(url string, data string) bool {
+	return true
 }

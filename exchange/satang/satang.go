@@ -6,7 +6,7 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"github.com/tonkla/autotp/common"
+	"github.com/tonkla/autotp/helper"
 	"github.com/tonkla/autotp/types"
 )
 
@@ -33,7 +33,7 @@ func (s Satang) GetName() string {
 func (s Satang) GetTicker(symbol string) types.Ticker {
 	path := fmt.Sprintf(pathTicker, symbol)
 	url := fmt.Sprintf("%s%s", urlBase, path)
-	data, err := common.Get(url)
+	data, err := helper.Get(url)
 	if err != nil {
 		log.Println(err)
 		return types.Ticker{}
@@ -50,7 +50,7 @@ func (s Satang) GetTicker(symbol string) types.Ticker {
 func (s Satang) GetHistoricalPrices(symbol string, interval string, limit int) []types.HisPrice {
 	path := fmt.Sprintf(pathHisPrice, symbol, interval, limit)
 	url := fmt.Sprintf("%s%s", urlBase, path)
-	data, err := common.Get(url)
+	data, err := helper.Get(url)
 	if err != nil {
 		log.Println(err)
 		return nil
@@ -77,7 +77,7 @@ func (s Satang) GetOrderBook(symbol string, limit int) types.OrderBook {
 	path := fmt.Sprintf(pathDepth, symbol, limit)
 	url := fmt.Sprintf("%s%s", urlBase, path)
 
-	data, err := common.Get(url)
+	data, err := helper.Get(url)
 	if err != nil {
 		log.Println(err)
 		return types.OrderBook{}

@@ -2,12 +2,12 @@ package kzm
 
 import "github.com/tonkla/autotp/types"
 
-func OnTick(ticker types.Ticker) *types.Advice {
-	advice := &types.Advice{
+func OnTick(ticker types.Ticker) *types.Order {
+	order := &types.Order{
 		Symbol: ticker.Symbol,
-		Side:   "",
+		Side:   types.SIDE_BUY,
 		Price:  0,
 		Qty:    0,
 	}
-	return advice
+	return order
 }

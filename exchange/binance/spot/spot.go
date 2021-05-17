@@ -7,7 +7,7 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"github.com/tonkla/autotp/common"
+	"github.com/tonkla/autotp/helper"
 	"github.com/tonkla/autotp/types"
 )
 
@@ -43,7 +43,7 @@ func (b Binance) GetTicker(symbol string) types.Ticker {
 	_symbol := sanitizeSymbol(symbol)
 	path := fmt.Sprintf(pathTicker, _symbol)
 	url := fmt.Sprintf("%s%s", urlBase, path)
-	data, err := common.Get(url)
+	data, err := helper.Get(url)
 	if err != nil {
 		log.Println(err)
 		return types.Ticker{}
@@ -62,7 +62,7 @@ func (b Binance) GetHistoricalPrices(symbol string, interval string, limit int) 
 	_symbol := sanitizeSymbol(symbol)
 	path := fmt.Sprintf(pathHisPrice, _symbol, interval, limit)
 	url := fmt.Sprintf("%s%s", urlBase, path)
-	data, err := common.Get(url)
+	data, err := helper.Get(url)
 	if err != nil {
 		log.Println(err)
 		return nil
@@ -90,7 +90,7 @@ func (b Binance) GetOrderBook(symbol string, limit int) types.OrderBook {
 	path := fmt.Sprintf(pathDepth, _symbol, limit)
 	url := fmt.Sprintf("%s%s", urlBase, path)
 
-	data, err := common.Get(url)
+	data, err := helper.Get(url)
 	if err != nil {
 		log.Println(err)
 		return types.OrderBook{}
@@ -136,14 +136,14 @@ func (b Binance) GetOrderHistory() []types.Order {
 func (b Binance) OpenOrder(order types.Order) *types.TradeResult {
 	url := ""
 	data := ""
-	common.Post(url, data)
+	helper.Post(url, data)
 	return nil
 }
 
 func (b Binance) CloseOrder(order types.Order) *types.TradeResult {
 	url := ""
 	data := ""
-	common.Post(url, data)
+	helper.Post(url, data)
 	return nil
 }
 
