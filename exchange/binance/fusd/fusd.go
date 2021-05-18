@@ -26,6 +26,12 @@ func GetTicker(symbol string) types.Ticker {
 	}
 }
 
+func GetOpenOrders() {
+}
+
+func GetOrderHistory() {
+}
+
 func Trade(order types.Order) *types.TradeResult {
 	url := fmt.Sprintf("%s%s", urlBase, pathTrade)
 	data, e := json.Marshal(order)

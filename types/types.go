@@ -51,3 +51,10 @@ type TradeResult struct {
 	Time  int64
 	RefID string
 }
+
+type GridParams struct {
+	LowerPrice float64
+	UpperPrice float64
+	Grids      int64
+	Qty        float64
+}
