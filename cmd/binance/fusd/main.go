@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
+	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/tonkla/autotp/db"
 	binance "github.com/tonkla/autotp/exchange/binance/fusd"
@@ -21,38 +24,43 @@ var rootCmd = &cobra.Command{
 }
 
 var (
-	symbol       string
-	lowerPrice   float64
-	upperPrice   float64
-	grids        int64
-	qty          float64
-	triggerPrice float64
+	configFile string
 )
 
 func init() {
-	rootCmd.Flags().StringVarP(&symbol, "symbol", "s", "", "Symbol (required)")
-	rootCmd.MarkFlagRequired("symbol")
-
-	rootCmd.Flags().Float64VarP(&lowerPrice, "lowerPrice", "l", 0, "Lower Price (required)")
-	rootCmd.MarkFlagRequired("lowerPrice")
-
-	rootCmd.Flags().Float64VarP(&upperPrice, "upperPrice", "u", 0, "Upper Price (required)")
-	rootCmd.MarkFlagRequired("upperPrice")
-
-	rootCmd.Flags().Int64VarP(&grids, "grids", "g", 0, "Grids (required)")
-	rootCmd.MarkFlagRequired("grids")
-
-	rootCmd.Flags().Float64VarP(&qty, "qty", "q", 0, "Quantity per order (required)")
-	rootCmd.MarkFlagRequired("qty")
-
-	rootCmd.Flags().Float64VarP(&triggerPrice, "triggerPrice", "t", 0, "Trigger Price")
+	rootCmd.Flags().StringVarP(&configFile, "configFile", "c", "", "Configuration File (required)")
+	rootCmd.MarkFlagRequired("configFile")
 }
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
-	} else if upperPrice <= lowerPrice {
+	} else if _, err := os.Stat(configFile); os.IsNotExist(err) {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	} else if ext := path.Ext(configFile); ext != ".yml" && ext != ".yaml" {
+		fmt.Fprintln(os.Stderr, "Accept only YAML file")
+		os.Exit(1)
+	}
+
+	viper.SetConfigFile(configFile)
+	err := viper.ReadInConfig()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	symbol := viper.GetString("symbol")
+	lowerPrice := viper.GetFloat64("lowerPrice")
+	upperPrice := viper.GetFloat64("upperPrice")
+	grids := viper.GetInt64("grids")
+	qty := viper.GetFloat64("qty")
+	view := viper.GetString("view")
+	triggerPrice := viper.GetFloat64("triggerPrice")
+	intervalSec := viper.GetInt64("intervalSec")
+
+	if upperPrice <= lowerPrice {
 		fmt.Fprintln(os.Stderr, "An upper price must be greater than a lower price")
 		os.Exit(1)
 	} else if grids < 2 {
@@ -64,24 +72,34 @@ func main() {
 	}
 
 	params := types.GridParams{
-		LowerPrice: lowerPrice,
-		UpperPrice: upperPrice,
-		Grids:      grids,
-		Qty:        qty,
+		LowerPrice:   lowerPrice,
+		UpperPrice:   upperPrice,
+		Grids:        grids,
+		Qty:          qty,
+		TriggerPrice: triggerPrice,
+		View:         view,
 	}
 
-	ticker := binance.GetTicker(symbol)
-
-	orders := strategy.OnTick(ticker, params)
-	for _, order := range orders {
-		result := binance.Trade(order)
-		if result == nil {
+	if intervalSec == 0 {
+		intervalSec = 5
+	}
+	for range time.Tick(time.Duration(intervalSec) * time.Second) {
+		ticker := binance.GetTicker(symbol)
+		if ticker == nil {
 			continue
 		}
-
-		err := db.CreateRecord(*result)
-		if err != nil {
-			log.Println(err)
+		orders := strategy.OnTick(*ticker, params)
+		for _, order := range orders {
+			_order := binance.Trade(order)
+			if _order == nil {
+				continue
+			}
+			err := db.CreateOrder(_order)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			log.Println(_order.Time)
 		}
 	}
 }

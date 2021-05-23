@@ -133,20 +133,20 @@ func (b Binance) GetOrderHistory() []types.Order {
 	return []types.Order{}
 }
 
-func (b Binance) OpenOrder(order types.Order) *types.TradeResult {
+func (b Binance) OpenOrder(order types.Order) *types.Order {
 	url := ""
 	data := ""
 	helper.Post(url, data)
 	return nil
 }
 
-func (b Binance) CloseOrder(order types.Order) *types.TradeResult {
+func (b Binance) CloseOrder(order types.Order) *types.Order {
 	url := ""
 	data := ""
 	helper.Post(url, data)
 	return nil
 }
 
-func (b Binance) CloseOrderByID(id string) *types.TradeResult {
+func (b Binance) CloseOrderByID(id string) *types.Order {
 	return nil
 }

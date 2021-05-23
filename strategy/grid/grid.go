@@ -1,6 +1,8 @@
 package grid
 
 import (
+	"strings"
+
 	"github.com/tonkla/autotp/db"
 	"github.com/tonkla/autotp/helper"
 	"github.com/tonkla/autotp/types"
@@ -11,28 +13,38 @@ func OnTick(ticker types.Ticker, p types.GridParams) []types.Order {
 
 	var orders []types.Order
 
+	_view := strings.ToLower(p.View)
+
 	// Has already bought at this price?
-	record := db.GetRecordByPrice(buyPrice, types.SIDE_BUY)
-	if record == nil {
-		orders = append(orders, types.Order{
-			Symbol: ticker.Symbol,
-			Side:   types.SIDE_BUY,
-			Price:  buyPrice,
-			Qty:    p.Qty,
-			TP:     buyPrice + gridWidth*2,
-		})
+	if _view == "long" || _view == "l" || _view == "neutral" || _view == "n" {
+		order := types.Order{
+			Exchange: ticker.Exchange,
+			Symbol:   ticker.Symbol,
+			Price:    buyPrice,
+			TP:       buyPrice + gridWidth*2,
+			Qty:      p.Qty,
+			Side:     types.SIDE_BUY,
+			Status:   types.ORDER_STATUS_LIMIT,
+		}
+		if !db.DoesOrderExists(&order) {
+			orders = append(orders, order)
+		}
 	}
 
 	// Has already sold at this price?
-	record = db.GetRecordByPrice(sellPrice, types.SIDE_SELL)
-	if record == nil {
-		orders = append(orders, types.Order{
-			Symbol: ticker.Symbol,
-			Side:   types.SIDE_SELL,
-			Price:  sellPrice,
-			Qty:    p.Qty,
-			TP:     sellPrice - gridWidth*2,
-		})
+	if _view == "short" || _view == "s" || _view == "neutral" || _view == "n" {
+		order := types.Order{
+			Exchange: ticker.Exchange,
+			Symbol:   ticker.Symbol,
+			Price:    sellPrice,
+			TP:       sellPrice - gridWidth*2,
+			Qty:      p.Qty,
+			Side:     types.SIDE_SELL,
+			Status:   types.ORDER_STATUS_LIMIT,
+		}
+		if !db.DoesOrderExists(&order) {
+			orders = append(orders, order)
+		}
 	}
 
 	return orders

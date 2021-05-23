@@ -1,5 +1,10 @@
-apiKey: 1234567890
-exchange: binance
-symbol: bnbbusd
-bot: kzm
-database: autotp.sqlite
+apiKey: API_KEY
+secretKey: SECRET_KEY
+intervalSec: 5
+symbol: BNBUSDT
+lowerPrice: 100
+upperPrice: 200
+grids: 10
+qty: 0.1
+view: NEUTRAL | LONG | SHORT
+triggerPrice: 150

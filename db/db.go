@@ -1,21 +1,22 @@
 package db
 
-import "github.com/tonkla/autotp/types"
+import (
+	"github.com/tonkla/autotp/types"
+)
 
-// GetRecord performs SQL select on the table records
-func GetRecord(id string) *types.Record {
+// GetOrder performs SQL select on the table orders
+func GetOrder(order types.Order) *types.Order {
 	return nil
 }
 
-// GetRecordByPrice performs SQL select on the table records by target price
-func GetRecordByPrice(price float64, side string) *types.Record {
+func DoesOrderExists(order *types.Order) bool {
+	return false
+}
+
+// CreateOrder performs SQL insert on the table orders
+func CreateOrder(order *types.Order) error {
 	return nil
 }
 
-// CreateRecord performs SQL insert on the table records
-func CreateRecord(result types.TradeResult) error {
-	return nil
-}
-
-// UpdateRecord performs SQL update on the table records
-func UpdateRecord(id string) {}
+// UpdateOrder performs SQL update on the table orders
+func UpdateOrder(order *types.Order) {}

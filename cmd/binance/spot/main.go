@@ -2,23 +2,23 @@ package main
 
 import (
 	binance "github.com/tonkla/autotp/exchange/binance/spot"
-	s "github.com/tonkla/autotp/strategy/mama"
+	strategy "github.com/tonkla/autotp/strategy/mama"
 	"github.com/tonkla/autotp/types"
 )
 
 func main() {
-	tick := types.Ticker{Exchange: types.Exchange{Name: types.EXC_BINANCE}, Symbol: "BNBBUSD", Price: 0, Qty: 0}
-	advice := s.OnTick(tick)
+	tick := types.Ticker{Symbol: "BNBBUSD", Price: 0, Qty: 0}
+	order := strategy.OnTick(tick)
 	b := binance.New()
-	if advice.Side == "buy" {
+	if order.Side == types.SIDE_BUY {
 		b.OpenOrder(types.Order{
-			Side:  "B",
-			Price: advice.Price,
-			Qty:   advice.Qty,
+			Side:  order.Side,
+			Price: order.Price,
+			Qty:   order.Qty,
 		})
-	} else if advice.Side == "sell" {
+	} else if order.Side == types.SIDE_SELL {
 		b.CloseOrder(types.Order{
-			Side:  "S",
+			Side:  order.Side,
 			Price: 0,
 			Qty:   0,
 		})
