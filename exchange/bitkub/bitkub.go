@@ -73,7 +73,7 @@ func (b Bitkub) GetOrderBook(symbol string, limit int) types.OrderBook {
 	}
 
 	return types.OrderBook{
-		Exchange: types.Exchange{Name: types.EXC_BITKUB},
+		Exchange: types.EXC_BITKUB,
 		Symbol:   symbol,
 		Bids:     bids,
 		Asks:     asks}

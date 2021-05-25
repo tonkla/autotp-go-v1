@@ -36,9 +36,9 @@ func main() {
 	var satang types.OrderBook
 
 	for book := range ch {
-		if book.Exchange.Name == types.EXC_BITKUB {
+		if book.Exchange == types.EXC_BITKUB {
 			bitkub = book
-		} else if book.Exchange.Name == types.EXC_SATANG {
+		} else if book.Exchange == types.EXC_SATANG {
 			satang = book
 		}
 	}
@@ -63,8 +63,8 @@ func main() {
 	tfFee := 10.0
 
 	if bestBid.Bids[0].Price > 0 && bestAsk.Asks[0].Price > 0 {
-		fmt.Printf("Best Buy\t@ %s\t%.2f THB\t%.4f BNB\n", bestAsk.Exchange.Name, askPrice, askQty)
-		fmt.Printf("Best Sell\t@ %s\t%.2f THB\t%.4f BNB\n", bestBid.Exchange.Name, bidPrice, bidQty)
+		fmt.Printf("Best Buy\t@ %s\t%.2f THB\t%.4f BNB\n", bestAsk.Exchange, askPrice, askQty)
+		fmt.Printf("Best Sell\t@ %s\t%.2f THB\t%.4f BNB\n", bestBid.Exchange, bidPrice, bidQty)
 		fmt.Printf("Profit\t\t= %.2f THB\t(Spread = %.2f , Fee = %.2f + %.2f + %.2f)\n",
 			(bestBid.Bids[0].Price - bestAsk.Asks[0].Price - buyFee - sellFee - tfFee),
 			(bestBid.Bids[0].Price - bestAsk.Asks[0].Price), buyFee, sellFee, tfFee)

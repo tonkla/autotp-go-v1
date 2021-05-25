@@ -15,7 +15,7 @@ const (
 )
 
 type Ticker struct {
-	Exchange Exchange
+	Exchange string
 	Symbol   string
 	Price    float64
 	Qty      float64
@@ -31,23 +31,23 @@ type HisPrice struct {
 	Close  float64
 }
 
-type Exchange struct {
-	Name string
-}
-
 type Order struct {
-	Time     int64
-	Exchange Exchange
-	Symbol   string
-	Price    float64
-	TP       float64
-	Qty      float64
-	Side     string
-	Status   string
+	ID        uint  `gorm:"primaryKey"`
+	CreatedAt int64 `gorm:"autoCreateTime"`
+	UpdatedAt int64 `gorm:"autoUpdateTime"`
+	Time      int64
+	Exchange  string `gorm:"index"`
+	Symbol    string `gorm:"index"`
+	Price     float64
+	SL        float64
+	TP        float64
+	Qty       float64
+	Side      string `gorm:"index"`
+	Status    string `gorm:"index"`
 }
 
 type OrderBook struct {
-	Exchange Exchange
+	Exchange string
 	Symbol   string
 	Bids     []Order
 	Asks     []Order
@@ -60,4 +60,10 @@ type GridParams struct {
 	Qty          float64
 	TriggerPrice float64
 	View         string
+	SL           float64
+	TP           float64
+}
+
+type Helper interface {
+	DoesOrderExists(*Order) bool
 }

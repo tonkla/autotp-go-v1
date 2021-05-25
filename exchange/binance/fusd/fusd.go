@@ -24,7 +24,7 @@ func GetTicker(symbol string) *types.Ticker {
 	}
 	r := gjson.Parse(string(data))
 	return &types.Ticker{
-		Exchange: types.Exchange{Name: types.EXC_BINANCE},
+		Exchange: types.EXC_BINANCE,
 		Symbol:   r.Get("symbol").String(),
 		Price:    r.Get("price").Float(),
 		Time:     r.Get("time").Int(),
@@ -39,8 +39,8 @@ func GetOrderHistory() {
 
 func Trade(order types.Order) *types.Order {
 	url := fmt.Sprintf("%s%s", urlBase, pathTrade)
-	data, e := json.Marshal(order)
-	if e != nil {
+	data, err := json.Marshal(order)
+	if err != nil {
 		return nil
 	}
 	isSucceeded := helper.Post(url, string(data))

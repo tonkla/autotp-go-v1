@@ -5,6 +5,8 @@ symbol: BNBUSDT
 lowerPrice: 100
 upperPrice: 200
 grids: 10
+gridTP: 1
+gridSL: 0
 qty: 0.1
 view: NEUTRAL | LONG | SHORT
 triggerPrice: 150

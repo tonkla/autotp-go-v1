@@ -119,7 +119,7 @@ func (b Binance) GetOrderBook(symbol string, limit int) types.OrderBook {
 	}
 
 	return types.OrderBook{
-		Exchange: types.Exchange{Name: types.EXC_BINANCE},
+		Exchange: types.EXC_BINANCE,
 		Symbol:   _symbol,
 		Bids:     bids,
 		Asks:     asks}
@@ -134,16 +134,16 @@ func (b Binance) GetOrderHistory() []types.Order {
 }
 
 func (b Binance) OpenOrder(order types.Order) *types.Order {
-	url := ""
-	data := ""
-	helper.Post(url, data)
+	// url := ""
+	// data := ""
+	// helper.Post(url, data)
 	return nil
 }
 
 func (b Binance) CloseOrder(order types.Order) *types.Order {
-	url := ""
-	data := ""
-	helper.Post(url, data)
+	// url := ""
+	// data := ""
+	// helper.Post(url, data)
 	return nil
 }
 

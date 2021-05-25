@@ -106,7 +106,7 @@ func (s Satang) GetOrderBook(symbol string, limit int) types.OrderBook {
 	}
 
 	return types.OrderBook{
-		Exchange: types.Exchange{Name: types.EXC_SATANG},
+		Exchange: types.EXC_SATANG,
 		Symbol:   symbol,
 		Bids:     bids,
 		Asks:     asks}

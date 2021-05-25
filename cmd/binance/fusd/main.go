@@ -57,11 +57,13 @@ func main() {
 	grids := viper.GetInt64("grids")
 	qty := viper.GetFloat64("qty")
 	view := viper.GetString("view")
+	sl := viper.GetFloat64("gridSL")
+	tp := viper.GetFloat64("gridTP")
 	triggerPrice := viper.GetFloat64("triggerPrice")
 	intervalSec := viper.GetInt64("intervalSec")
 
 	if upperPrice <= lowerPrice {
-		fmt.Fprintln(os.Stderr, "An upper price must be greater than a lower price")
+		fmt.Fprintln(os.Stderr, "The upper price must be greater than the lower price")
 		os.Exit(1)
 	} else if grids < 2 {
 		fmt.Fprintln(os.Stderr, "Size of the grids must be greater than 1")
@@ -76,9 +78,14 @@ func main() {
 		UpperPrice:   upperPrice,
 		Grids:        grids,
 		Qty:          qty,
-		TriggerPrice: triggerPrice,
 		View:         view,
+		SL:           sl,
+		TP:           tp,
+		TriggerPrice: triggerPrice,
 	}
+
+	db := db.Connect()
+	hp := helper{db: db}
 
 	if intervalSec == 0 {
 		intervalSec = 5
@@ -88,18 +95,26 @@ func main() {
 		if ticker == nil {
 			continue
 		}
-		orders := strategy.OnTick(*ticker, params)
-		for _, order := range orders {
-			_order := binance.Trade(order)
-			if _order == nil {
+		orders := strategy.OnTick(ticker, params, hp)
+		for _, ord := range orders {
+			order := binance.Trade(ord)
+			if order == nil {
 				continue
 			}
-			err := db.CreateOrder(_order)
+			err := db.CreateOrder(order)
 			if err != nil {
 				log.Println(err)
 				continue
 			}
-			log.Println(_order.Time)
+			log.Printf("%s %.4f of %s at $%.2f (%s)\n", order.Side, order.Qty, order.Symbol, order.Price, order.Exchange)
 		}
 	}
+}
+
+type helper struct {
+	db *db.DB
+}
+
+func (h helper) DoesOrderExists(order *types.Order) bool {
+	return h.db.DoesOrderExists(order)
 }
