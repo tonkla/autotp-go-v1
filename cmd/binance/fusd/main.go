@@ -60,6 +60,7 @@ func main() {
 	sl := viper.GetFloat64("gridSL")
 	tp := viper.GetFloat64("gridTP")
 	triggerPrice := viper.GetFloat64("triggerPrice")
+	slippage := viper.GetFloat64("slippage")
 	intervalSec := viper.GetInt64("intervalSec")
 
 	if upperPrice <= lowerPrice {
@@ -85,7 +86,7 @@ func main() {
 	}
 
 	db := db.Connect()
-	hp := helper{db: db}
+	hp := helper{db: db, slippage: slippage}
 
 	if intervalSec == 0 {
 		intervalSec = 5
@@ -106,15 +107,17 @@ func main() {
 				log.Println(err)
 				continue
 			}
-			log.Printf("%s %.4f of %s at $%.2f (%s)\n", order.Side, order.Qty, order.Symbol, order.Price, order.Exchange)
+			log.Printf("%s %.4f of %s at $%.2f (%s)\n",
+				order.Side, order.Qty, order.Symbol, order.Price, order.Exchange)
 		}
 	}
 }
 
 type helper struct {
-	db *db.DB
+	db       *db.DB
+	slippage float64
 }
 
-func (h helper) DoesOrderExists(order *types.Order) bool {
-	return h.db.DoesOrderExists(order)
+func (h helper) DoesOrderExist(order *types.Order) bool {
+	return h.db.DoesOrderExist(order, h.slippage)
 }

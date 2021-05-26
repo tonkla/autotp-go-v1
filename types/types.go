@@ -65,5 +65,5 @@ type GridParams struct {
 }
 
 type Helper interface {
-	DoesOrderExists(*Order) bool
+	DoesOrderExist(*Order) bool
 }

@@ -28,11 +28,18 @@ func (d *DB) GetOrder(order types.Order) *types.Order {
 	return nil
 }
 
-// DoesOrderExists checks the order existence
-func (d *DB) DoesOrderExists(o *types.Order) bool {
+// DoesOrderExist checks the order existence
+func (d *DB) DoesOrderExist(o *types.Order, slippage float64) bool {
 	var order types.Order
-	d.db.Where("exchange = ? AND symbol = ? AND price = ? AND side = ? AND status <> ?",
-		o.Exchange, o.Symbol, o.Price, o.Side, types.ORDER_STATUS_CLOSED).First(&order)
+	if slippage > 0 {
+		lowerPrice := o.Price - (o.Price * slippage)
+		upperPrice := o.Price + (o.Price * slippage)
+		d.db.Where("exchange = ? AND symbol = ? AND price >= ? AND price <= ? AND side = ? AND status <> ?",
+			o.Exchange, o.Symbol, lowerPrice, upperPrice, o.Side, types.ORDER_STATUS_CLOSED).First(&order)
+	} else {
+		d.db.Where("exchange = ? AND symbol = ? AND price = ? AND side = ? AND status <> ?",
+			o.Exchange, o.Symbol, o.Price, o.Side, types.ORDER_STATUS_CLOSED).First(&order)
+	}
 	return order.ID != 0
 }
 

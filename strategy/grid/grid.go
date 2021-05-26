@@ -25,7 +25,7 @@ func OnTick(ticker *types.Ticker, p types.GridParams, h types.Helper) []types.Or
 	if view == "long" || view == "l" || view == "neutral" || view == "n" {
 		order.Price = buyPrice
 		order.Side = types.SIDE_BUY
-		if !h.DoesOrderExists(&order) {
+		if !h.DoesOrderExist(&order) {
 			if p.SL > 0 {
 				order.SL = buyPrice - gridWidth*p.SL
 			}
@@ -40,7 +40,7 @@ func OnTick(ticker *types.Ticker, p types.GridParams, h types.Helper) []types.Or
 	if view == "short" || view == "s" || view == "neutral" || view == "n" {
 		order.Price = sellPrice
 		order.Side = types.SIDE_SELL
-		if !h.DoesOrderExists(&order) {
+		if !h.DoesOrderExist(&order) {
 			if p.SL > 0 {
 				order.SL = sellPrice + gridWidth*p.SL
 			}
