@@ -20,6 +20,6 @@ func Get(url string) ([]byte, error) {
 }
 
 // Post calls a URL with HTTP POST
-func Post(url string, data string) bool {
-	return true
+func Post(url string, data string) ([]byte, error) {
+	return []byte{}, nil
 }

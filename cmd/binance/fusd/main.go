@@ -86,7 +86,6 @@ func main() {
 	}
 
 	db := db.Connect()
-	hp := helper{db: db, slippage: slippage}
 
 	if intervalSec == 0 {
 		intervalSec = 5
@@ -96,13 +95,14 @@ func main() {
 		if ticker == nil {
 			continue
 		}
-		orders := strategy.OnTick(ticker, params, hp)
-		for _, ord := range orders {
-			order := binance.Trade(ord)
-			if order == nil {
+		for _, order := range strategy.OnTick(ticker, params) {
+			if db.IsOrderActive(&order, slippage) {
 				continue
 			}
-			err := db.CreateOrder(order)
+			if binance.Trade(&order) == nil {
+				continue
+			}
+			err := db.CreateOrder(&order)
 			if err != nil {
 				log.Println(err)
 				continue
@@ -111,13 +111,4 @@ func main() {
 				order.Side, order.Qty, order.Symbol, order.Price, order.Exchange)
 		}
 	}
-}
-
-type helper struct {
-	db       *db.DB
-	slippage float64
-}
-
-func (h helper) DoesOrderExist(order *types.Order) bool {
-	return h.db.DoesOrderExist(order, h.slippage)
 }

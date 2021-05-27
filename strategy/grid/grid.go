@@ -7,7 +7,7 @@ import (
 	"github.com/tonkla/autotp/types"
 )
 
-func OnTick(ticker *types.Ticker, p types.GridParams, h types.Helper) []types.Order {
+func OnTick(ticker *types.Ticker, p types.GridParams) []types.Order {
 	buyPrice, sellPrice, gridWidth := helper.GetGridRange(ticker.Price, p.LowerPrice, p.UpperPrice, float64(p.Grids))
 
 	view := strings.ToLower(p.View)
@@ -25,30 +25,26 @@ func OnTick(ticker *types.Ticker, p types.GridParams, h types.Helper) []types.Or
 	if view == "long" || view == "l" || view == "neutral" || view == "n" {
 		order.Price = buyPrice
 		order.Side = types.SIDE_BUY
-		if !h.DoesOrderExist(&order) {
-			if p.SL > 0 {
-				order.SL = buyPrice - gridWidth*p.SL
-			}
-			if p.TP > 0 {
-				order.TP = buyPrice + gridWidth*p.TP
-			}
-			orders = append(orders, order)
+		if p.SL > 0 {
+			order.SL = buyPrice - gridWidth*p.SL
 		}
+		if p.TP > 0 {
+			order.TP = buyPrice + gridWidth*p.TP
+		}
+		orders = append(orders, order)
 	}
 
 	// Has already sold at this price?
 	if view == "short" || view == "s" || view == "neutral" || view == "n" {
 		order.Price = sellPrice
 		order.Side = types.SIDE_SELL
-		if !h.DoesOrderExist(&order) {
-			if p.SL > 0 {
-				order.SL = sellPrice + gridWidth*p.SL
-			}
-			if p.TP > 0 {
-				order.TP = sellPrice - gridWidth*p.TP
-			}
-			orders = append(orders, order)
+		if p.SL > 0 {
+			order.SL = sellPrice + gridWidth*p.SL
 		}
+		if p.TP > 0 {
+			order.TP = sellPrice - gridWidth*p.TP
+		}
+		orders = append(orders, order)
 	}
 
 	return orders

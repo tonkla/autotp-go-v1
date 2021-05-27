@@ -63,7 +63,3 @@ type GridParams struct {
 	SL           float64
 	TP           float64
 }
-
-type Helper interface {
-	DoesOrderExist(*Order) bool
-}

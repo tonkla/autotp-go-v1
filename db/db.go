@@ -24,12 +24,7 @@ func Connect() *DB {
 }
 
 // GetOrder performs SQL select on the table orders
-func (d *DB) GetOrder(order types.Order) *types.Order {
-	return nil
-}
-
-// DoesOrderExist checks the order existence
-func (d *DB) DoesOrderExist(o *types.Order, slippage float64) bool {
+func (d *DB) GetActiveOrder(o *types.Order, slippage float64) *types.Order {
 	var order types.Order
 	if slippage > 0 {
 		lowerPrice := o.Price - (o.Price * slippage)
@@ -40,7 +35,12 @@ func (d *DB) DoesOrderExist(o *types.Order, slippage float64) bool {
 		d.db.Where("exchange = ? AND symbol = ? AND price = ? AND side = ? AND status <> ?",
 			o.Exchange, o.Symbol, o.Price, o.Side, types.ORDER_STATUS_CLOSED).First(&order)
 	}
-	return order.ID != 0
+	return &order
+}
+
+// IsOrderActive checks the order is active
+func (d *DB) IsOrderActive(o *types.Order, slippage float64) bool {
+	return d.GetActiveOrder(o, slippage).ID > 0
 }
 
 // CreateOrder performs SQL insert on the table orders
@@ -50,5 +50,5 @@ func (d *DB) CreateOrder(order *types.Order) error {
 
 // UpdateOrder performs SQL update on the table orders
 func (d *DB) UpdateOrder(order *types.Order) error {
-	return nil
+	return d.db.Save(&order).Error
 }

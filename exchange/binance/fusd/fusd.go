@@ -3,7 +3,6 @@ package fusd
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/tidwall/gjson"
 	"github.com/tonkla/autotp/helper"
@@ -37,16 +36,15 @@ func GetOpenOrders() {
 func GetOrderHistory() {
 }
 
-func Trade(order types.Order) *types.Order {
+func Trade(order *types.Order) *types.Order {
 	url := fmt.Sprintf("%s%s", urlBase, pathTrade)
 	data, err := json.Marshal(order)
 	if err != nil {
 		return nil
 	}
-	isSucceeded := helper.Post(url, string(data))
-	if isSucceeded {
-		order.Time = time.Now().Unix()
-		return &order
+	_, err = helper.Post(url, string(data))
+	if err != nil {
+		return nil
 	}
-	return nil
+	return order
 }
