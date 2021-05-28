@@ -22,7 +22,7 @@ type Ticker struct {
 	Time     int64
 }
 
-type HisPrice struct {
+type HistoricalPrice struct {
 	Symbol string
 	Time   int64
 	Open   float64
@@ -53,13 +53,15 @@ type OrderBook struct {
 	Asks     []Order
 }
 
-type GridParams struct {
+type BotParams struct {
 	LowerPrice   float64
 	UpperPrice   float64
-	Grids        int64
+	Grids        float64
 	Qty          float64
 	TriggerPrice float64
 	View         string
 	SL           float64
 	TP           float64
+	MATimeframe  string
+	MAPeriod     int64
 }

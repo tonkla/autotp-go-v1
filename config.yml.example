@@ -11,3 +11,5 @@ slippage: 0.001
 qty: 0.1
 view: NEUTRAL | LONG | SHORT
 triggerPrice: 150
+maTimeframe: 1h
+maPeriod: 20

@@ -47,7 +47,7 @@ func (s Satang) GetTicker(symbol string) types.Ticker {
 }
 
 // GetHistoricalPrices returns a list of k-lines/candlesticks of the symbol
-func (s Satang) GetHistoricalPrices(symbol string, interval string, limit int) []types.HisPrice {
+func (s Satang) GetHistoricalPrices(symbol string, interval string, limit int) []types.HistoricalPrice {
 	path := fmt.Sprintf(pathHisPrice, symbol, interval, limit)
 	url := fmt.Sprintf("%s%s", urlBase, path)
 	data, err := helper.Get(url)
@@ -56,10 +56,10 @@ func (s Satang) GetHistoricalPrices(symbol string, interval string, limit int) [
 		return nil
 	}
 
-	var hPrices []types.HisPrice
+	var hPrices []types.HistoricalPrice
 	for _, data := range gjson.Parse(string(data)).Array() {
 		d := data.Array()
-		p := types.HisPrice{
+		p := types.HistoricalPrice{
 			Symbol: symbol,
 			Time:   d[0].Int() / 1000,
 			Open:   d[1].Float(),

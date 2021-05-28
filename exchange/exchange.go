@@ -10,7 +10,7 @@ import (
 type Exchangeable interface {
 	GetName() string
 	GetTicker(symbol string) types.Ticker
-	GetHistoricalPrices(symbol string, interval string, limit int) []types.HisPrice
+	GetHistoricalPrices(symbol string, interval string, limit int) []types.HistoricalPrice
 	OpenOrder(types.Order) *types.Order
 	CloseOrder(types.Order) *types.Order
 	CloseOrderByID(string) *types.Order

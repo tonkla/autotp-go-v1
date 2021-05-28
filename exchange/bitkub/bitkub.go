@@ -35,8 +35,8 @@ func (b Bitkub) GetTicker(symbol string) types.Ticker {
 }
 
 // GetHistoricalPrices returns a list of k-lines/candlesticks of the symbol
-func (b Bitkub) GetHistoricalPrices(symbol string, interval string, limit int) []types.HisPrice {
-	return []types.HisPrice{}
+func (b Bitkub) GetHistoricalPrices(symbol string, interval string, limit int) []types.HistoricalPrice {
+	return []types.HistoricalPrice{}
 }
 
 // GetOrderBook returns an order book of the symbol

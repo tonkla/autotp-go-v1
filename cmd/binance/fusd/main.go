@@ -12,7 +12,7 @@ import (
 
 	"github.com/tonkla/autotp/db"
 	binance "github.com/tonkla/autotp/exchange/binance/fusd"
-	strategy "github.com/tonkla/autotp/strategy/grid"
+	strategy "github.com/tonkla/autotp/strategy/gridtrend"
 	"github.com/tonkla/autotp/types"
 )
 
@@ -54,7 +54,7 @@ func main() {
 	symbol := viper.GetString("symbol")
 	lowerPrice := viper.GetFloat64("lowerPrice")
 	upperPrice := viper.GetFloat64("upperPrice")
-	grids := viper.GetInt64("grids")
+	grids := viper.GetFloat64("grids")
 	qty := viper.GetFloat64("qty")
 	view := viper.GetString("view")
 	sl := viper.GetFloat64("gridSL")
@@ -62,6 +62,8 @@ func main() {
 	triggerPrice := viper.GetFloat64("triggerPrice")
 	slippage := viper.GetFloat64("slippage")
 	intervalSec := viper.GetInt64("intervalSec")
+	maTimeframe := viper.GetString("maTimeframe")
+	maPeriod := viper.GetInt64("maPeriod")
 
 	if upperPrice <= lowerPrice {
 		fmt.Fprintln(os.Stderr, "The upper price must be greater than the lower price")
@@ -74,7 +76,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	params := types.GridParams{
+	params := &types.BotParams{
 		LowerPrice:   lowerPrice,
 		UpperPrice:   upperPrice,
 		Grids:        grids,
@@ -83,6 +85,8 @@ func main() {
 		SL:           sl,
 		TP:           tp,
 		TriggerPrice: triggerPrice,
+		MATimeframe:  maTimeframe,
+		MAPeriod:     maPeriod,
 	}
 
 	db := db.Connect()
@@ -90,6 +94,7 @@ func main() {
 	if intervalSec == 0 {
 		intervalSec = 5
 	}
+	// Create new LIMIT orders
 	for range time.Tick(time.Duration(intervalSec) * time.Second) {
 		ticker := binance.GetTicker(symbol)
 		if ticker == nil {

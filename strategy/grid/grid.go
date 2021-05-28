@@ -7,10 +7,12 @@ import (
 	"github.com/tonkla/autotp/types"
 )
 
-func OnTick(ticker *types.Ticker, p types.GridParams) []types.Order {
-	buyPrice, sellPrice, gridWidth := helper.GetGridRange(ticker.Price, p.LowerPrice, p.UpperPrice, float64(p.Grids))
+func OnTick(ticker *types.Ticker, p *types.BotParams) []types.Order {
+	var orders []types.Order
 
-	view := strings.ToLower(p.View)
+	buyPrice, sellPrice, gridWidth := helper.GetGridRange(ticker.Price, p.LowerPrice, p.UpperPrice, p.Grids)
+
+	view := strings.ToUpper(p.View)
 
 	order := types.Order{
 		Exchange: ticker.Exchange,
@@ -19,10 +21,7 @@ func OnTick(ticker *types.Ticker, p types.GridParams) []types.Order {
 		Status:   types.ORDER_STATUS_LIMIT,
 	}
 
-	var orders []types.Order
-
-	// Has already bought at this price?
-	if view == "long" || view == "l" || view == "neutral" || view == "n" {
+	if view == "LONG" || view == "L" || view == "NEUTRAL" || view == "N" {
 		order.Price = buyPrice
 		order.Side = types.SIDE_BUY
 		if p.SL > 0 {
@@ -34,8 +33,7 @@ func OnTick(ticker *types.Ticker, p types.GridParams) []types.Order {
 		orders = append(orders, order)
 	}
 
-	// Has already sold at this price?
-	if view == "short" || view == "s" || view == "neutral" || view == "n" {
+	if view == "SHORT" || view == "S" || view == "NEUTRAL" || view == "N" {
 		order.Price = sellPrice
 		order.Side = types.SIDE_SELL
 		if p.SL > 0 {

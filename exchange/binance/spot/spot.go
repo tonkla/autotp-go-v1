@@ -58,7 +58,7 @@ func (b Binance) GetTicker(symbol string) types.Ticker {
 }
 
 // GetHistoricalPrices returns a list of k-lines/candlesticks of the symbol
-func (b Binance) GetHistoricalPrices(symbol string, interval string, limit int) []types.HisPrice {
+func (b Binance) GetHistoricalPrices(symbol string, interval string, limit int) []types.HistoricalPrice {
 	_symbol := sanitizeSymbol(symbol)
 	path := fmt.Sprintf(pathHisPrice, _symbol, interval, limit)
 	url := fmt.Sprintf("%s%s", urlBase, path)
@@ -68,10 +68,10 @@ func (b Binance) GetHistoricalPrices(symbol string, interval string, limit int) 
 		return nil
 	}
 
-	var hPrices []types.HisPrice
+	var hPrices []types.HistoricalPrice
 	for _, data := range gjson.Parse(string(data)).Array() {
 		d := data.Array()
-		p := types.HisPrice{
+		p := types.HistoricalPrice{
 			Symbol: _symbol,
 			Time:   d[0].Int() / 1000,
 			Open:   d[1].Float(),
