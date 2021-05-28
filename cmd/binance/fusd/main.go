@@ -100,7 +100,8 @@ func main() {
 		if ticker == nil {
 			continue
 		}
-		for _, order := range strategy.OnTick(ticker, params) {
+		hPrices := binance.GetHistoricalPrices(ticker.Symbol, maTimeframe, 100)
+		for _, order := range strategy.OnTick(ticker, params, hPrices) {
 			if db.IsOrderActive(&order, slippage) {
 				continue
 			}

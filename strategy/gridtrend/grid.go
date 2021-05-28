@@ -1,17 +1,15 @@
 package gridtrend
 
 import (
-	binance "github.com/tonkla/autotp/exchange/binance/fusd"
 	"github.com/tonkla/autotp/helper"
 	"github.com/tonkla/autotp/talib"
 	"github.com/tonkla/autotp/types"
 )
 
-func OnTick(ticker *types.Ticker, p *types.BotParams) []types.Order {
+func OnTick(ticker *types.Ticker, p *types.BotParams, hprices []types.HistoricalPrice) []types.Order {
 	var orders []types.Order
 
-	bars := binance.GetHistoricalPrices(ticker.Symbol, p.MATimeframe, 100)
-	bar := bars[len(bars)-1]
+	bar := hprices[len(hprices)-1]
 	if bar.Open == 0 || bar.High == 0 || bar.Low == 0 || bar.Close == 0 {
 		return nil
 	}
@@ -19,7 +17,7 @@ func OnTick(ticker *types.Ticker, p *types.BotParams) []types.Order {
 	close := bar.Close
 
 	var highes, lows, closes []float64
-	for _, b := range bars {
+	for _, b := range hprices {
 		highes = append(highes, b.High)
 		lows = append(lows, b.Low)
 		closes = append(closes, b.Close)
