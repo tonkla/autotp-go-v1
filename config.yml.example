@@ -1,3 +1,4 @@
+botID: 1
 apiKey: API_KEY
 secretKey: SECRET_KEY
 intervalSec: 5

@@ -51,6 +51,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	botID := viper.GetInt64("botID")
 	symbol := viper.GetString("symbol")
 	lowerPrice := viper.GetFloat64("lowerPrice")
 	upperPrice := viper.GetFloat64("upperPrice")
@@ -76,7 +77,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	params := &types.BotParams{
+	params := types.BotParams{
+		BotID:        botID,
 		LowerPrice:   lowerPrice,
 		UpperPrice:   upperPrice,
 		Grids:        grids,
@@ -85,6 +87,7 @@ func main() {
 		SL:           sl,
 		TP:           tp,
 		TriggerPrice: triggerPrice,
+		Slippage:     slippage,
 		MATimeframe:  maTimeframe,
 		MAPeriod:     maPeriod,
 	}
@@ -95,25 +98,31 @@ func main() {
 		intervalSec = 5
 	}
 	// Create new LIMIT orders
+	log.Printf("I'm a bot ID %d, I'm working...\n", botID)
 	for range time.Tick(time.Duration(intervalSec) * time.Second) {
 		ticker := binance.GetTicker(symbol)
-		if ticker == nil {
+		if ticker == nil || ticker.Price <= 0 {
 			continue
 		}
+
 		hPrices := binance.GetHistoricalPrices(ticker.Symbol, maTimeframe, 100)
-		for _, order := range strategy.OnTick(ticker, params, hPrices) {
-			if db.IsOrderActive(&order, slippage) {
+		if len(hPrices) == 0 {
+			continue
+		}
+
+		for _, order := range strategy.OnTick(*ticker, params, hPrices) {
+			if db.IsOrderActive(order, slippage) {
 				continue
 			}
-			if binance.Trade(&order) == nil {
+			if binance.Trade(order) == nil {
 				continue
 			}
-			err := db.CreateOrder(&order)
+			err := db.CreateOrder(order)
 			if err != nil {
 				log.Println(err)
 				continue
 			}
-			log.Printf("%s %.4f of %s at $%.2f (%s)\n",
+			log.Printf("\t%s %.4f of %s at $%.2f (%s)\n",
 				order.Side, order.Qty, order.Symbol, order.Price, order.Exchange)
 		}
 	}

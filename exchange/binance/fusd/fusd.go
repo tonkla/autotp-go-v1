@@ -66,7 +66,7 @@ func GetHistoricalPrices(symbol string, interval string, limit int) []types.Hist
 	return hPrices
 }
 
-func Trade(order *types.Order) *types.Order {
+func Trade(order types.Order) *types.Order {
 	url := fmt.Sprintf("%s%s", urlBase, pathTrade)
 	data, err := json.Marshal(order)
 	if err != nil {
@@ -76,5 +76,5 @@ func Trade(order *types.Order) *types.Order {
 	if err != nil {
 		return nil
 	}
-	return order
+	return &order
 }

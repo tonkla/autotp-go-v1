@@ -43,3 +43,18 @@ func TestGetGridRange(t *testing.T) {
 		t.Error("88-90-94")
 	}
 }
+
+func TestGetGridZones(t *testing.T) {
+	zones, grid := GetGridZones(554, 500, 800, 60)
+	if len(zones) != (800-550)/int(grid) || grid != 5 {
+		t.Error("550-554-555")
+	}
+	zones, _ = GetGridZones(555, 500, 800, 60)
+	if len(zones) != (800-550)/int(grid) {
+		t.Error("550-555-560")
+	}
+	zones, _ = GetGridZones(556, 500, 800, 60)
+	if len(zones) != (800-555)/int(grid) {
+		t.Error("555-556-560")
+	}
+}

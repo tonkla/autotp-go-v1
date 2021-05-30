@@ -6,12 +6,24 @@ const (
 	EXC_FTX     = "FTX"
 	EXC_SATANG  = "SATANG"
 
-	SIDE_BUY  = "BUY"
-	SIDE_SELL = "SELL"
-
 	ORDER_STATUS_LIMIT  = "LIMIT"
 	ORDER_STATUS_OPEN   = "OPEN"
 	ORDER_STATUS_CLOSED = "CLOSED"
+
+	SIDE_BUY  = "BUY"
+	SIDE_SELL = "SELL"
+
+	TREND_NO     = 0
+	TREND_UP_1   = 1
+	TREND_UP_2   = 2
+	TREND_UP_3   = 3
+	TREND_UP_4   = 4
+	TREND_UP_5   = 5
+	TREND_DOWN_1 = -1
+	TREND_DOWN_2 = -2
+	TREND_DOWN_3 = -3
+	TREND_DOWN_4 = -4
+	TREND_DOWN_5 = -5
 )
 
 type Ticker struct {
@@ -32,10 +44,10 @@ type HistoricalPrice struct {
 }
 
 type Order struct {
-	ID        uint  `gorm:"primaryKey"`
-	CreatedAt int64 `gorm:"autoCreateTime"`
-	UpdatedAt int64 `gorm:"autoUpdateTime"`
-	Time      int64
+	ID        uint   `gorm:"primaryKey"`
+	CreatedAt int64  `gorm:"autoCreateTime"`
+	UpdatedAt int64  `gorm:"autoUpdateTime"`
+	BotID     int64  `gorm:"index"`
 	Exchange  string `gorm:"index"`
 	Symbol    string `gorm:"index"`
 	Price     float64
@@ -54,14 +66,16 @@ type OrderBook struct {
 }
 
 type BotParams struct {
+	BotID        int64
 	LowerPrice   float64
 	UpperPrice   float64
 	Grids        float64
 	Qty          float64
-	TriggerPrice float64
 	View         string
 	SL           float64
 	TP           float64
+	TriggerPrice float64
+	Slippage     float64
 	MATimeframe  string
 	MAPeriod     int64
 }

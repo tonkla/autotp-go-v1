@@ -6,6 +6,36 @@ https://github.com/markcheno/go-talib/blob/master/talib.go
 
 package talib
 
+import "math"
+
+func SMA(inReal []float64, inTimePeriod int) []float64 {
+	outReal := make([]float64, len(inReal))
+
+	lookbackTotal := inTimePeriod - 1
+	startIdx := lookbackTotal
+	periodTotal := 0.0
+	trailingIdx := startIdx - lookbackTotal
+	i := trailingIdx
+	if inTimePeriod > 1 {
+		for i < startIdx {
+			periodTotal += inReal[i]
+			i++
+		}
+	}
+	outIdx := startIdx
+	for ok := true; ok; {
+		periodTotal += inReal[i]
+		tempReal := periodTotal
+		periodTotal -= inReal[trailingIdx]
+		outReal[outIdx] = tempReal / float64(inTimePeriod)
+		trailingIdx++
+		i++
+		outIdx++
+		ok = i < len(outReal)
+	}
+	return outReal
+}
+
 func EMA(inReal []float64, inTimePeriod int) []float64 {
 	multiplier := 2.0 / float64(inTimePeriod+1)
 	return EMAk(inReal, inTimePeriod, multiplier)
@@ -122,4 +152,61 @@ func MACD(inReal []float64, inFastPeriod int, inSlowPeriod int, inSignalPeriod i
 		outMACDHist[i] = outMACD[i] - outMACDSignal[i]
 	}
 	return outMACD, outMACDSignal, outMACDHist
+}
+
+func ATR(inHigh []float64, inLow []float64, inClose []float64, inTimePeriod int) []float64 {
+	outReal := make([]float64, len(inClose))
+
+	inTimePeriodF := float64(inTimePeriod)
+
+	if inTimePeriod < 1 {
+		return outReal
+	}
+
+	if inTimePeriod <= 1 {
+		return TRange(inHigh, inLow, inClose)
+	}
+
+	outIdx := inTimePeriod
+	today := inTimePeriod + 1
+
+	tr := TRange(inHigh, inLow, inClose)
+	prevATRTemp := SMA(tr, inTimePeriod)
+	prevATR := prevATRTemp[inTimePeriod]
+	outReal[inTimePeriod] = prevATR
+
+	for outIdx = inTimePeriod + 1; outIdx < len(inClose); outIdx++ {
+		prevATR *= inTimePeriodF - 1.0
+		prevATR += tr[today]
+		prevATR /= inTimePeriodF
+		outReal[outIdx] = prevATR
+		today++
+	}
+	return outReal
+}
+
+func TRange(inHigh []float64, inLow []float64, inClose []float64) []float64 {
+	outReal := make([]float64, len(inClose))
+
+	startIdx := 1
+	outIdx := startIdx
+	today := startIdx
+	for today < len(inClose) {
+		tempLT := inLow[today]
+		tempHT := inHigh[today]
+		tempCY := inClose[today-1]
+		greatest := tempHT - tempLT
+		val2 := math.Abs(tempCY - tempHT)
+		if val2 > greatest {
+			greatest = val2
+		}
+		val3 := math.Abs(tempCY - tempLT)
+		if val3 > greatest {
+			greatest = val3
+		}
+		outReal[outIdx] = greatest
+		outIdx++
+		today++
+	}
+	return outReal
 }

@@ -2,6 +2,7 @@
 Copyright 2016 Mark Chenoweth
 Copyright 2018 Alessandro Sanino
 Licensed under terms of MIT license (see LICENSE)
+https://github.com/markcheno/go-talib/blob/master/talib_test.go
 */
 
 package talib
@@ -113,6 +114,11 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+func TestSMA(t *testing.T) {
+	result := SMA(testClose, 20)
+	compare(t, result, "result = talib.SMA(testClose,20)")
+}
+
 func TestEMA(t *testing.T) {
 	compare(t, EMA(testClose, 5), "result = talib.EMA(testClose,5)")
 	compare(t, EMA(testClose, 20), "result = talib.EMA(testClose,20)")
@@ -130,4 +136,14 @@ func TestMACD(t *testing.T) {
 	compare(t, macd[unstable:], fmt.Sprintf("result, macdsignal, macdhist = talib.MACD(testClose,12,26,9); result = result[%d:]", unstable))
 	compare(t, macdsignal[unstable:], fmt.Sprintf("macd, result, macdhist = talib.MACD(testClose,12,26,9); result = result[%d:]", unstable))
 	compare(t, macdhist[unstable:], fmt.Sprintf("macd, macdsignal, result = talib.MACD(testClose,12,26,9); result = result[%d:]", unstable))
+}
+
+func TestATR(t *testing.T) {
+	result := ATR(testHigh, testLow, testClose, 14)
+	compare(t, result, "result = talib.ATR(testHigh,testLow,testClose,14)")
+}
+
+func TestTRange(t *testing.T) {
+	result := TRange(testHigh, testLow, testClose)
+	compare(t, result, "result = talib.TRANGE(testHigh,testLow,testClose)")
 }

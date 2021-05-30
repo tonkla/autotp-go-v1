@@ -6,7 +6,7 @@ import (
 	"github.com/tonkla/autotp/types"
 )
 
-func OnTick(ticker *types.Ticker, p *types.BotParams, hprices []types.HistoricalPrice) []types.Order {
+func OnTick(ticker types.Ticker, p types.BotParams, hprices []types.HistoricalPrice) []types.Order {
 	var orders []types.Order
 
 	bar := hprices[len(hprices)-1]
@@ -37,6 +37,7 @@ func OnTick(ticker *types.Ticker, p *types.BotParams, hprices []types.Historical
 	buyPrice, sellPrice, gridWidth := helper.GetGridRange(ticker.Price, p.LowerPrice, p.UpperPrice, p.Grids)
 
 	order := types.Order{
+		BotID:    p.BotID,
 		Exchange: ticker.Exchange,
 		Symbol:   ticker.Symbol,
 		Qty:      p.Qty,

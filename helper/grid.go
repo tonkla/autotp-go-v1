@@ -1,8 +1,10 @@
 package helper
 
-import "math"
+import (
+	"math"
+)
 
-// GetGridRange returns a lower value and an upper value of the grid that closed to the target value
+// GetGridRange returns the lower number and the upper number that closed to the target number
 func GetGridRange(target float64, lowerNum float64, upperNum float64, grids float64) (float64, float64, float64) {
 	if target <= lowerNum || lowerNum >= upperNum || grids < 2 {
 		return 0, 0, 0
@@ -96,4 +98,23 @@ func GetGridRange(target float64, lowerNum float64, upperNum float64, grids floa
 	}
 
 	return lower, upper, grid
+}
+
+// GetGridZones returns all buyable zones of the grid
+func GetGridZones(target float64, lowerNum float64, upperNum float64, grids float64) ([]float64, float64) {
+	if target <= lowerNum || lowerNum >= upperNum || grids < 2 {
+		return nil, 0
+	}
+
+	start, _, grid := GetGridRange(target, lowerNum, upperNum, grids)
+
+	var zones []float64
+	for i := 0.0; i < grids; i++ {
+		num := start + i*grid
+		if num >= upperNum {
+			break
+		}
+		zones = append(zones, num)
+	}
+	return zones, grid
 }
