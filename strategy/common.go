@@ -42,6 +42,7 @@ func GetTrend(bars []types.HistoricalPrice, period int) int {
 	cwma := talib.WMA(c, period)
 	cma_0 := cwma[len(cwma)-1]
 	cma_1 := cwma[len(cwma)-2]
+	cma_2 := cwma[len(cwma)-3]
 
 	// Not the J. Welles Wilder Jr.'s ATR
 	atr := hma_0 - lma_0
@@ -49,17 +50,17 @@ func GetTrend(bars []types.HistoricalPrice, period int) int {
 	// Positive slope
 	if cma_1 < cma_0 {
 		trend = types.TREND_UP_1
-		// Higher low
-		if l_1 < l_0 {
+		// Higher low, and continued positive slope
+		if l_1 < l_0 && cma_2 < cma_1 {
 			trend = types.TREND_UP_2
-			// Green bar
-			if o_0 < c_0 {
+			// Green bar, or moving to top
+			if o_0 < c_0 || h_0-c_0 < (c_0-l_0)*0.5 {
 				trend = types.TREND_UP_3
-				// Current low is greater than the average close, or it's a long green bar
-				if l_0 > cma_0 || h_0-l_0 > atr {
+				// Low is greater than average close, or long green bar, or narrow upper band
+				if l_0 > cma_0 || h_0-l_0 > atr || hma_0-cma_0 < (cma_0-lma_0)*0.7 {
 					trend = types.TREND_UP_4
-					// Current low is greater than the average high, or it's a very long green bar
-					if l_0 > hma_0 || h_0-l_0 > 1.5*atr {
+					// Low is greater than average high, or very long green bar
+					if l_0 > hma_0 || h_0-l_0 > 1.25*atr {
 						trend = types.TREND_UP_5
 					}
 				}
@@ -69,17 +70,17 @@ func GetTrend(bars []types.HistoricalPrice, period int) int {
 	// Negative slope
 	if cma_1 > cma_0 {
 		trend = types.TREND_DOWN_1
-		// Lower high
-		if h_1 > h_0 {
+		// Lower high, and continued negative slope
+		if h_1 > h_0 && cma_2 > cma_1 {
 			trend = types.TREND_DOWN_2
-			// Red bar
-			if o_0 > c_0 {
+			// Red bar, or moving to bottom
+			if o_0 > c_0 || (h_0-c_0)*0.5 > c_0-l_0 {
 				trend = types.TREND_DOWN_3
-				// Current high is less than the average close, or it's a long red bar
-				if h_0 < cma_0 || h_0-l_0 > atr {
+				// High is less than average close, or long red bar, or narrow lower band
+				if h_0 < cma_0 || h_0-l_0 > atr || (hma_0-cma_0)*0.7 > cma_0-lma_0 {
 					trend = types.TREND_DOWN_4
-					// Current high is less than the average low, or it's a very long red bar
-					if h_0 < lma_0 || h_0-l_0 > 1.5*atr {
+					// High is less than average low, or very long red bar
+					if h_0 < lma_0 || h_0-l_0 > 1.25*atr {
 						trend = types.TREND_DOWN_5
 					}
 				}
