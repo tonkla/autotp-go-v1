@@ -98,20 +98,20 @@ func (b Binance) GetOrderBook(symbol string, limit int) types.OrderBook {
 
 	orders := gjson.Parse(string(data))
 
-	var bids []types.Order
+	var bids []types.ExOrder
 	for _, bid := range orders.Get("bids").Array() {
 		b := bid.Array()
-		ord := types.Order{
-			Side:  "BUY",
+		ord := types.ExOrder{
+			Side:  types.SIDE_BUY,
 			Price: b[0].Float(),
 			Qty:   b[1].Float()}
 		bids = append(bids, ord)
 	}
 
-	var asks []types.Order
+	var asks []types.ExOrder
 	for _, ask := range orders.Get("asks").Array() {
 		a := ask.Array()
-		ord := types.Order{
+		ord := types.ExOrder{
 			Side:  "SELL",
 			Price: a[0].Float(),
 			Qty:   a[1].Float()}

@@ -44,25 +44,40 @@ type HistoricalPrice struct {
 }
 
 type Order struct {
-	ID        uint   `gorm:"primaryKey"`
-	CreatedAt int64  `gorm:"autoCreateTime"`
-	UpdatedAt int64  `gorm:"autoUpdateTime"`
-	BotID     int64  `gorm:"index"`
-	Exchange  string `gorm:"index"`
-	Symbol    string `gorm:"index"`
-	Price     float64
-	SL        float64
-	TP        float64
-	Qty       float64
-	Side      string `gorm:"index"`
-	Status    string `gorm:"index"`
+	ID         uint   `gorm:"primaryKey"`
+	CreatedAt  int64  `gorm:"autoCreateTime"`
+	UpdatedAt  int64  `gorm:"autoUpdateTime"`
+	BotID      int64  `gorm:"index"`
+	Exchange   string `gorm:"index"`
+	Symbol     string `gorm:"index"`
+	OpenPrice  float64
+	ClosePrice float64
+	OpenTime   int64
+	CloseTime  int64
+	SL         float64
+	TP         float64
+	Qty        float64
+	Side       string `gorm:"index"`
+	Status     string `gorm:"index"`
+}
+
+type TradeOrders struct {
+	OpenOrders  []Order
+	CloseOrders []Order
+}
+
+type ExOrder struct {
+	Symbol string
+	Price  float64
+	Qty    float64
+	Side   string
 }
 
 type OrderBook struct {
 	Exchange string
 	Symbol   string
-	Bids     []Order
-	Asks     []Order
+	Bids     []ExOrder
+	Asks     []ExOrder
 }
 
 type BotParams struct {

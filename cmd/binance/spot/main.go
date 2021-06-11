@@ -123,7 +123,7 @@ func main() {
 				continue
 			}
 			log.Printf("\t%s %.4f of %s at $%.2f (%s)\n",
-				order.Side, order.Qty, order.Symbol, order.Price, order.Exchange)
+				order.Side, order.Qty, order.Symbol, order.OpenPrice, order.Exchange)
 		}
 	}
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/tonkla/autotp/db"
 	binance "github.com/tonkla/autotp/exchange/binance/fusd"
 	strategy "github.com/tonkla/autotp/strategy/gridtrend"
+	"github.com/tonkla/autotp/strategy/trend"
 	"github.com/tonkla/autotp/types"
 )
 
@@ -97,7 +98,7 @@ func main() {
 	if intervalSec == 0 {
 		intervalSec = 5
 	}
-	// Create new LIMIT orders
+
 	log.Printf("I'm a bot ID %d, I'm working...\n", botID)
 	for range time.Tick(time.Duration(intervalSec) * time.Second) {
 		ticker := binance.GetTicker(symbol)
@@ -105,15 +106,30 @@ func main() {
 			continue
 		}
 
-		hPrices := binance.GetHistoricalPrices(ticker.Symbol, maTimeframe, 100)
-		if len(hPrices) == 0 {
+		hprices := binance.GetHistoricalPrices(ticker.Symbol, maTimeframe, 100)
+		if len(hprices) == 0 {
 			continue
 		}
 
-		for _, order := range strategy.OnTick(*ticker, params, hPrices) {
-			if db.IsOrderActive(order, slippage) {
-				continue
-			}
+		p := trend.OnTickParams{
+			Ticker:    *ticker,
+			BotParams: params,
+			HPrices:   hprices,
+			DB:        *db,
+		}
+
+		tradeOrders := trend.OnTick(p)
+		if tradeOrders == nil {
+			continue
+		}
+		for _, order := range tradeOrders.OpenOrders {
+			fmt.Println(order)
+		}
+		for _, order := range tradeOrders.CloseOrders {
+			fmt.Println(order)
+		}
+
+		for _, order := range strategy.OnTick(*ticker, params, hprices, *db) {
 			if binance.Trade(order) == nil {
 				continue
 			}
@@ -123,7 +139,7 @@ func main() {
 				continue
 			}
 			log.Printf("\t%s %.4f of %s at $%.2f (%s)\n",
-				order.Side, order.Qty, order.Symbol, order.Price, order.Exchange)
+				order.Side, order.Qty, order.Symbol, order.OpenPrice, order.Exchange)
 		}
 	}
 }

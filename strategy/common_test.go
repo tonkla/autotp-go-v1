@@ -10,12 +10,12 @@ import (
 
 const (
 	symbol    = "BNBUSDT"
-	timeframe = "1h"
-	period    = 10
+	timeframe = "1d"
+	period    = 8
 )
 
 func TestGetTrend(t *testing.T) {
-	bars := binance.GetHistoricalPrices(symbol, timeframe, 100)
+	bars := binance.GetHistoricalPrices(symbol, timeframe, 20)
 	trend := GetTrend(bars, period)
 	fmt.Println(trend)
 	t.Error("Skip")

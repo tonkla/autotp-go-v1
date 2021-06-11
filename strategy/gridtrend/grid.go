@@ -1,12 +1,13 @@
 package gridtrend
 
 import (
+	"github.com/tonkla/autotp/db"
 	"github.com/tonkla/autotp/helper"
 	"github.com/tonkla/autotp/talib"
 	"github.com/tonkla/autotp/types"
 )
 
-func OnTick(ticker types.Ticker, p types.BotParams, hprices []types.HistoricalPrice) []types.Order {
+func OnTick(ticker types.Ticker, p types.BotParams, hprices []types.HistoricalPrice, db db.DB) []types.Order {
 	var orders []types.Order
 
 	bar := hprices[len(hprices)-1]
@@ -46,7 +47,7 @@ func OnTick(ticker types.Ticker, p types.BotParams, hprices []types.HistoricalPr
 
 	// Uptrend or Oversold
 	if (cma_1 < cma_0 && close < hma_0+0.5*atr) || close < lma_0-0.5*atr {
-		order.Price = buyPrice
+		order.OpenPrice = buyPrice
 		order.Side = types.SIDE_BUY
 		if p.SL > 0 {
 			order.SL = buyPrice - gridWidth*p.SL
@@ -54,12 +55,14 @@ func OnTick(ticker types.Ticker, p types.BotParams, hprices []types.HistoricalPr
 		if p.TP > 0 {
 			order.TP = buyPrice + gridWidth*p.TP
 		}
-		orders = append(orders, order)
+		if !db.IsOrderActive(order, p.Slippage) {
+			orders = append(orders, order)
+		}
 	}
 
 	// Downtrend or Overbought
 	if (cma_1 > cma_0 && close > lma_0-0.5*atr) || close > hma_0+0.5*atr {
-		order.Price = sellPrice
+		order.OpenPrice = sellPrice
 		order.Side = types.SIDE_SELL
 		if p.SL > 0 {
 			order.SL = sellPrice + gridWidth*p.SL
@@ -67,7 +70,9 @@ func OnTick(ticker types.Ticker, p types.BotParams, hprices []types.HistoricalPr
 		if p.TP > 0 {
 			order.TP = sellPrice - gridWidth*p.TP
 		}
-		orders = append(orders, order)
+		if !db.IsOrderActive(order, p.Slippage) {
+			orders = append(orders, order)
+		}
 	}
 
 	return orders

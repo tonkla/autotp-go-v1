@@ -42,8 +42,8 @@ func GetOrderHistory(symbol string) []types.Order {
 }
 
 // GetHistoricalPrices returns a list of k-lines/candlesticks
-func GetHistoricalPrices(symbol string, interval string, limit int) []types.HistoricalPrice {
-	url := fmt.Sprintf("%s%s?symbol=%s&interval=%s&limit=%d", urlBase, pathKlines, symbol, interval, limit)
+func GetHistoricalPrices(symbol string, timeframe string, limit int) []types.HistoricalPrice {
+	url := fmt.Sprintf("%s%s?symbol=%s&interval=%s&limit=%d", urlBase, pathKlines, symbol, timeframe, limit)
 	data, err := helper.Get(url)
 	if err != nil {
 		log.Println(err)

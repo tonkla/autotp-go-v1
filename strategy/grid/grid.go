@@ -23,7 +23,7 @@ func OnTick(ticker types.Ticker, p types.BotParams) []types.Order {
 	}
 
 	if view == "LONG" || view == "L" || view == "NEUTRAL" || view == "N" {
-		order.Price = buyPrice
+		order.OpenPrice = buyPrice
 		order.Side = types.SIDE_BUY
 		if p.SL > 0 {
 			order.SL = buyPrice - gridWidth*p.SL
@@ -35,7 +35,7 @@ func OnTick(ticker types.Ticker, p types.BotParams) []types.Order {
 	}
 
 	if view == "SHORT" || view == "S" || view == "NEUTRAL" || view == "N" {
-		order.Price = sellPrice
+		order.OpenPrice = sellPrice
 		order.Side = types.SIDE_SELL
 		if p.SL > 0 {
 			order.SL = sellPrice + gridWidth*p.SL
