@@ -2,7 +2,7 @@ package gridtrend
 
 import (
 	"github.com/tonkla/autotp/db"
-	"github.com/tonkla/autotp/helper"
+	"github.com/tonkla/autotp/strategy"
 	"github.com/tonkla/autotp/talib"
 	"github.com/tonkla/autotp/types"
 )
@@ -35,7 +35,7 @@ func OnTick(ticker types.Ticker, p types.BotParams, hprices []types.HistoricalPr
 
 	atr := hma_0 - lma_0
 
-	buyPrice, sellPrice, gridWidth := helper.GetGridRange(ticker.Price, p.LowerPrice, p.UpperPrice, p.Grids)
+	buyPrice, sellPrice, gridWidth := strategy.GetGridRange(ticker.Price, p.LowerPrice, p.UpperPrice, p.Grids)
 
 	order := types.Order{
 		BotID:    p.BotID,

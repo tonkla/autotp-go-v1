@@ -29,10 +29,10 @@ func (d DB) GetActiveOrder(o types.Order, slippage float64) *types.Order {
 	if slippage > 0 {
 		lowerPrice := o.OpenPrice - (o.OpenPrice * slippage)
 		upperPrice := o.OpenPrice + (o.OpenPrice * slippage)
-		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND price >= ? AND price <= ? AND side = ? AND status <> ?",
+		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price >= ? AND open_price <= ? AND side = ? AND status <> ?",
 			o.BotID, o.Exchange, o.Symbol, lowerPrice, upperPrice, o.Side, types.ORDER_STATUS_CLOSED).First(&order)
 	} else {
-		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND price = ? AND side = ? AND status <> ?",
+		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price = ? AND side = ? AND status <> ?",
 			o.BotID, o.Exchange, o.Symbol, o.OpenPrice, o.Side, types.ORDER_STATUS_CLOSED).First(&order)
 	}
 	return &order
@@ -43,6 +43,22 @@ func (d DB) GetActiveOrders(o types.Order) []types.Order {
 	var orders []types.Order
 	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND status <> ?",
 		o.BotID, o.Exchange, o.Symbol, o.Side, types.ORDER_STATUS_CLOSED).Find(&orders)
+	return orders
+}
+
+// GetProfitOrders returns the orders that are profitable
+func (d DB) GetProfitOrders(o types.Order) []types.Order {
+	var orders []types.Order
+	fee := o.ClosePrice * 0.002 // tx fee is 0.2%
+	if o.Side == types.SIDE_BUY {
+		priceWithFee := o.ClosePrice - fee
+		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND status = ? AND open_price < ?",
+			o.BotID, o.Exchange, o.Symbol, o.Side, types.ORDER_STATUS_OPEN, priceWithFee).Find(&orders)
+	} else if o.Side == types.SIDE_SELL {
+		priceWithFee := o.ClosePrice + fee
+		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND status = ? AND open_price > ?",
+			o.BotID, o.Exchange, o.Symbol, o.Side, types.ORDER_STATUS_OPEN, priceWithFee).Find(&orders)
+	}
 	return orders
 }
 

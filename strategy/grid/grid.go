@@ -3,14 +3,14 @@ package grid
 import (
 	"strings"
 
-	"github.com/tonkla/autotp/helper"
+	"github.com/tonkla/autotp/strategy"
 	"github.com/tonkla/autotp/types"
 )
 
 func OnTick(ticker types.Ticker, p types.BotParams) []types.Order {
 	var orders []types.Order
 
-	buyPrice, sellPrice, gridWidth := helper.GetGridRange(ticker.Price, p.LowerPrice, p.UpperPrice, p.Grids)
+	buyPrice, sellPrice, gridWidth := strategy.GetGridRange(ticker.Price, p.LowerPrice, p.UpperPrice, p.Grids)
 
 	view := strings.ToUpper(p.View)
 
