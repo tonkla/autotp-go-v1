@@ -12,7 +12,6 @@ import (
 
 	"github.com/tonkla/autotp/db"
 	binance "github.com/tonkla/autotp/exchange/binance/fusd"
-	strategy "github.com/tonkla/autotp/strategy/gridtrend"
 	"github.com/tonkla/autotp/strategy/trend"
 	"github.com/tonkla/autotp/types"
 )
@@ -106,6 +105,11 @@ func main() {
 			continue
 		}
 
+		orderBook := binance.GetOrderBook(symbol, 5)
+		if orderBook == nil {
+			continue
+		}
+
 		hprices := binance.GetHistoricalPrices(ticker.Symbol, maTimeframe, 100)
 		if len(hprices) == 0 {
 			continue
@@ -113,6 +117,7 @@ func main() {
 
 		p := trend.OnTickParams{
 			Ticker:    *ticker,
+			OrderBook: *orderBook,
 			BotParams: params,
 			HPrices:   hprices,
 			DB:        *db,
@@ -122,14 +127,21 @@ func main() {
 		if tradeOrders == nil {
 			continue
 		}
-		for _, order := range tradeOrders.OpenOrders {
-			fmt.Println(order)
-		}
+		// Close
 		for _, order := range tradeOrders.CloseOrders {
-			fmt.Println(order)
+			if binance.Trade(order) == nil {
+				continue
+			}
+			err := db.UpdateOrder(order)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			log.Printf("\t%s %.4f of %s at $%.2f (%s)\n",
+				order.Side, order.Qty, order.Symbol, order.OpenPrice, order.Exchange)
 		}
-
-		for _, order := range strategy.OnTick(*ticker, params, hprices, *db) {
+		// Open
+		for _, order := range tradeOrders.OpenOrders {
 			if binance.Trade(order) == nil {
 				continue
 			}

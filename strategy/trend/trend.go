@@ -1,20 +1,24 @@
 package trend
 
 import (
+	"strings"
+
 	"github.com/tonkla/autotp/db"
 	"github.com/tonkla/autotp/strategy"
-	"github.com/tonkla/autotp/types"
+	t "github.com/tonkla/autotp/types"
 )
 
 type OnTickParams struct {
-	Ticker    types.Ticker
-	BotParams types.BotParams
-	HPrices   []types.HistoricalPrice
+	Ticker    t.Ticker
+	OrderBook t.OrderBook
+	BotParams t.BotParams
+	HPrices   []t.HistoricalPrice
 	DB        db.DB
 }
 
-func OnTick(p OnTickParams) *types.TradeOrders {
+func OnTick(p OnTickParams) *t.TradeOrders {
 	ticker := p.Ticker
+	odbook := p.OrderBook
 	params := p.BotParams
 	prices := p.HPrices
 	db := p.DB
@@ -30,14 +34,14 @@ func OnTick(p OnTickParams) *types.TradeOrders {
 	h_1 := p_1.High
 	l_1 := p_1.Low
 
-	var openOrders, closeOrders []types.Order
+	var openOrders, closeOrders []t.Order
 
 	trend := strategy.GetTrend(prices, int(params.MAPeriod))
-	upperPrice := strategy.GetUpperPrice(ticker.Price)
-	lowerPrice := strategy.GetLowerPrice(ticker.Price)
+	upperPrice := odbook.Asks[1].Price
+	lowerPrice := odbook.Bids[1].Price
 
 	// Query Order
-	qo := types.Order{
+	qo := t.Order{
 		BotID:    params.BotID,
 		Exchange: ticker.Exchange,
 		Symbol:   ticker.Symbol,
@@ -45,14 +49,17 @@ func OnTick(p OnTickParams) *types.TradeOrders {
 	}
 
 	// Uptrend
-	if trend >= types.TREND_UP_1 {
+	if trend >= t.TREND_UP_1 {
 		// Stop Loss, for SELL orders
-		qo.Side = types.SIDE_SELL
-		closeOrders = append(closeOrders, db.GetActiveOrders(qo)...)
+		qo.Side = t.SIDE_SELL
+		for _, o := range db.GetActiveOrders(qo) {
+			o.ClosePrice = lowerPrice
+			closeOrders = append(closeOrders, o)
+		}
 
 		// Take Profit, when lower low or previous bar was red
 		if c_0 < l_1 || c_1 < o_1 {
-			qo.Side = types.SIDE_BUY
+			qo.Side = t.SIDE_BUY
 			qo.ClosePrice = upperPrice
 			for _, o := range db.GetProfitOrders(qo) {
 				o.ClosePrice = upperPrice
@@ -61,8 +68,8 @@ func OnTick(p OnTickParams) *types.TradeOrders {
 		}
 
 		// Open a new limit order, when no active BUY order at the price
-		if trend < types.TREND_UP_3 {
-			qo.Side = types.SIDE_BUY
+		if trend < t.TREND_UP_4 {
+			qo.Side = t.SIDE_BUY
 			qo.OpenPrice = lowerPrice
 			qo.ClosePrice = 0
 			if db.GetActiveOrder(qo, params.Slippage) == nil {
@@ -72,14 +79,15 @@ func OnTick(p OnTickParams) *types.TradeOrders {
 	}
 
 	// Downtrend
-	if trend <= types.TREND_DOWN_1 {
+	v := strings.ToUpper(params.View)
+	if trend <= t.TREND_DOWN_1 && (v == "N" || v == t.VIEW_NEUTRAL || v == "S" || v == t.VIEW_SHORT) {
 		// Stop Loss, for BUY orders
-		qo.Side = types.SIDE_BUY
+		qo.Side = t.SIDE_BUY
 		closeOrders = append(closeOrders, db.GetActiveOrders(qo)...)
 
 		// Take Profit, when higher high or previous bar was green
 		if c_0 > h_1 || c_1 > o_1 {
-			qo.Side = types.SIDE_SELL
+			qo.Side = t.SIDE_SELL
 			qo.ClosePrice = lowerPrice
 			for _, o := range db.GetProfitOrders(qo) {
 				o.ClosePrice = lowerPrice
@@ -88,8 +96,8 @@ func OnTick(p OnTickParams) *types.TradeOrders {
 		}
 
 		// Open a new limit order, when no active SELL order at the price
-		if trend > types.TREND_DOWN_3 {
-			qo.Side = types.SIDE_SELL
+		if trend > t.TREND_DOWN_4 {
+			qo.Side = t.SIDE_SELL
 			qo.OpenPrice = upperPrice
 			qo.ClosePrice = 0
 			if db.GetActiveOrder(qo, params.Slippage) == nil {
@@ -98,7 +106,7 @@ func OnTick(p OnTickParams) *types.TradeOrders {
 		}
 	}
 
-	return &types.TradeOrders{
+	return &t.TradeOrders{
 		OpenOrders:  openOrders,
 		CloseOrders: closeOrders,
 	}

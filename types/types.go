@@ -24,6 +24,10 @@ const (
 	TREND_DOWN_3 = -3
 	TREND_DOWN_4 = -4
 	TREND_DOWN_5 = -5
+
+	VIEW_NEUTRAL = "NEUTRAL"
+	VIEW_LONG    = "LONG"
+	VIEW_SHORT   = "SHORT"
 )
 
 type Ticker struct {

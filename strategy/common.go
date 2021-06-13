@@ -107,12 +107,12 @@ func GetATR(hprices []types.HistoricalPrice, period int) float64 {
 }
 
 // GetUpperPrice returns the nearest rounded upper price
-func GetUpperPrice(price float64) float64 {
+func GetUpperPrice(price float64, digit int) float64 {
 	return 0
 }
 
 // GetLowerPrice returns the nearest rounded lower price
-func GetLowerPrice(price float64) float64 {
+func GetLowerPrice(price float64, digit int) float64 {
 	return 0
 }
 
