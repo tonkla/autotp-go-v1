@@ -3,48 +3,65 @@ package grid
 import (
 	"strings"
 
+	"github.com/tonkla/autotp/db"
 	"github.com/tonkla/autotp/strategy"
-	"github.com/tonkla/autotp/types"
+	t "github.com/tonkla/autotp/types"
 )
 
-func OnTick(ticker types.Ticker, p types.BotParams) []types.Order {
-	var orders []types.Order
+type OnTickParams struct {
+	Ticker    t.Ticker
+	BotParams t.BotParams
+	DB        db.DB
+}
+
+func OnTick(params OnTickParams) *t.TradeOrders {
+	ticker := params.Ticker
+	p := params.BotParams
+	db := params.DB
+
+	var orders []t.Order
 
 	buyPrice, sellPrice, gridWidth := strategy.GetGridRange(ticker.Price, p.LowerPrice, p.UpperPrice, p.Grids)
 
-	view := strings.ToUpper(p.View)
-
-	order := types.Order{
+	order := t.Order{
 		BotID:    p.BotID,
 		Exchange: ticker.Exchange,
 		Symbol:   ticker.Symbol,
 		Qty:      p.Qty,
-		Status:   types.ORDER_STATUS_LIMIT,
+		Status:   t.ORDER_STATUS_LIMIT,
 	}
 
-	if view == "LONG" || view == "L" || view == "NEUTRAL" || view == "N" {
+	view := strings.ToUpper(p.View)
+
+	if view == t.VIEW_LONG || view == "L" || view == t.VIEW_NEUTRAL || view == "N" {
 		order.OpenPrice = buyPrice
-		order.Side = types.SIDE_BUY
-		if p.SL > 0 {
-			order.SL = buyPrice - gridWidth*p.SL
-		}
-		if p.TP > 0 {
-			order.TP = buyPrice + gridWidth*p.TP
+		order.Side = t.SIDE_BUY
+		if db.GetActiveOrder(order, p.Slippage) == nil {
+			if p.SL > 0 {
+				order.SL = buyPrice - gridWidth*p.SL
+			}
+			if p.TP > 0 {
+				order.TP = buyPrice + gridWidth*p.TP
+			}
 		}
 		orders = append(orders, order)
 	}
 
-	if view == "SHORT" || view == "S" || view == "NEUTRAL" || view == "N" {
+	if view == t.VIEW_SHORT || view == "S" || view == t.VIEW_NEUTRAL || view == "N" {
 		order.OpenPrice = sellPrice
-		order.Side = types.SIDE_SELL
-		if p.SL > 0 {
-			order.SL = sellPrice + gridWidth*p.SL
+		order.Side = t.SIDE_SELL
+		if db.GetActiveOrder(order, p.Slippage) == nil {
+			if p.SL > 0 {
+				order.SL = sellPrice + gridWidth*p.SL
+			}
+			if p.TP > 0 {
+				order.TP = sellPrice - gridWidth*p.TP
+			}
+			orders = append(orders, order)
 		}
-		if p.TP > 0 {
-			order.TP = sellPrice - gridWidth*p.TP
-		}
-		orders = append(orders, order)
 	}
 
-	return orders
+	return &t.TradeOrders{
+		OpenOrders: orders,
+	}
 }

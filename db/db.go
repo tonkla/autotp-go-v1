@@ -29,7 +29,7 @@ func (d DB) GetActiveOrder(o types.Order, slippage float64) *types.Order {
 	if slippage > 0 {
 		lowerPrice := o.OpenPrice - (o.OpenPrice * slippage)
 		upperPrice := o.OpenPrice + (o.OpenPrice * slippage)
-		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price >= ? AND open_price <= ? AND side = ? AND status <> ?",
+		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price BETWEEN ? AND ? AND side = ? AND status <> ?",
 			o.BotID, o.Exchange, o.Symbol, lowerPrice, upperPrice, o.Side, types.ORDER_STATUS_CLOSED).First(&order)
 	} else {
 		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price = ? AND side = ? AND status <> ?",

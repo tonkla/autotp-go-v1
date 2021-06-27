@@ -67,12 +67,12 @@ func OnTick(p OnTickParams) *t.TradeOrders {
 			}
 		}
 
-		// Open a new limit order, when no active BUY order at the price
+		// Open a new limit order, when no active BUY order
 		if trend < t.TREND_UP_4 {
 			qo.Side = t.SIDE_BUY
 			qo.OpenPrice = lowerPrice
 			qo.ClosePrice = 0
-			if db.GetActiveOrder(qo, params.Slippage) == nil {
+			if len(db.GetActiveOrders(qo)) == 0 {
 				openOrders = append(openOrders, qo)
 			}
 		}
@@ -95,12 +95,12 @@ func OnTick(p OnTickParams) *t.TradeOrders {
 			}
 		}
 
-		// Open a new limit order, when no active SELL order at the price
+		// Open a new limit order, when no active SELL order
 		if trend > t.TREND_DOWN_4 {
 			qo.Side = t.SIDE_SELL
 			qo.OpenPrice = upperPrice
 			qo.ClosePrice = 0
-			if db.GetActiveOrder(qo, params.Slippage) == nil {
+			if len(db.GetActiveOrders(qo)) == 0 {
 				openOrders = append(openOrders, qo)
 			}
 		}
