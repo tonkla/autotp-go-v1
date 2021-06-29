@@ -77,6 +77,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	log.Printf("I'm a bot ID %d, working on Binance's Spot\n", botID)
+
 	params := types.BotParams{
 		BotID:        botID,
 		LowerPrice:   lowerPrice,
@@ -97,26 +99,56 @@ func main() {
 	if intervalSec == 0 {
 		intervalSec = 5
 	}
-	// Create new LIMIT orders
-	log.Printf("I'm a bot ID %d, I'm working...\n", botID)
+
 	for range time.Tick(time.Duration(intervalSec) * time.Second) {
 		ticker := binance.GetTicker(symbol)
 		if ticker == nil || ticker.Price <= 0 {
 			continue
 		}
 
-		hPrices := binance.GetHistoricalPrices(ticker.Symbol, maTimeframe, 100)
-		if len(hPrices) == 0 {
+		orderBook := binance.GetOrderBook(symbol, 5)
+		if orderBook == nil {
 			continue
 		}
 
-		activeOrders := db.GetActiveOrders(types.Order{
-			BotID: botID, Exchange: ticker.Exchange, Symbol: ticker.Symbol, Side: types.SIDE_BUY})
+		hprices := binance.GetHistoricalPrices(ticker.Symbol, maTimeframe, 100)
+		if len(hprices) == 0 {
+			continue
+		}
 
-		for _, order := range strategy.OnTick(*ticker, params, hPrices, activeOrders) {
+		p := strategy.OnTickParams{
+			Ticker:    *ticker,
+			OrderBook: *orderBook,
+			BotParams: params,
+			HPrices:   hprices,
+			DB:        *db,
+		}
+
+		tradeOrders := strategy.OnTick(p)
+		if tradeOrders == nil {
+			continue
+		}
+
+		for _, order := range tradeOrders.CloseOrders {
 			if binance.Trade(order) == nil {
 				continue
 			}
+			order.CloseTime = time.Now().Unix()
+			order.Status = types.ORDER_STATUS_CLOSED
+			err := db.UpdateOrder(order)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			log.Printf("\t%s %.4f of %s at $%.2f (%s)\n",
+				order.Side, order.Qty, order.Symbol, order.OpenPrice, order.Exchange)
+		}
+
+		for _, order := range tradeOrders.OpenOrders {
+			if binance.Trade(order) == nil {
+				continue
+			}
+			order.OpenTime = time.Now().Unix()
 			err := db.CreateOrder(order)
 			if err != nil {
 				log.Println(err)

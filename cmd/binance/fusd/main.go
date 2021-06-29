@@ -77,6 +77,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	log.Printf("I'm a bot ID %d, working on Binance's USDⓈ-M Futures\n", botID)
+
 	params := types.BotParams{
 		BotID:        botID,
 		LowerPrice:   lowerPrice,
@@ -98,7 +100,6 @@ func main() {
 		intervalSec = 5
 	}
 
-	log.Printf("I'm a bot ID %d, I'm working...\n", botID)
 	for range time.Tick(time.Duration(intervalSec) * time.Second) {
 		ticker := binance.GetTicker(symbol)
 		if ticker == nil || ticker.Price <= 0 {
@@ -127,11 +128,12 @@ func main() {
 		if tradeOrders == nil {
 			continue
 		}
-		// Close
+
 		for _, order := range tradeOrders.CloseOrders {
 			if binance.Trade(order) == nil {
 				continue
 			}
+			order.Status = types.ORDER_STATUS_CLOSED
 			err := db.UpdateOrder(order)
 			if err != nil {
 				log.Println(err)
@@ -140,7 +142,7 @@ func main() {
 			log.Printf("\t%s %.4f of %s at $%.2f (%s)\n",
 				order.Side, order.Qty, order.Symbol, order.OpenPrice, order.Exchange)
 		}
-		// Open
+
 		for _, order := range tradeOrders.OpenOrders {
 			if binance.Trade(order) == nil {
 				continue

@@ -1,79 +1,67 @@
-package gridtrend
+package grid
 
 import (
+	"strings"
+
 	"github.com/tonkla/autotp/db"
 	"github.com/tonkla/autotp/strategy"
-	"github.com/tonkla/autotp/talib"
-	"github.com/tonkla/autotp/types"
+	t "github.com/tonkla/autotp/types"
 )
 
-func OnTick(ticker types.Ticker, p types.BotParams, hprices []types.HistoricalPrice, db db.DB) []types.Order {
-	var orders []types.Order
+type OnTickParams struct {
+	Ticker    t.Ticker
+	BotParams t.BotParams
+	DB        db.DB
+}
 
-	bar := hprices[len(hprices)-1]
-	if bar.Open == 0 || bar.High == 0 || bar.Low == 0 || bar.Close == 0 {
-		return nil
-	}
+func OnTick(params OnTickParams) *t.TradeOrders {
+	ticker := params.Ticker
+	p := params.BotParams
+	db := params.DB
 
-	close := bar.Close
-
-	var highes, lows, closes []float64
-	for _, b := range hprices {
-		highes = append(highes, b.High)
-		lows = append(lows, b.Low)
-		closes = append(closes, b.Close)
-	}
-	hwma := talib.WMA(highes, int(p.MAPeriod))
-	hma_0 := hwma[len(hwma)-1]
-
-	lwma := talib.WMA(lows, int(p.MAPeriod))
-	lma_0 := lwma[len(lwma)-1]
-
-	cwma := talib.WMA(closes, int(p.MAPeriod))
-	cma_0 := cwma[len(cwma)-1]
-	cma_1 := cwma[len(cwma)-2]
-
-	atr := hma_0 - lma_0
+	var orders []t.Order
 
 	buyPrice, sellPrice, gridWidth := strategy.GetGridRange(ticker.Price, p.LowerPrice, p.UpperPrice, p.Grids)
 
-	order := types.Order{
+	order := t.Order{
 		BotID:    p.BotID,
 		Exchange: ticker.Exchange,
 		Symbol:   ticker.Symbol,
 		Qty:      p.Qty,
-		Status:   types.ORDER_STATUS_LIMIT,
+		Status:   t.ORDER_STATUS_LIMIT,
 	}
 
-	// Uptrend or Oversold
-	if (cma_1 < cma_0 && close < hma_0+0.5*atr) || close < lma_0-0.5*atr {
+	view := strings.ToUpper(p.View)
+
+	if view == t.VIEW_LONG || view == "L" || view == t.VIEW_NEUTRAL || view == "N" {
 		order.OpenPrice = buyPrice
-		order.Side = types.SIDE_BUY
-		if p.SL > 0 {
-			order.SL = buyPrice - gridWidth*p.SL
+		order.Side = t.SIDE_BUY
+		if db.GetActiveOrder(order, p.Slippage) == nil {
+			if p.SL > 0 {
+				order.SL = buyPrice - gridWidth*p.SL
+			}
+			if p.TP > 0 {
+				order.TP = buyPrice + gridWidth*p.TP
+			}
 		}
-		if p.TP > 0 {
-			order.TP = buyPrice + gridWidth*p.TP
-		}
-		if !db.IsOrderActive(order, p.Slippage) {
-			orders = append(orders, order)
-		}
+		orders = append(orders, order)
 	}
 
-	// Downtrend or Overbought
-	if (cma_1 > cma_0 && close > lma_0-0.5*atr) || close > hma_0+0.5*atr {
+	if view == t.VIEW_SHORT || view == "S" || view == t.VIEW_NEUTRAL || view == "N" {
 		order.OpenPrice = sellPrice
-		order.Side = types.SIDE_SELL
-		if p.SL > 0 {
-			order.SL = sellPrice + gridWidth*p.SL
-		}
-		if p.TP > 0 {
-			order.TP = sellPrice - gridWidth*p.TP
-		}
-		if !db.IsOrderActive(order, p.Slippage) {
+		order.Side = t.SIDE_SELL
+		if db.GetActiveOrder(order, p.Slippage) == nil {
+			if p.SL > 0 {
+				order.SL = sellPrice + gridWidth*p.SL
+			}
+			if p.TP > 0 {
+				order.TP = sellPrice - gridWidth*p.TP
+			}
 			orders = append(orders, order)
 		}
 	}
 
-	return orders
+	return &t.TradeOrders{
+		OpenOrders: orders,
+	}
 }

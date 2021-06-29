@@ -16,12 +16,12 @@ type OnTickParams struct {
 	DB        db.DB
 }
 
-func OnTick(p OnTickParams) *t.TradeOrders {
-	ticker := p.Ticker
-	odbook := p.OrderBook
-	params := p.BotParams
-	prices := p.HPrices
-	db := p.DB
+func OnTick(params OnTickParams) *t.TradeOrders {
+	ticker := params.Ticker
+	odbook := params.OrderBook
+	p := params.BotParams
+	prices := params.HPrices
+	db := params.DB
 
 	p_0 := prices[len(prices)-1]
 	if p_0.Open == 0 || p_0.High == 0 || p_0.Low == 0 || p_0.Close == 0 {
@@ -36,16 +36,16 @@ func OnTick(p OnTickParams) *t.TradeOrders {
 
 	var openOrders, closeOrders []t.Order
 
-	trend := strategy.GetTrend(prices, int(params.MAPeriod))
+	trend := strategy.GetTrend(prices, int(p.MAPeriod))
 	upperPrice := odbook.Asks[1].Price
 	lowerPrice := odbook.Bids[1].Price
 
 	// Query Order
 	qo := t.Order{
-		BotID:    params.BotID,
+		BotID:    p.BotID,
 		Exchange: ticker.Exchange,
 		Symbol:   ticker.Symbol,
-		Qty:      params.Qty,
+		Qty:      p.Qty,
 	}
 
 	// Uptrend
@@ -79,7 +79,7 @@ func OnTick(p OnTickParams) *t.TradeOrders {
 	}
 
 	// Downtrend
-	v := strings.ToUpper(params.View)
+	v := strings.ToUpper(p.View)
 	if trend <= t.TREND_DOWN_1 && (v == "N" || v == t.VIEW_NEUTRAL || v == "S" || v == t.VIEW_SHORT) {
 		// Stop Loss, for BUY orders
 		qo.Side = t.SIDE_BUY
