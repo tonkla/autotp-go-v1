@@ -80,7 +80,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 
 	// Downtrend
 	v := strings.ToUpper(p.View)
-	if trend <= t.TREND_DOWN_1 && (v == "N" || v == t.VIEW_NEUTRAL || v == "S" || v == t.VIEW_SHORT) {
+	if trend <= t.TREND_DOWN_1 && (v == t.VIEW_NEUTRAL || v == "N" || v == t.VIEW_SHORT || v == "S") {
 		// Stop Loss, for BUY orders
 		qo.Side = t.SIDE_BUY
 		closeOrders = append(closeOrders, db.GetActiveOrders(qo)...)

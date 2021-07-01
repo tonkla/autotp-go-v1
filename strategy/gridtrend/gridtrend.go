@@ -11,8 +11,11 @@ import (
 type OnTickParams struct {
 	Ticker    t.Ticker
 	BotParams t.BotParams
+	HPrices   []t.HistoricalPrice
 	DB        db.DB
 }
+
+const openGaps = 2
 
 func OnTick(params OnTickParams) *t.TradeOrders {
 	ticker := params.Ticker
@@ -22,6 +25,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 	var orders []t.Order
 
 	buyPrice, sellPrice, gridWidth := strategy.GetGridRange(ticker.Price, p.LowerPrice, p.UpperPrice, p.Grids)
+	trend := strategy.GetTrend(params.HPrices, int(p.MAPeriod))
 
 	order := t.Order{
 		BotID:    p.BotID,
@@ -33,8 +37,11 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 
 	view := strings.ToUpper(p.View)
 
-	if view == t.VIEW_LONG || view == "L" || view == t.VIEW_NEUTRAL || view == "N" {
+	if view == t.VIEW_NEUTRAL || view == "N" || view == t.VIEW_LONG || view == "L" {
 		order.OpenPrice = buyPrice
+		if trend <= t.TREND_DOWN_1 {
+			order.OpenPrice = buyPrice - gridWidth*openGaps
+		}
 		order.Side = t.SIDE_BUY
 		if db.GetActiveOrder(order, p.Slippage) == nil {
 			if p.SL > 0 {
@@ -47,8 +54,11 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		orders = append(orders, order)
 	}
 
-	if view == t.VIEW_SHORT || view == "S" || view == t.VIEW_NEUTRAL || view == "N" {
+	if view == t.VIEW_NEUTRAL || view == "N" || view == t.VIEW_SHORT || view == "S" {
 		order.OpenPrice = sellPrice
+		if trend >= t.TREND_UP_1 {
+			order.OpenPrice = sellPrice + gridWidth*openGaps
+		}
 		order.Side = t.SIDE_SELL
 		if db.GetActiveOrder(order, p.Slippage) == nil {
 			if p.SL > 0 {

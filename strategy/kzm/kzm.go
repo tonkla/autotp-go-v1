@@ -2,7 +2,7 @@ package kzm
 
 import (
 	"github.com/tonkla/autotp/db"
-	"github.com/tonkla/autotp/strategy/grid"
+	grid "github.com/tonkla/autotp/strategy/gridtrend"
 	"github.com/tonkla/autotp/strategy/trend"
 	"github.com/tonkla/autotp/types"
 )
@@ -24,7 +24,7 @@ func OnTick(params OnTickParams) *types.TradeOrders {
 
 	var openOrders, closeOrders []types.Order
 
-	orders := grid.OnTick(grid.OnTickParams{Ticker: ticker, BotParams: p, DB: db})
+	orders := grid.OnTick(grid.OnTickParams{Ticker: ticker, BotParams: p, HPrices: prices, DB: db})
 	if orders != nil {
 		openOrders = append(openOrders, orders.OpenOrders...)
 		closeOrders = append(closeOrders, orders.CloseOrders...)
