@@ -6,12 +6,17 @@ const (
 	EXC_FTX     = "FTX"
 	EXC_SATANG  = "SATANG"
 
-	ORDER_STATUS_LIMIT  = "LIMIT"
-	ORDER_STATUS_OPEN   = "OPEN"
+	ORDER_SIDE_BUY  = "BUY"
+	ORDER_SIDE_SELL = "SELL"
+
+	ORDER_STATUS_NEW    = "NEW"
+	ORDER_STATUS_FILLED = "FILLED"
 	ORDER_STATUS_CLOSED = "CLOSED"
 
-	SIDE_BUY  = "BUY"
-	SIDE_SELL = "SELL"
+	ORDER_TYPE_LIMIT  = "LIMIT"
+	ORDER_TYPE_MARKET = "MARKET"
+	ORDER_TYPE_SL     = "STOP_LOSS"
+	ORDER_TYPE_TP     = "TAKE_PROFIT"
 
 	TREND_NO     = 0
 	TREND_UP_1   = 1
@@ -54,10 +59,11 @@ type Order struct {
 	BotID      int64  `gorm:"index"`
 	Exchange   string `gorm:"index"`
 	Symbol     string `gorm:"index"`
-	OpenPrice  float64
-	ClosePrice float64
+	RefID      int64  `gorm:"index"`
 	OpenTime   int64
 	CloseTime  int64
+	OpenPrice  float64
+	ClosePrice float64
 	SL         float64
 	TP         float64
 	Qty        float64

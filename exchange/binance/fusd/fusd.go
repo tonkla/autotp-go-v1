@@ -1,30 +1,34 @@
 package fusd
 
 import (
-	"encoding/json"
 	"fmt"
+	"net/http"
+	"strings"
+	"time"
 
 	"github.com/tidwall/gjson"
+	"github.com/tonkla/autotp/exchange/binance"
 	"github.com/tonkla/autotp/helper"
 	t "github.com/tonkla/autotp/types"
 )
 
 const (
-	urlBase    = "https://fapi.binance.com/fapi/v1"
-	pathTicker = "/ticker/price"
-	pathDepth  = "/depth"
-	pathKlines = "/klines"
-	pathTrade  = "/order"
+	urlBase      = "https://fapi.binance.com/fapi/v1"
+	pathDepth    = "/depth"
+	pathKlines   = "/klines"
+	pathNewOrder = "/order"
+	pathTicker   = "/ticker/price"
 )
 
 // GetTicker returns the latest ticker
 func GetTicker(symbol string) *t.Ticker {
-	url := fmt.Sprintf("%s%s?symbol=%s", urlBase, pathTicker, symbol)
-	data, err := helper.Get(url)
+	var url strings.Builder
+	fmt.Fprintf(&url, "%s%s?symbol=%s", urlBase, pathTicker, symbol)
+	data, err := helper.Get(url.String())
 	if err != nil {
 		return nil
 	}
-	r := gjson.Parse(string(data))
+	r := gjson.ParseBytes(data)
 	return &t.Ticker{
 		Exchange: t.EXC_BINANCE,
 		Symbol:   r.Get("symbol").String(),
@@ -35,14 +39,15 @@ func GetTicker(symbol string) *t.Ticker {
 
 // GetOrderBook returns an order book (market depth)
 func GetOrderBook(symbol string, limit int) *t.OrderBook {
-	url := fmt.Sprintf("%s%s?symbol=%s&limit=%d", urlBase, pathDepth, symbol, limit)
-	data, err := helper.Get(url)
+	var url strings.Builder
+	fmt.Fprintf(&url, "%s%s?symbol=%s&limit=%d", urlBase, pathDepth, symbol, limit)
+	data, err := helper.Get(url.String())
 	if err != nil {
 		return nil
 	}
 
 	var bids, asks []t.ExOrder
-	result := gjson.Parse(string(data))
+	result := gjson.ParseBytes(data)
 	for _, bid := range result.Get("bids").Array() {
 		b := bid.Array()
 		bids = append(bids, t.ExOrder{
@@ -65,24 +70,17 @@ func GetOrderBook(symbol string, limit int) *t.OrderBook {
 	}
 }
 
-func GetOpenOrders(symbol string) []t.Order {
-	return []t.Order{}
-}
-
-func GetOrderHistory(symbol string) []t.Order {
-	return []t.Order{}
-}
-
 // GetHistoricalPrices returns a list of k-lines/candlesticks
 func GetHistoricalPrices(symbol string, timeframe string, limit int) []t.HistoricalPrice {
-	url := fmt.Sprintf("%s%s?symbol=%s&interval=%s&limit=%d", urlBase, pathKlines, symbol, timeframe, limit)
-	data, err := helper.Get(url)
+	var url strings.Builder
+	fmt.Fprintf(&url, "%s%s?symbol=%s&interval=%s&limit=%d", urlBase, pathKlines, symbol, timeframe, limit)
+	data, err := helper.Get(url.String())
 	if err != nil {
 		return nil
 	}
 
 	var hPrices []t.HistoricalPrice
-	for _, data := range gjson.Parse(string(data)).Array() {
+	for _, data := range gjson.ParseBytes(data).Array() {
 		d := data.Array()
 		p := t.HistoricalPrice{
 			Symbol: symbol,
@@ -97,15 +95,36 @@ func GetHistoricalPrices(symbol string, timeframe string, limit int) []t.Histori
 	return hPrices
 }
 
-func Trade(order t.Order) *t.Order {
-	url := fmt.Sprintf("%s%s", urlBase, pathTrade)
-	data, err := json.Marshal(order)
+func GetOpenOrders(symbol string) []t.Order {
+	return []t.Order{}
+}
+
+func GetOrderHistory(symbol string) []t.Order {
+	return []t.Order{}
+}
+
+func NewOrder(o t.Order, apiKey string, secretKey string) *t.Order {
+	var payload strings.Builder
+	fmt.Fprintf(&payload,
+		"symbol=%s&side=%s&type=LIMIT&quantity=%f&price=%f&timestamp=%d",
+		o.Symbol, o.Side, o.Qty, o.OpenPrice, time.Now().Unix())
+
+	signature := binance.Sign(payload.String(), secretKey)
+
+	var url strings.Builder
+	fmt.Fprintf(&url, "%s%s", urlBase, pathNewOrder)
+	fmt.Fprintf(&url, "?%s&signature=%s", payload, signature)
+	url.WriteString(payload.String())
+	resp, err := helper.Post(url.String(), newHeader(apiKey))
 	if err != nil {
 		return nil
 	}
-	_, err = helper.Post(url, string(data))
-	if err != nil {
-		return nil
-	}
-	return &order
+	fmt.Println("Response:", resp)
+	return &o
+}
+
+func newHeader(apiKey string) http.Header {
+	var header http.Header
+	header.Set("X-MBX-APIKEY", apiKey)
+	return header
 }

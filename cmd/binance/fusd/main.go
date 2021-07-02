@@ -51,6 +51,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	apiKey := viper.GetString("apiKey")
+	secretKey := viper.GetString("secretKey")
 	botID := viper.GetInt64("botID")
 	symbol := viper.GetString("symbol")
 	lowerPrice := viper.GetFloat64("lowerPrice")
@@ -130,7 +132,7 @@ func main() {
 		}
 
 		for _, order := range tradeOrders.CloseOrders {
-			if binance.Trade(order) == nil {
+			if binance.NewOrder(order, apiKey, secretKey) == nil {
 				continue
 			}
 			order.Status = types.ORDER_STATUS_CLOSED
@@ -144,7 +146,7 @@ func main() {
 		}
 
 		for _, order := range tradeOrders.OpenOrders {
-			if binance.Trade(order) == nil {
+			if binance.NewOrder(order, apiKey, secretKey) == nil {
 				continue
 			}
 			err := db.CreateOrder(order)

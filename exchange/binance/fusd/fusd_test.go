@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-var symbol = "DOGEUSDT"
+const symbol = "BNBUSDT"
 
 func TestGetTicker(t *testing.T) {
 	ticker := GetTicker(symbol)

@@ -32,7 +32,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		Exchange: ticker.Exchange,
 		Symbol:   ticker.Symbol,
 		Qty:      p.Qty,
-		Status:   t.ORDER_STATUS_LIMIT,
+		Status:   t.ORDER_STATUS_NEW,
 	}
 
 	view := strings.ToUpper(p.View)
@@ -42,7 +42,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		if trend <= t.TREND_DOWN_1 {
 			order.OpenPrice = buyPrice - gridWidth*openGaps
 		}
-		order.Side = t.SIDE_BUY
+		order.Side = t.ORDER_SIDE_BUY
 		if db.GetActiveOrder(order, p.Slippage) == nil {
 			if p.SL > 0 {
 				order.SL = buyPrice - gridWidth*p.SL
@@ -59,7 +59,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		if trend >= t.TREND_UP_1 {
 			order.OpenPrice = sellPrice + gridWidth*openGaps
 		}
-		order.Side = t.SIDE_SELL
+		order.Side = t.ORDER_SIDE_SELL
 		if db.GetActiveOrder(order, p.Slippage) == nil {
 			if p.SL > 0 {
 				order.SL = sellPrice + gridWidth*p.SL

@@ -4,38 +4,26 @@ import (
 	"testing"
 )
 
-const (
-	name   = "BINANCE"
-	symbol = "bnbbusd"
-)
-
-func TestGetName(t *testing.T) {
-	ex := New()
-	if ex.GetName() != name {
-		t.Fail()
-	}
-}
+const symbol = "BNBUSDT"
 
 func TestGetTicker(t *testing.T) {
-	ex := New()
-	ticker := ex.GetTicker(symbol)
-	if ticker.Price == 0 || ticker.Qty == 0 {
-		t.Fail()
-	}
-}
-
-func TestGetHistoricalPrices(t *testing.T) {
-	ex := New()
-	prices := ex.GetHistoricalPrices(symbol, "1d", 1)
-	if len(prices) != 1 || prices[0].Open == 0 {
+	ticker := GetTicker(symbol)
+	if ticker == nil || ticker.Price <= 0 {
 		t.Fail()
 	}
 }
 
 func TestGetOrderBook(t *testing.T) {
-	ex := New()
-	book := ex.GetOrderBook(symbol, 5)
-	if len(book.Bids) != 5 || len(book.Asks) != 5 || book.Bids[0].Price == 0 || book.Asks[0].Price == 0 {
+	book := GetOrderBook(symbol, 5)
+	if book == nil || len(book.Asks) != 5 || len(book.Bids) != 5 ||
+		book.Asks[0].Price <= 0 || book.Bids[0].Price <= 0 {
+		t.Fail()
+	}
+}
+
+func TestGetHistoricalPrices(t *testing.T) {
+	prices := GetHistoricalPrices(symbol, "1d", 10)
+	if len(prices) == 0 || len(prices) != 10 || prices[0].Open == 0 {
 		t.Fail()
 	}
 }

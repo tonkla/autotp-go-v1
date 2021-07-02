@@ -50,14 +50,14 @@ func (d DB) GetActiveOrders(o types.Order) []types.Order {
 func (d DB) GetProfitOrders(o types.Order) []types.Order {
 	var orders []types.Order
 	fee := o.ClosePrice * 0.002 // tx fee is 0.2%
-	if o.Side == types.SIDE_BUY {
+	if o.Side == types.ORDER_SIDE_BUY {
 		priceWithFee := o.ClosePrice - fee
 		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND status = ? AND open_price < ?",
-			o.BotID, o.Exchange, o.Symbol, o.Side, types.ORDER_STATUS_OPEN, priceWithFee).Find(&orders)
-	} else if o.Side == types.SIDE_SELL {
+			o.BotID, o.Exchange, o.Symbol, o.Side, types.ORDER_STATUS_FILLED, priceWithFee).Find(&orders)
+	} else if o.Side == types.ORDER_SIDE_SELL {
 		priceWithFee := o.ClosePrice + fee
 		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND status = ? AND open_price > ?",
-			o.BotID, o.Exchange, o.Symbol, o.Side, types.ORDER_STATUS_OPEN, priceWithFee).Find(&orders)
+			o.BotID, o.Exchange, o.Symbol, o.Side, types.ORDER_STATUS_FILLED, priceWithFee).Find(&orders)
 	}
 	return orders
 }

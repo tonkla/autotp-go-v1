@@ -2,151 +2,132 @@ package spot
 
 import (
 	"fmt"
-	"log"
+	"net/http"
 	"strings"
+	"time"
 
 	"github.com/tidwall/gjson"
 
+	"github.com/tonkla/autotp/exchange/binance"
 	"github.com/tonkla/autotp/helper"
-	"github.com/tonkla/autotp/types"
+	t "github.com/tonkla/autotp/types"
 )
 
 const (
-	urlBase = "https://api.binance.com/api/v3"
-	// urlTest   = "https://testnet.binance.vision/api/v3"
-	pathDepth    = "/depth?symbol=%s&limit=%d"
-	pathHisPrice = "/klines?symbol=%s&interval=%s&limit=%d"
-	pathTicker   = "/ticker/24hr?symbol=%s"
+	urlBase      = "https://api.binance.com/api/v3"
+	pathDepth    = "/depth"
+	pathKlines   = "/klines"
+	pathNewOrder = "/order"
+	pathTicker   = "/ticker/price"
 )
 
-type Binance struct {
-}
-
-func New() Binance {
-	return Binance{}
-}
-
-func sanitizeSymbol(symbol string) string {
-	s := strings.ToUpper(symbol)
-	s = strings.ReplaceAll(s, "-", "")
-	s = strings.ReplaceAll(s, "_", "")
-	return s
-}
-
-// GetName returns "BINANCE"
-func (b Binance) GetName() string {
-	return types.EXC_BINANCE
-}
-
-// GetTicker returns the latest ticker of the symbol
-func (b Binance) GetTicker(symbol string) types.Ticker {
-	_symbol := sanitizeSymbol(symbol)
-	path := fmt.Sprintf(pathTicker, _symbol)
-	url := fmt.Sprintf("%s%s", urlBase, path)
+// GetTicker returns the latest ticker
+func GetTicker(symbol string) *t.Ticker {
+	url := fmt.Sprintf("%s%s?symbol=%s", urlBase, pathTicker, symbol)
 	data, err := helper.Get(url)
 	if err != nil {
-		log.Println(err)
-		return types.Ticker{}
+		return nil
 	}
-
-	r := gjson.Parse(string(data))
-	return types.Ticker{
-		Symbol: _symbol,
-		Price:  r.Get("lastPrice").Float(),
-		Qty:    r.Get("lastQty").Float(),
+	r := gjson.ParseBytes(data)
+	return &t.Ticker{
+		Exchange: t.EXC_BINANCE,
+		Symbol:   r.Get("symbol").String(),
+		Price:    r.Get("price").Float(),
+		Time:     r.Get("time").Int(),
 	}
 }
 
-// GetHistoricalPrices returns a list of k-lines/candlesticks of the symbol
-func (b Binance) GetHistoricalPrices(symbol string, interval string, limit int) []types.HistoricalPrice {
-	_symbol := sanitizeSymbol(symbol)
-	path := fmt.Sprintf(pathHisPrice, _symbol, interval, limit)
-	url := fmt.Sprintf("%s%s", urlBase, path)
+// GetOrderBook returns an order book (market depth)
+func GetOrderBook(symbol string, limit int) *t.OrderBook {
+	url := fmt.Sprintf("%s%s?symbol=%s&limit=%d", urlBase, pathDepth, symbol, limit)
 	data, err := helper.Get(url)
 	if err != nil {
-		log.Println(err)
 		return nil
 	}
 
-	var hPrices []types.HistoricalPrice
-	for _, data := range gjson.Parse(string(data)).Array() {
+	var bids, asks []t.ExOrder
+	result := gjson.ParseBytes(data)
+	for _, bid := range result.Get("bids").Array() {
+		b := bid.Array()
+		bids = append(bids, t.ExOrder{
+			Price: b[0].Float(),
+			Qty:   b[1].Float(),
+		})
+	}
+	for _, ask := range result.Get("asks").Array() {
+		a := ask.Array()
+		asks = append(asks, t.ExOrder{
+			Price: a[0].Float(),
+			Qty:   a[1].Float(),
+		})
+	}
+	return &t.OrderBook{
+		Exchange: t.EXC_BINANCE,
+		Symbol:   symbol,
+		Bids:     bids,
+		Asks:     asks,
+	}
+}
+
+func GetOrder(symbol string, id int) *t.Order {
+	return nil
+}
+
+func GetOpenOrders(symbol string) []t.Order {
+	return []t.Order{}
+}
+
+func GetOrderHistory(symbol string) []t.Order {
+	return []t.Order{}
+}
+
+// GetHistoricalPrices returns a list of k-lines/candlesticks
+func GetHistoricalPrices(symbol string, timeframe string, limit int) []t.HistoricalPrice {
+	url := fmt.Sprintf("%s%s?symbol=%s&interval=%s&limit=%d", urlBase, pathKlines, symbol, timeframe, limit)
+	data, err := helper.Get(url)
+	if err != nil {
+		return nil
+	}
+
+	var hprices []t.HistoricalPrice
+	for _, data := range gjson.ParseBytes(data).Array() {
 		d := data.Array()
-		p := types.HistoricalPrice{
-			Symbol: _symbol,
+		p := t.HistoricalPrice{
+			Symbol: symbol,
 			Time:   d[0].Int() / 1000,
 			Open:   d[1].Float(),
 			High:   d[2].Float(),
 			Low:    d[3].Float(),
 			Close:  d[4].Float(),
 		}
-		hPrices = append(hPrices, p)
+		hprices = append(hprices, p)
 	}
-	return hPrices
+	return hprices
 }
 
-// GetOrderBook returns an order book of the symbol
-func (b Binance) GetOrderBook(symbol string, limit int) types.OrderBook {
-	_symbol := sanitizeSymbol(symbol)
-	path := fmt.Sprintf(pathDepth, _symbol, limit)
-	url := fmt.Sprintf("%s%s", urlBase, path)
+// NewOrder sends an order to trade on the exchange
+func NewOrder(o t.Order, apiKey string, secretKey string) *t.Order {
+	var payload strings.Builder
+	fmt.Fprintf(&payload,
+		"symbol=%s&side=%s&type=LIMIT&quantity=%f&price=%f&timestamp=%d",
+		o.Symbol, o.Side, o.Qty, o.OpenPrice, time.Now().Unix())
 
-	data, err := helper.Get(url)
+	signature := binance.Sign(payload.String(), secretKey)
+
+	var url strings.Builder
+	fmt.Fprintf(&url, "%s%s", urlBase, pathNewOrder)
+	fmt.Fprintf(&url, "?%s&signature=%s", payload, signature)
+	url.WriteString(payload.String())
+	resp, err := helper.Post(url.String(), newHeader(apiKey))
 	if err != nil {
-		log.Println(err)
-		return types.OrderBook{}
+		return nil
 	}
-
-	orders := gjson.Parse(string(data))
-
-	var bids []types.ExOrder
-	for _, bid := range orders.Get("bids").Array() {
-		b := bid.Array()
-		ord := types.ExOrder{
-			Side:  types.SIDE_BUY,
-			Price: b[0].Float(),
-			Qty:   b[1].Float()}
-		bids = append(bids, ord)
-	}
-
-	var asks []types.ExOrder
-	for _, ask := range orders.Get("asks").Array() {
-		a := ask.Array()
-		ord := types.ExOrder{
-			Side:  "SELL",
-			Price: a[0].Float(),
-			Qty:   a[1].Float()}
-		asks = append(asks, ord)
-	}
-
-	return types.OrderBook{
-		Exchange: types.EXC_BINANCE,
-		Symbol:   _symbol,
-		Bids:     bids,
-		Asks:     asks}
+	fmt.Println("Response:", resp)
+	return &o
 }
 
-func (b Binance) GetOpenOrders() []types.Order {
-	return []types.Order{}
-}
-
-func (b Binance) GetOrderHistory() []types.Order {
-	return []types.Order{}
-}
-
-func (b Binance) OpenOrder(order types.Order) *types.Order {
-	// url := ""
-	// data := ""
-	// helper.Post(url, data)
-	return nil
-}
-
-func (b Binance) CloseOrder(order types.Order) *types.Order {
-	// url := ""
-	// data := ""
-	// helper.Post(url, data)
-	return nil
-}
-
-func (b Binance) CloseOrderByID(id string) *types.Order {
-	return nil
+func newHeader(apiKey string) http.Header {
+	var header http.Header
+	header.Set("X-MBX-APIKEY", apiKey)
+	return header
 }
