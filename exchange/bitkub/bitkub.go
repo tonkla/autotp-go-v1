@@ -50,13 +50,13 @@ func (b Bitkub) GetOrderBook(symbol string, limit int) types.OrderBook {
 		return types.OrderBook{}
 	}
 
-	orders := gjson.Parse(string(data))
+	orders := gjson.ParseBytes(data)
 
 	var bids []types.ExOrder
 	for _, bid := range orders.Get("bids").Array() {
 		b := bid.Array()
 		ord := types.ExOrder{
-			Side:  types.SIDE_BUY,
+			Side:  types.ORDER_SIDE_BUY,
 			Price: b[0].Float(),
 			Qty:   b[1].Float(),
 		}
@@ -67,7 +67,7 @@ func (b Bitkub) GetOrderBook(symbol string, limit int) types.OrderBook {
 	for _, ask := range orders.Get("asks").Array() {
 		a := ask.Array()
 		ord := types.ExOrder{
-			Side:  types.SIDE_SELL,
+			Side:  types.ORDER_SIDE_SELL,
 			Price: a[0].Float(),
 			Qty:   a[1].Float(),
 		}

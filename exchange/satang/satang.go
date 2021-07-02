@@ -38,7 +38,7 @@ func (s Satang) GetTicker(symbol string) types.Ticker {
 		log.Println(err)
 		return types.Ticker{}
 	}
-	r := gjson.Parse(string(data))
+	r := gjson.ParseBytes(data)
 	return types.Ticker{
 		Symbol: symbol,
 		Price:  r.Get("lastPrice").Float(),
@@ -57,7 +57,7 @@ func (s Satang) GetHistoricalPrices(symbol string, interval string, limit int) [
 	}
 
 	var hPrices []types.HistoricalPrice
-	for _, data := range gjson.Parse(string(data)).Array() {
+	for _, data := range gjson.ParseBytes(data).Array() {
 		d := data.Array()
 		p := types.HistoricalPrice{
 			Symbol: symbol,
@@ -83,13 +83,13 @@ func (s Satang) GetOrderBook(symbol string, limit int) types.OrderBook {
 		return types.OrderBook{}
 	}
 
-	orders := gjson.Parse(string(data))
+	orders := gjson.ParseBytes(data)
 
 	var bids []types.ExOrder
 	for _, bid := range orders.Get("bids").Array() {
 		b := bid.Array()
 		ord := types.ExOrder{
-			Side:  types.SIDE_BUY,
+			Side:  types.ORDER_SIDE_BUY,
 			Price: b[0].Float(),
 			Qty:   b[1].Float()}
 		bids = append(bids, ord)
@@ -99,7 +99,7 @@ func (s Satang) GetOrderBook(symbol string, limit int) types.OrderBook {
 	for _, ask := range orders.Get("asks").Array() {
 		a := ask.Array()
 		ord := types.ExOrder{
-			Side:  types.SIDE_SELL,
+			Side:  types.ORDER_SIDE_SELL,
 			Price: a[0].Float(),
 			Qty:   a[1].Float()}
 		asks = append(asks, ord)

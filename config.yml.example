@@ -1,6 +1,6 @@
-botID: 1
 apiKey: API_KEY
 secretKey: SECRET_KEY
+botID: 1
 intervalSec: 5
 symbol: BNBUSDT
 lowerPrice: 100
