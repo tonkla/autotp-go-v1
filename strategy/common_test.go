@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	binance "github.com/tonkla/autotp/exchange/binance/fusd"
+	"github.com/tonkla/autotp/exchange/binance"
 	"github.com/tonkla/autotp/talib"
 )
 
@@ -15,14 +15,16 @@ const (
 )
 
 func TestGetTrend(t *testing.T) {
-	bars := binance.GetHistoricalPrices(symbol, timeframe, 20)
+	client := binance.NewSpotClient("", "")
+	bars := client.GetHistoricalPrices(symbol, timeframe, 20)
 	trend := GetTrend(bars, period)
 	fmt.Println(trend)
 	t.Error("Skip")
 }
 
 func TestGetATR(t *testing.T) {
-	bars := binance.GetHistoricalPrices(symbol, timeframe, 100)
+	client := binance.NewSpotClient("", "")
+	bars := client.GetHistoricalPrices(symbol, timeframe, 100)
 
 	var h, l, c []float64
 	for _, b := range bars {

@@ -1,38 +1,38 @@
 package types
 
 const (
-	EXC_BINANCE = "BINANCE"
-	EXC_BITKUB  = "BITKUB"
-	EXC_FTX     = "FTX"
-	EXC_SATANG  = "SATANG"
+	ExcBinance = "BINANCE"
+	ExcBitkub  = "BITKUB"
+	ExcFTX     = "FTX"
+	ExcSatang  = "SATANG"
 
-	ORDER_SIDE_BUY  = "BUY"
-	ORDER_SIDE_SELL = "SELL"
+	OrderStatusNew    = "NEW"
+	OrderStatusFilled = "FILLED"
+	OrderStatusClosed = "CLOSED"
 
-	ORDER_STATUS_NEW    = "NEW"
-	ORDER_STATUS_FILLED = "FILLED"
-	ORDER_STATUS_CLOSED = "CLOSED"
+	OrderSideBuy  = "BUY"
+	OrderSideSell = "SELL"
 
-	ORDER_TYPE_LIMIT  = "LIMIT"
-	ORDER_TYPE_MARKET = "MARKET"
-	ORDER_TYPE_SL     = "STOP_LOSS"
-	ORDER_TYPE_TP     = "TAKE_PROFIT"
+	OrderTypeLimit  = "LIMIT"
+	OrderTypeMarket = "MARKET"
+	OrderTypeSL     = "STOP_LOSS"
+	OrderTypeTP     = "TAKE_PROFIT"
 
-	TREND_NO     = 0
-	TREND_UP_1   = 1
-	TREND_UP_2   = 2
-	TREND_UP_3   = 3
-	TREND_UP_4   = 4
-	TREND_UP_5   = 5
-	TREND_DOWN_1 = -1
-	TREND_DOWN_2 = -2
-	TREND_DOWN_3 = -3
-	TREND_DOWN_4 = -4
-	TREND_DOWN_5 = -5
+	TrendNo    = 0
+	TrendUp1   = 1
+	TrendUp2   = 2
+	TrendUp3   = 3
+	TrendUp4   = 4
+	TrendUp5   = 5
+	TrendDown1 = -1
+	TrendDown2 = -2
+	TrendDown3 = -3
+	TrendDown4 = -4
+	TrendDown5 = -5
 
-	VIEW_NEUTRAL = "NEUTRAL"
-	VIEW_LONG    = "LONG"
-	VIEW_SHORT   = "SHORT"
+	ViewNeutral = "NEUTRAL"
+	ViewLong    = "LONG"
+	ViewShort   = "SHORT"
 )
 
 type Ticker struct {

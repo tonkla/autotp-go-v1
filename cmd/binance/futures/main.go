@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/tonkla/autotp/db"
-	binance "github.com/tonkla/autotp/exchange/binance/fusd"
+	"github.com/tonkla/autotp/exchange/binance"
 	"github.com/tonkla/autotp/strategy/trend"
 	"github.com/tonkla/autotp/types"
 )
@@ -102,18 +102,20 @@ func main() {
 		intervalSec = 5
 	}
 
+	client := binance.NewFuturesClient(apiKey, secretKey)
+
 	for range time.Tick(time.Duration(intervalSec) * time.Second) {
-		ticker := binance.GetTicker(symbol)
+		ticker := client.GetTicker(symbol)
 		if ticker == nil || ticker.Price <= 0 {
 			continue
 		}
 
-		orderBook := binance.GetOrderBook(symbol, 5)
+		orderBook := client.GetOrderBook(symbol, 5)
 		if orderBook == nil {
 			continue
 		}
 
-		hprices := binance.GetHistoricalPrices(ticker.Symbol, maTimeframe, 100)
+		hprices := client.GetHistoricalPrices(ticker.Symbol, maTimeframe, 100)
 		if len(hprices) == 0 {
 			continue
 		}
@@ -132,10 +134,10 @@ func main() {
 		}
 
 		for _, order := range tradeOrders.CloseOrders {
-			if binance.NewOrder(order, apiKey, secretKey) == nil {
+			if client.PlaceOrder(order) == nil {
 				continue
 			}
-			order.Status = types.ORDER_STATUS_CLOSED
+			order.Status = types.OrderStatusClosed
 			err := db.UpdateOrder(order)
 			if err != nil {
 				log.Println(err)
@@ -146,7 +148,7 @@ func main() {
 		}
 
 		for _, order := range tradeOrders.OpenOrders {
-			if binance.NewOrder(order, apiKey, secretKey) == nil {
+			if client.PlaceOrder(order) == nil {
 				continue
 			}
 			err := db.CreateOrder(order)

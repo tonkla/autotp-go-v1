@@ -49,9 +49,9 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 	}
 
 	// Uptrend
-	if trend >= t.TREND_UP_1 {
+	if trend >= t.TrendUp1 {
 		// Stop Loss, for SELL orders
-		qo.Side = t.ORDER_SIDE_SELL
+		qo.Side = t.OrderSideSell
 		for _, o := range db.GetActiveOrders(qo) {
 			o.ClosePrice = lowerPrice
 			closeOrders = append(closeOrders, o)
@@ -59,7 +59,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 
 		// Take Profit, when lower low or previous bar was red
 		if c_0 < l_1 || c_1 < o_1 {
-			qo.Side = t.ORDER_SIDE_BUY
+			qo.Side = t.OrderSideBuy
 			qo.ClosePrice = upperPrice
 			for _, o := range db.GetProfitOrders(qo) {
 				o.ClosePrice = upperPrice
@@ -68,8 +68,8 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		}
 
 		// Open a new limit order, when no active BUY order
-		if trend < t.TREND_UP_4 {
-			qo.Side = t.ORDER_SIDE_BUY
+		if trend < t.TrendUp4 {
+			qo.Side = t.OrderSideBuy
 			qo.OpenPrice = lowerPrice
 			qo.ClosePrice = 0
 			if len(db.GetActiveOrders(qo)) == 0 {
@@ -80,14 +80,14 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 
 	// Downtrend
 	v := strings.ToUpper(p.View)
-	if trend <= t.TREND_DOWN_1 && (v == t.VIEW_NEUTRAL || v == "N" || v == t.VIEW_SHORT || v == "S") {
+	if trend <= t.TrendDown1 && (v == t.ViewNeutral || v == "N" || v == t.ViewShort || v == "S") {
 		// Stop Loss, for BUY orders
-		qo.Side = t.ORDER_SIDE_BUY
+		qo.Side = t.OrderSideBuy
 		closeOrders = append(closeOrders, db.GetActiveOrders(qo)...)
 
 		// Take Profit, when higher high or previous bar was green
 		if c_0 > h_1 || c_1 > o_1 {
-			qo.Side = t.ORDER_SIDE_SELL
+			qo.Side = t.OrderSideSell
 			qo.ClosePrice = lowerPrice
 			for _, o := range db.GetProfitOrders(qo) {
 				o.ClosePrice = lowerPrice
@@ -96,8 +96,8 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		}
 
 		// Open a new limit order, when no active SELL order
-		if trend > t.TREND_DOWN_4 {
-			qo.Side = t.ORDER_SIDE_SELL
+		if trend > t.TrendDown4 {
+			qo.Side = t.OrderSideSell
 			qo.OpenPrice = upperPrice
 			qo.ClosePrice = 0
 			if len(db.GetActiveOrders(qo)) == 0 {

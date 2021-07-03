@@ -26,7 +26,7 @@ func New() *Bitkub {
 
 // GetName returns "BITKUB"
 func (b Bitkub) GetName() string {
-	return types.EXC_BITKUB
+	return types.ExcBitkub
 }
 
 // GetTicker returns the latest ticker of the symbol
@@ -56,7 +56,7 @@ func (b Bitkub) GetOrderBook(symbol string, limit int) types.OrderBook {
 	for _, bid := range orders.Get("bids").Array() {
 		b := bid.Array()
 		ord := types.ExOrder{
-			Side:  types.ORDER_SIDE_BUY,
+			Side:  types.OrderSideBuy,
 			Price: b[0].Float(),
 			Qty:   b[1].Float(),
 		}
@@ -67,7 +67,7 @@ func (b Bitkub) GetOrderBook(symbol string, limit int) types.OrderBook {
 	for _, ask := range orders.Get("asks").Array() {
 		a := ask.Array()
 		ord := types.ExOrder{
-			Side:  types.ORDER_SIDE_SELL,
+			Side:  types.OrderSideSell,
 			Price: a[0].Float(),
 			Qty:   a[1].Float(),
 		}
@@ -75,7 +75,7 @@ func (b Bitkub) GetOrderBook(symbol string, limit int) types.OrderBook {
 	}
 
 	return types.OrderBook{
-		Exchange: types.EXC_BITKUB,
+		Exchange: types.ExcBitkub,
 		Symbol:   symbol,
 		Bids:     bids,
 		Asks:     asks}

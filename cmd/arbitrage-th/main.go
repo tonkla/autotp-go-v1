@@ -36,9 +36,9 @@ func main() {
 	var satang types.OrderBook
 
 	for book := range ch {
-		if book.Exchange == types.EXC_BITKUB {
+		if book.Exchange == types.ExcBitkub {
 			bitkub = book
-		} else if book.Exchange == types.EXC_SATANG {
+		} else if book.Exchange == types.ExcSatang {
 			satang = book
 		}
 	}

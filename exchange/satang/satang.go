@@ -26,7 +26,7 @@ func New() *Satang {
 
 // GetName returns "SATANG"
 func (s Satang) GetName() string {
-	return types.EXC_SATANG
+	return types.ExcSatang
 }
 
 // GetTicker returns the latest ticker of the symbol
@@ -89,7 +89,7 @@ func (s Satang) GetOrderBook(symbol string, limit int) types.OrderBook {
 	for _, bid := range orders.Get("bids").Array() {
 		b := bid.Array()
 		ord := types.ExOrder{
-			Side:  types.ORDER_SIDE_BUY,
+			Side:  types.OrderSideBuy,
 			Price: b[0].Float(),
 			Qty:   b[1].Float()}
 		bids = append(bids, ord)
@@ -99,14 +99,14 @@ func (s Satang) GetOrderBook(symbol string, limit int) types.OrderBook {
 	for _, ask := range orders.Get("asks").Array() {
 		a := ask.Array()
 		ord := types.ExOrder{
-			Side:  types.ORDER_SIDE_SELL,
+			Side:  types.OrderSideSell,
 			Price: a[0].Float(),
 			Qty:   a[1].Float()}
 		asks = append(asks, ord)
 	}
 
 	return types.OrderBook{
-		Exchange: types.EXC_SATANG,
+		Exchange: types.ExcSatang,
 		Symbol:   symbol,
 		Bids:     bids,
 		Asks:     asks}
