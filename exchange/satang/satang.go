@@ -3,6 +3,7 @@ package satang
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/tidwall/gjson"
 
@@ -10,30 +11,21 @@ import (
 	"github.com/tonkla/autotp/types"
 )
 
-const (
-	urlBase      = "https://satangcorp.com/api/v3"
-	pathDepth    = "/depth?symbol=%s&limit=%d"
-	pathHisPrice = "/klines?symbol=%s&interval=%s&limit=%d"
-	pathTicker   = "/ticker/24hr?symbol=%s"
-)
-
-type Satang struct {
+type Client struct {
+	baseURL string
 }
 
-func New() *Satang {
-	return &Satang{}
+func NewClient() Client {
+	return Client{
+		baseURL: "https://satangcorp.com/api/v3",
+	}
 }
 
-// GetName returns "SATANG"
-func (s Satang) GetName() string {
-	return types.ExcSatang
-}
-
-// GetTicker returns the latest ticker of the symbol
-func (s Satang) GetTicker(symbol string) types.Ticker {
-	path := fmt.Sprintf(pathTicker, symbol)
-	url := fmt.Sprintf("%s%s", urlBase, path)
-	data, err := helper.Get(url)
+// GetTicker returns the latest ticker
+func (c Client) GetTicker(symbol string) types.Ticker {
+	var url strings.Builder
+	fmt.Fprintf(&url, "%s/ticker/24hr?symbol=%s", c.baseURL, symbol)
+	data, err := helper.Get(url.String())
 	if err != nil {
 		log.Println(err)
 		return types.Ticker{}
@@ -46,17 +38,17 @@ func (s Satang) GetTicker(symbol string) types.Ticker {
 	}
 }
 
-// GetHistoricalPrices returns a list of k-lines/candlesticks of the symbol
-func (s Satang) GetHistoricalPrices(symbol string, interval string, limit int) []types.HistoricalPrice {
-	path := fmt.Sprintf(pathHisPrice, symbol, interval, limit)
-	url := fmt.Sprintf("%s%s", urlBase, path)
-	data, err := helper.Get(url)
+// GetHistoricalPrices returns historical prices in a format of Klines/Candlesticks
+func (c Client) GetHistoricalPrices(symbol string, interval string, limit int) []types.HistoricalPrice {
+	var url strings.Builder
+	fmt.Fprintf(&url, "%s/klines?symbol=%s&interval=%s&limit=%d", c.baseURL, symbol, interval, limit)
+	data, err := helper.Get(url.String())
 	if err != nil {
 		log.Println(err)
 		return nil
 	}
 
-	var hPrices []types.HistoricalPrice
+	var hprices []types.HistoricalPrice
 	for _, data := range gjson.ParseBytes(data).Array() {
 		d := data.Array()
 		p := types.HistoricalPrice{
@@ -67,17 +59,16 @@ func (s Satang) GetHistoricalPrices(symbol string, interval string, limit int) [
 			Low:    d[3].Float(),
 			Close:  d[4].Float(),
 		}
-		hPrices = append(hPrices, p)
+		hprices = append(hprices, p)
 	}
-	return hPrices
+	return hprices
 }
 
-// GetOrderBook returns an order book of the symbol
-func (s Satang) GetOrderBook(symbol string, limit int) types.OrderBook {
-	path := fmt.Sprintf(pathDepth, symbol, limit)
-	url := fmt.Sprintf("%s%s", urlBase, path)
-
-	data, err := helper.Get(url)
+// GetOrderBook returns an order book (market depth)
+func (c Client) GetOrderBook(symbol string, limit int) types.OrderBook {
+	var url strings.Builder
+	fmt.Fprintf(&url, "%s/depth?symbol=%s&limit=%d", c.baseURL, symbol, limit)
+	data, err := helper.Get(url.String())
 	if err != nil {
 		log.Println(err)
 		return types.OrderBook{}

@@ -22,14 +22,14 @@ func main() {
 
 	go func() {
 		defer wg.Done()
-		ex := bitkub.New()
-		ch <- ex.GetOrderBook("thb_bnb", 5)
+		c := bitkub.NewClient()
+		ch <- c.GetOrderBook("thb_bnb", 5)
 	}()
 
 	go func() {
 		defer wg.Done()
-		ex := satang.New()
-		ch <- ex.GetOrderBook("bnb_thb", 5)
+		c := satang.NewClient()
+		ch <- c.GetOrderBook("bnb_thb", 5)
 	}()
 
 	var bitkub types.OrderBook

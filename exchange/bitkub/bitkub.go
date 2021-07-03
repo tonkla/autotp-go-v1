@@ -3,6 +3,7 @@ package bitkub
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/tidwall/gjson"
 
@@ -10,41 +11,42 @@ import (
 	"github.com/tonkla/autotp/types"
 )
 
-const (
-	urlBase      = "https://api.bitkub.com/api"
-	pathDepth    = "/market/depth?sym=%s&lmt=%d"
-	pathHisPrice = "/market/tradingview?sym=%s&int=%d&frm=%d"
-	pathTicker   = "/market/trades?sym=%s&lmt=%d"
-)
-
-type Bitkub struct {
+type Client struct {
+	baseURL string
 }
 
-func New() *Bitkub {
-	return &Bitkub{}
+func NewClient() Client {
+	return Client{
+		baseURL: "https://api.bitkub.com/api",
+	}
 }
 
-// GetName returns "BITKUB"
-func (b Bitkub) GetName() string {
-	return types.ExcBitkub
+// GetTicker returns the latest ticker
+func (c Client) GetTicker(symbol string) *types.Ticker {
+	var url strings.Builder
+	fmt.Fprintf(&url, "%s/market/ticker?sym=%s", c.baseURL, symbol)
+	data, err := helper.Get(url.String())
+	if err != nil {
+		return nil
+	}
+	ticker := gjson.ParseBytes(data).Get(strings.ToUpper(symbol))
+	return &types.Ticker{
+		Exchange: types.ExcBitkub,
+		Symbol:   symbol,
+		Price:    ticker.Get("last").Float(),
+	}
 }
 
-// GetTicker returns the latest ticker of the symbol
-func (b Bitkub) GetTicker(symbol string) types.Ticker {
-	return types.Ticker{}
-}
-
-// GetHistoricalPrices returns a list of k-lines/candlesticks of the symbol
-func (b Bitkub) GetHistoricalPrices(symbol string, interval string, limit int) []types.HistoricalPrice {
+// GetHistoricalPrices returns historical prices in a format of Klines/Candlesticks
+func (c Client) GetHistoricalPrices(symbol string, interval int) []types.HistoricalPrice {
 	return []types.HistoricalPrice{}
 }
 
-// GetOrderBook returns an order book of the symbol
-func (b Bitkub) GetOrderBook(symbol string, limit int) types.OrderBook {
-	path := fmt.Sprintf(pathDepth, symbol, limit)
-	url := fmt.Sprintf("%s%s", urlBase, path)
-
-	data, err := helper.Get(url)
+// GetOrderBook returns an order book (market depth)
+func (c Client) GetOrderBook(symbol string, limit int) types.OrderBook {
+	var url strings.Builder
+	fmt.Fprintf(&url, "%s/market/depth?sym=%s&lmt=%d", c.baseURL, symbol, limit)
+	data, err := helper.Get(url.String())
 	if err != nil {
 		log.Println(err)
 		return types.OrderBook{}
@@ -78,5 +80,6 @@ func (b Bitkub) GetOrderBook(symbol string, limit int) types.OrderBook {
 		Exchange: types.ExcBitkub,
 		Symbol:   symbol,
 		Bids:     bids,
-		Asks:     asks}
+		Asks:     asks,
+	}
 }
