@@ -10,6 +10,7 @@ import (
 
 type OnTickParams struct {
 	Ticker    t.Ticker
+	OrderBook t.OrderBook
 	BotParams t.BotParams
 	HPrices   []t.HistoricalPrice
 	DB        db.DB
@@ -33,6 +34,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		Symbol:   ticker.Symbol,
 		Qty:      p.Qty,
 		Status:   t.OrderStatusNew,
+		Type:     t.OrderTypeLimit,
 	}
 
 	view := strings.ToUpper(p.View)

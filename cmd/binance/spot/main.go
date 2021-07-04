@@ -12,8 +12,8 @@ import (
 
 	"github.com/tonkla/autotp/db"
 	"github.com/tonkla/autotp/exchange/binance"
-	strategy "github.com/tonkla/autotp/strategy/kzm"
-	"github.com/tonkla/autotp/types"
+	strategy "github.com/tonkla/autotp/strategy/gridtrend"
+	t "github.com/tonkla/autotp/types"
 )
 
 var rootCmd = &cobra.Command{
@@ -81,7 +81,7 @@ func main() {
 
 	log.Printf("I'm a bot ID %d, working on Binance's Spot\n", botID)
 
-	params := types.BotParams{
+	params := t.BotParams{
 		BotID:        botID,
 		LowerPrice:   lowerPrice,
 		UpperPrice:   upperPrice,
@@ -102,20 +102,20 @@ func main() {
 		intervalSec = 5
 	}
 
-	client := binance.NewSpotClient(apiKey, secretKey)
+	exchange := binance.NewTestSpotClient(apiKey, secretKey)
 
 	for range time.Tick(time.Duration(intervalSec) * time.Second) {
-		ticker := client.GetTicker(symbol)
+		ticker := exchange.GetTicker(symbol)
 		if ticker == nil || ticker.Price <= 0 {
 			continue
 		}
 
-		orderBook := client.GetOrderBook(symbol, 5)
+		orderBook := exchange.GetOrderBook(symbol, 5)
 		if orderBook == nil {
 			continue
 		}
 
-		hprices := client.GetHistoricalPrices(ticker.Symbol, maTimeframe, 100)
+		hprices := exchange.GetHistoricalPrices(ticker.Symbol, maTimeframe, 100)
 		if len(hprices) == 0 {
 			continue
 		}
@@ -134,11 +134,11 @@ func main() {
 		}
 
 		for _, order := range tradeOrders.CloseOrders {
-			if client.PlaceOrder(order) == nil {
+			if exchange.PlaceOrder(order) == nil {
 				continue
 			}
 			// order.CloseTime = time.Now().Unix()
-			order.Status = types.OrderStatusClosed
+			order.Status = t.OrderStatusClosed
 			err := db.UpdateOrder(order)
 			if err != nil {
 				log.Println(err)
@@ -148,18 +148,69 @@ func main() {
 				order.Side, order.Qty, order.Symbol, order.OpenPrice, order.Exchange)
 		}
 
-		for _, order := range tradeOrders.OpenOrders {
-			if client.PlaceOrder(order) == nil {
+		for _, o := range tradeOrders.OpenOrders {
+			order := exchange.PlaceOrder(o)
+			if order == nil {
 				continue
 			}
-			// order.OpenTime = time.Now().Unix()
-			err := db.CreateOrder(order)
+			err := db.CreateOrder(*order)
 			if err != nil {
 				log.Println(err)
 				continue
 			}
+
 			log.Printf("\t%s %.4f of %s at $%.2f (%s)\n",
 				order.Side, order.Qty, order.Symbol, order.OpenPrice, order.Exchange)
+		}
+
+		// Not: Because the Binance Spot do not support SL/TP, so we need to place a SL/TP order separately.
+
+		qo := t.Order{
+			BotID:    botID,
+			Exchange: t.ExcBinance,
+			Symbol:   symbol,
+		}
+		for _, o := range db.GetNewOrders(qo) {
+			exo := exchange.GetOrder(o)
+			if exo == nil {
+				continue
+			}
+
+			if exo.Status != t.OrderStatusFilled || !exo.IsWorking {
+				continue
+			}
+
+			if o.SL > 0 {
+				o.Type = t.OrderTypeSL
+				o.ClosePrice = o.SL
+				order := exchange.PlaceOrder(o)
+				if order == nil {
+					continue
+				}
+
+				o.Status = t.OrderStatusFilled
+				err := db.UpdateOrder(o)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+			}
+
+			if o.TP > 0 {
+				o.Type = t.OrderTypeTP
+				o.ClosePrice = o.TP
+				order := exchange.PlaceOrder(o)
+				if order == nil {
+					continue
+				}
+
+				o.Status = t.OrderStatusFilled
+				err := db.UpdateOrder(o)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+			}
 		}
 	}
 }

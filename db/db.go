@@ -38,11 +38,19 @@ func (d DB) GetActiveOrder(o types.Order, slippage float64) *types.Order {
 	return &order
 }
 
+// GetNewOrders returns the orders that their status is NEW
+func (d DB) GetNewOrders(o types.Order) []types.Order {
+	var orders []types.Order
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND status = ?",
+		o.BotID, o.Exchange, o.Symbol, types.OrderStatusNew).Find(&orders)
+	return orders
+}
+
 // GetActiveOrders returns the orders that their status is not CLOSED
 func (d DB) GetActiveOrders(o types.Order) []types.Order {
 	var orders []types.Order
-	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND status <> ?",
-		o.BotID, o.Exchange, o.Symbol, o.Side, types.OrderStatusClosed).Find(&orders)
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND status <> ?",
+		o.BotID, o.Exchange, o.Symbol, types.OrderStatusClosed).Find(&orders)
 	return orders
 }
 
@@ -64,7 +72,7 @@ func (d DB) GetProfitOrders(o types.Order) []types.Order {
 
 // IsOrderActive checks the order is active
 func (d DB) IsOrderActive(o types.Order, slippage float64) bool {
-	return d.GetActiveOrder(o, slippage).ID > 0
+	return d.GetActiveOrder(o, slippage).RefID1 > 0
 }
 
 // CreateOrder performs SQL insert on the table orders

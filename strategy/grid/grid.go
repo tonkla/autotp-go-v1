@@ -29,6 +29,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		Symbol:   ticker.Symbol,
 		Qty:      p.Qty,
 		Status:   t.OrderStatusNew,
+		Type:     t.OrderTypeLimit,
 	}
 
 	view := strings.ToUpper(p.View)

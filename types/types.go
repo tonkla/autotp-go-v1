@@ -6,17 +6,18 @@ const (
 	ExcFTX     = "FTX"
 	ExcSatang  = "SATANG"
 
-	OrderStatusNew    = "NEW"
-	OrderStatusFilled = "FILLED"
-	OrderStatusClosed = "CLOSED"
+	OrderStatusNew      = "NEW"
+	OrderStatusFilled   = "FILLED"
+	OrderStatusCanceled = "CANCELED"
+	OrderStatusClosed   = "CLOSED"
 
 	OrderSideBuy  = "BUY"
 	OrderSideSell = "SELL"
 
 	OrderTypeLimit  = "LIMIT"
 	OrderTypeMarket = "MARKET"
-	OrderTypeSL     = "STOP_LOSS"
-	OrderTypeTP     = "TAKE_PROFIT"
+	OrderTypeSL     = "STOP_LOSS_LIMIT"
+	OrderTypeTP     = "TAKE_PROFIT_LIMIT"
 
 	TrendNo    = 0
 	TrendUp1   = 1
@@ -53,22 +54,22 @@ type HistoricalPrice struct {
 }
 
 type Order struct {
-	ID         uint   `gorm:"primaryKey"`
-	CreatedAt  int64  `gorm:"autoCreateTime"`
-	UpdatedAt  int64  `gorm:"autoUpdateTime"`
+	RefID1     int64  `gorm:"index"`
+	RefID2     string `gorm:"index"`
 	BotID      int64  `gorm:"index"`
 	Exchange   string `gorm:"index"`
 	Symbol     string `gorm:"index"`
-	RefID      int64  `gorm:"index"`
-	OpenTime   int64
-	CloseTime  int64
+	Side       string `gorm:"index"`
+	Status     string `gorm:"index"`
+	Type       string `gorm:"-"`
+	IsWorking  bool   `gorm:"-"`
+	OpenTime   int64  `gorm:"index"`
+	CloseTime  int64  `gorm:"index"`
+	Qty        float64
 	OpenPrice  float64
 	ClosePrice float64
 	SL         float64
 	TP         float64
-	Qty        float64
-	Side       string `gorm:"index"`
-	Status     string `gorm:"index"`
 }
 
 type TradeOrders struct {

@@ -44,3 +44,15 @@ func PostWithData(url string, header http.Header, data string) ([]byte, error) {
 	client := &http.Client{}
 	return call(client.Do(req))
 }
+
+// Delete calls the URL with HTTP DELETE
+func Delete(url string, header http.Header) ([]byte, error) {
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header = header
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	return call(client.Do(req))
+}
