@@ -29,12 +29,11 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 	trend := strategy.GetTrend(params.HPrices, int(p.MAPeriod))
 
 	order := t.Order{
-		BotID:    p.BotID,
-		Exchange: ticker.Exchange,
-		Symbol:   ticker.Symbol,
-		Qty:      p.Qty,
-		Status:   t.OrderStatusNew,
-		Type:     t.OrderTypeLimit,
+		BotID:  p.BotID,
+		Symbol: ticker.Symbol,
+		Qty:    p.Qty,
+		Status: t.OrderStatusNew,
+		Type:   t.OrderTypeLimit,
 	}
 
 	view := strings.ToUpper(p.View)

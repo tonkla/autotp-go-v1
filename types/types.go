@@ -37,11 +37,10 @@ const (
 )
 
 type Ticker struct {
-	Exchange string
-	Symbol   string
-	Price    float64
-	Qty      float64
-	Time     int64
+	Symbol string
+	Price  float64
+	Qty    float64
+	Time   int64
 }
 
 type HistoricalPrice struct {
@@ -85,10 +84,9 @@ type ExOrder struct {
 }
 
 type OrderBook struct {
-	Exchange string
-	Symbol   string
-	Bids     []ExOrder
-	Asks     []ExOrder
+	Symbol string
+	Bids   []ExOrder
+	Asks   []ExOrder
 }
 
 type BotParams struct {

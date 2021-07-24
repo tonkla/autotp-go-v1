@@ -9,13 +9,13 @@ import (
 )
 
 const (
-	symbol    = "BNBUSDT"
+	symbol    = "BNBBUSD"
 	timeframe = "1d"
 	period    = 8
 )
 
 func TestGetTrend(t *testing.T) {
-	client := binance.NewSpotClient("", "")
+	client := binance.NewTestSpotClient("", "")
 	bars := client.GetHistoricalPrices(symbol, timeframe, 20)
 	trend := GetTrend(bars, period)
 	fmt.Println(trend)

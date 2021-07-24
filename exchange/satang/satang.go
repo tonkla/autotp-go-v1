@@ -97,8 +97,7 @@ func (c Client) GetOrderBook(symbol string, limit int) types.OrderBook {
 	}
 
 	return types.OrderBook{
-		Exchange: types.ExcSatang,
-		Symbol:   symbol,
-		Bids:     bids,
-		Asks:     asks}
+		Symbol: symbol,
+		Bids:   bids,
+		Asks:   asks}
 }

@@ -79,7 +79,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.Printf("I'm a bot ID %d, working on Binance's Spot\n", botID)
+	log.Printf("I'm a bot ID %d, trading on a Binance's Spot\n", botID)
 
 	params := t.BotParams{
 		BotID:        botID,
@@ -133,37 +133,41 @@ func main() {
 			continue
 		}
 
-		for _, order := range tradeOrders.CloseOrders {
-			if exchange.PlaceOrder(order) == nil {
+		// Close orders ------------------------------------------------------------
+
+		for _, o := range tradeOrders.CloseOrders {
+			if exchange.PlaceOrder(o) == nil {
 				continue
 			}
 			// order.CloseTime = time.Now().Unix()
-			order.Status = t.OrderStatusClosed
-			err := db.UpdateOrder(order)
+			o.Exchange = t.ExcBinance
+			o.Status = t.OrderStatusClosed
+			err := db.UpdateOrder(o)
 			if err != nil {
 				log.Println(err)
 				continue
 			}
-			log.Printf("\t%s %.4f of %s at $%.2f (%s)\n",
-				order.Side, order.Qty, order.Symbol, order.OpenPrice, order.Exchange)
+			log.Printf("\t%s %.4f of %s at $%.2f (%s)\n", o.Side, o.Qty, o.Symbol, o.OpenPrice, o.Exchange)
 		}
 
-		for _, o := range tradeOrders.OpenOrders {
-			order := exchange.PlaceOrder(o)
-			if order == nil {
+		// Open a new order --------------------------------------------------------
+
+		for _, _o := range tradeOrders.OpenOrders {
+			o := exchange.PlaceOrder(_o)
+			if o == nil {
 				continue
 			}
-			err := db.CreateOrder(*order)
+			o.Exchange = t.ExcBinance
+			err := db.CreateOrder(*o)
 			if err != nil {
 				log.Println(err)
 				continue
 			}
 
-			log.Printf("\t%s %.4f of %s at $%.2f (%s)\n",
-				order.Side, order.Qty, order.Symbol, order.OpenPrice, order.Exchange)
+			log.Printf("\t%s %.4f of %s at $%.2f (%s)\n", o.Side, o.Qty, o.Symbol, o.OpenPrice, o.Exchange)
 		}
 
-		// Not: Because the Binance Spot do not support SL/TP, so we need to place a SL/TP order separately.
+		// Place SL/TP with the order type STOP_LOSS_LIMIT / TAKE_PROFIT_LIMIT
 
 		qo := t.Order{
 			BotID:    botID,

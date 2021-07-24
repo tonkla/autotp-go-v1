@@ -42,10 +42,9 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 
 	// Query Order
 	qo := t.Order{
-		BotID:    p.BotID,
-		Exchange: ticker.Exchange,
-		Symbol:   ticker.Symbol,
-		Qty:      p.Qty,
+		BotID:  p.BotID,
+		Symbol: ticker.Symbol,
+		Qty:    p.Qty,
 	}
 
 	// Uptrend

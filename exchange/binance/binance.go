@@ -56,12 +56,12 @@ func Sign(payload string, secretKey string) string {
 }
 
 func newHeader(apiKey string) http.Header {
-	var header http.Header
+	var header http.Header = make(map[string][]string)
 	header.Set("X-MBX-APIKEY", apiKey)
 	return header
 }
 
-func now() int64 {
+func now13() int64 {
 	return time.Now().UnixNano() / 1e6
 }
 
@@ -77,10 +77,9 @@ func (c Client) GetTicker(symbol string) *t.Ticker {
 	}
 	r := gjson.ParseBytes(data)
 	return &t.Ticker{
-		Exchange: t.ExcBinance,
-		Symbol:   r.Get("symbol").String(),
-		Price:    r.Get("price").Float(),
-		Time:     r.Get("time").Int(),
+		Symbol: r.Get("symbol").String(),
+		Price:  r.Get("price").Float(),
+		Time:   r.Get("time").Int(),
 	}
 }
 
@@ -110,10 +109,9 @@ func (c Client) GetOrderBook(symbol string, limit int) *t.OrderBook {
 		})
 	}
 	return &t.OrderBook{
-		Exchange: t.ExcBinance,
-		Symbol:   symbol,
-		Bids:     bids,
-		Asks:     asks,
+		Symbol: symbol,
+		Bids:   bids,
+		Asks:   asks,
 	}
 }
 
@@ -148,7 +146,7 @@ func (c Client) GetHistoricalPrices(symbol string, timeframe string, limit int) 
 func (c Client) GetOrder(o t.Order) *t.Order {
 	var payload, url strings.Builder
 	fmt.Fprintf(&payload,
-		"timestamp=%d&symbol=%s&orderId=%d&origClientOrderId=%s", now(), o.Symbol, o.RefID1, o.RefID2)
+		"timestamp=%d&symbol=%s&orderId=%d&origClientOrderId=%s", now13(), o.Symbol, o.RefID1, o.RefID2)
 
 	signature := Sign(payload.String(), c.secretKey)
 
@@ -168,7 +166,7 @@ func (c Client) GetOrder(o t.Order) *t.Order {
 // GetOpenOrders returns open orders
 func (c Client) GetOpenOrders(symbol string) []t.Order {
 	var payload, url strings.Builder
-	fmt.Fprintf(&payload, "symbol=%s&timestamp=%d", symbol, now())
+	fmt.Fprintf(&payload, "symbol=%s&timestamp=%d", symbol, now13())
 
 	signature := Sign(payload.String(), c.secretKey)
 
@@ -200,7 +198,7 @@ func (c Client) GetOpenOrders(symbol string) []t.Order {
 // GetAllOrders returns all account orders; active, canceled, or filled
 func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime int) []t.Order {
 	var payload, url strings.Builder
-	fmt.Fprintf(&payload, "timestamp=%d&symbol=%s", now(), symbol)
+	fmt.Fprintf(&payload, "timestamp=%d&symbol=%s", now13(), symbol)
 
 	if limit > 0 {
 		fmt.Fprintf(&payload, "&limit=%d", limit)
@@ -241,9 +239,13 @@ func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime in
 
 // PlaceOrder sends an order to the exchange
 func (c Client) PlaceOrder(o t.Order) *t.Order {
+	if o.OpenPrice == 0 {
+		return nil
+	}
+
 	var payload, url strings.Builder
 	fmt.Fprintf(&payload, "timestamp=%d&symbol=%s&side=%s&type=%s&quantity=%f",
-		now(), o.Symbol, o.Side, o.Type, o.Qty)
+		now13(), o.Symbol, o.Side, o.Type, o.Qty)
 
 	if o.Type == t.OrderTypeLimit || o.Type == t.OrderTypeTP || o.Type == t.OrderTypeSL {
 		fmt.Fprintf(&payload, "&timeInForce=GTC")
@@ -296,7 +298,7 @@ func (c Client) PlaceOrder(o t.Order) *t.Order {
 func (c Client) CancelOrder(o t.Order) *t.Order {
 	var payload, url strings.Builder
 	fmt.Fprintf(&payload, "timestamp=%d&symbol=%s&orderId=%d&origClientOrderId=%s",
-		now(), o.Symbol, o.RefID1, o.RefID2)
+		now13(), o.Symbol, o.RefID1, o.RefID2)
 
 	signature := Sign(payload.String(), c.secretKey)
 

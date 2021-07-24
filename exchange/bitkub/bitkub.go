@@ -31,9 +31,8 @@ func (c Client) GetTicker(symbol string) *types.Ticker {
 	}
 	ticker := gjson.ParseBytes(data).Get(strings.ToUpper(symbol))
 	return &types.Ticker{
-		Exchange: types.ExcBitkub,
-		Symbol:   symbol,
-		Price:    ticker.Get("last").Float(),
+		Symbol: symbol,
+		Price:  ticker.Get("last").Float(),
 	}
 }
 
@@ -77,9 +76,8 @@ func (c Client) GetOrderBook(symbol string, limit int) types.OrderBook {
 	}
 
 	return types.OrderBook{
-		Exchange: types.ExcBitkub,
-		Symbol:   symbol,
-		Bids:     bids,
-		Asks:     asks,
+		Symbol: symbol,
+		Bids:   bids,
+		Asks:   asks,
 	}
 }
