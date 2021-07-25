@@ -37,10 +37,11 @@ const (
 )
 
 type Ticker struct {
-	Symbol string
-	Price  float64
-	Qty    float64
-	Time   int64
+	Exchange string
+	Symbol   string
+	Price    float64
+	Qty      float64
+	Time     int64
 }
 
 type HistoricalPrice struct {

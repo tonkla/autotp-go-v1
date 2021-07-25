@@ -7,11 +7,10 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/tidwall/gjson"
 
-	"github.com/tonkla/autotp/helper"
+	h "github.com/tonkla/autotp/helper"
 	t "github.com/tonkla/autotp/types"
 )
 
@@ -61,25 +60,22 @@ func newHeader(apiKey string) http.Header {
 	return header
 }
 
-func now13() int64 {
-	return time.Now().UnixNano() / 1e6
-}
-
 // Public APIs -----------------------------------------------------------------
 
 // GetTicker returns the latest ticker
 func (c Client) GetTicker(symbol string) *t.Ticker {
 	var url strings.Builder
 	fmt.Fprintf(&url, "%s/ticker/price?symbol=%s", c.baseURL, symbol)
-	data, err := helper.Get(url.String())
+	data, err := h.Get(url.String())
 	if err != nil {
 		return nil
 	}
 	r := gjson.ParseBytes(data)
 	return &t.Ticker{
-		Symbol: r.Get("symbol").String(),
-		Price:  r.Get("price").Float(),
-		Time:   r.Get("time").Int(),
+		Exchange: t.ExcBinance,
+		Symbol:   r.Get("symbol").String(),
+		Price:    r.Get("price").Float(),
+		Time:     r.Get("time").Int(),
 	}
 }
 
@@ -87,7 +83,7 @@ func (c Client) GetTicker(symbol string) *t.Ticker {
 func (c Client) GetOrderBook(symbol string, limit int) *t.OrderBook {
 	var url strings.Builder
 	fmt.Fprintf(&url, "%s/depth?symbol=%s&limit=%d", c.baseURL, symbol, limit)
-	data, err := helper.Get(url.String())
+	data, err := h.Get(url.String())
 	if err != nil {
 		return nil
 	}
@@ -119,7 +115,7 @@ func (c Client) GetOrderBook(symbol string, limit int) *t.OrderBook {
 func (c Client) GetHistoricalPrices(symbol string, timeframe string, limit int) []t.HistoricalPrice {
 	var url strings.Builder
 	fmt.Fprintf(&url, "%s/klines?symbol=%s&interval=%s&limit=%d", c.baseURL, symbol, timeframe, limit)
-	data, err := helper.Get(url.String())
+	data, err := h.Get(url.String())
 	if err != nil {
 		return nil
 	}
@@ -146,12 +142,12 @@ func (c Client) GetHistoricalPrices(symbol string, timeframe string, limit int) 
 func (c Client) GetOrder(o t.Order) *t.Order {
 	var payload, url strings.Builder
 	fmt.Fprintf(&payload,
-		"timestamp=%d&symbol=%s&orderId=%d&origClientOrderId=%s", now13(), o.Symbol, o.RefID1, o.RefID2)
+		"timestamp=%d&symbol=%s&orderId=%d&origClientOrderId=%s", h.Now13(), o.Symbol, o.RefID1, o.RefID2)
 
 	signature := Sign(payload.String(), c.secretKey)
 
 	fmt.Fprintf(&url, "%s/order?%s&signature=%s", c.baseURL, payload.String(), signature)
-	data, err := helper.Get(url.String())
+	data, err := h.Get(url.String())
 	if err != nil {
 		return nil
 	}
@@ -166,12 +162,12 @@ func (c Client) GetOrder(o t.Order) *t.Order {
 // GetOpenOrders returns open orders
 func (c Client) GetOpenOrders(symbol string) []t.Order {
 	var payload, url strings.Builder
-	fmt.Fprintf(&payload, "symbol=%s&timestamp=%d", symbol, now13())
+	fmt.Fprintf(&payload, "symbol=%s&timestamp=%d", symbol, h.Now13())
 
 	signature := Sign(payload.String(), c.secretKey)
 
 	fmt.Fprintf(&url, "%s/openOrders?%s&signature=%s", c.baseURL, payload.String(), signature)
-	data, err := helper.Get(url.String())
+	data, err := h.Get(url.String())
 	if err != nil {
 		return nil
 	}
@@ -198,7 +194,7 @@ func (c Client) GetOpenOrders(symbol string) []t.Order {
 // GetAllOrders returns all account orders; active, canceled, or filled
 func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime int) []t.Order {
 	var payload, url strings.Builder
-	fmt.Fprintf(&payload, "timestamp=%d&symbol=%s", now13(), symbol)
+	fmt.Fprintf(&payload, "timestamp=%d&symbol=%s", h.Now13(), symbol)
 
 	if limit > 0 {
 		fmt.Fprintf(&payload, "&limit=%d", limit)
@@ -213,7 +209,7 @@ func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime in
 	signature := Sign(payload.String(), c.secretKey)
 
 	fmt.Fprintf(&url, "%s/allOrders?%s&signature=%s", c.baseURL, payload.String(), signature)
-	data, err := helper.Get(url.String())
+	data, err := h.Get(url.String())
 	if err != nil {
 		return nil
 	}
@@ -245,7 +241,7 @@ func (c Client) PlaceOrder(o t.Order) *t.Order {
 
 	var payload, url strings.Builder
 	fmt.Fprintf(&payload, "timestamp=%d&symbol=%s&side=%s&type=%s&quantity=%f",
-		now13(), o.Symbol, o.Side, o.Type, o.Qty)
+		h.Now13(), o.Symbol, o.Side, o.Type, o.Qty)
 
 	if o.Type == t.OrderTypeLimit || o.Type == t.OrderTypeTP || o.Type == t.OrderTypeSL {
 		fmt.Fprintf(&payload, "&timeInForce=GTC")
@@ -274,7 +270,7 @@ func (c Client) PlaceOrder(o t.Order) *t.Order {
 	signature := Sign(payload.String(), c.secretKey)
 
 	fmt.Fprintf(&url, "%s/order?%s&signature=%s", c.baseURL, payload.String(), signature)
-	data, err := helper.Post(url.String(), newHeader(c.apiKey))
+	data, err := h.Post(url.String(), newHeader(c.apiKey))
 	if err != nil {
 		return nil
 	}
@@ -283,14 +279,16 @@ func (c Client) PlaceOrder(o t.Order) *t.Order {
 	if status != t.OrderStatusNew && status != t.OrderStatusFilled {
 		return nil
 	}
-	o.Status = status
-	o.RefID1 = r.Get("orderId").Int()
-	o.RefID2 = r.Get("clientOrderId").String()
-	o.OpenTime = r.Get("transactTime").Int()
 	price := r.Get("price").Float()
-	if o.OpenPrice != price && price > 0 {
-		o.OpenPrice = price
+	if o.Status == t.OrderStatusNew {
+		o.RefID1 = r.Get("orderId").Int()
+		o.RefID2 = r.Get("clientOrderId").String()
+		o.OpenTime = r.Get("transactTime").Int()
+		if o.OpenPrice != price && price > 0 {
+			o.OpenPrice = price
+		}
 	}
+	o.Status = status
 	return &o
 }
 
@@ -298,12 +296,12 @@ func (c Client) PlaceOrder(o t.Order) *t.Order {
 func (c Client) CancelOrder(o t.Order) *t.Order {
 	var payload, url strings.Builder
 	fmt.Fprintf(&payload, "timestamp=%d&symbol=%s&orderId=%d&origClientOrderId=%s",
-		now13(), o.Symbol, o.RefID1, o.RefID2)
+		h.Now13(), o.Symbol, o.RefID1, o.RefID2)
 
 	signature := Sign(payload.String(), c.secretKey)
 
 	fmt.Fprintf(&url, "%s/order?%s&signature=%s", c.baseURL, payload.String(), signature)
-	data, err := helper.Delete(url.String(), newHeader(c.apiKey))
+	data, err := h.Delete(url.String(), newHeader(c.apiKey))
 	if err != nil {
 		return nil
 	}

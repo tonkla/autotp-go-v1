@@ -46,26 +46,34 @@ func (d DB) GetNewOrders(o types.Order) []types.Order {
 	return orders
 }
 
+// GetFilledOrders returns the orders that their status is FILLED
+func (d DB) GetFilledOrders(o types.Order) []types.Order {
+	var orders []types.Order
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND status = ?",
+		o.BotID, o.Exchange, o.Symbol, types.OrderStatusFilled).Find(&orders)
+	return orders
+}
+
 // GetActiveOrders returns the orders that their status is not CLOSED
 func (d DB) GetActiveOrders(o types.Order) []types.Order {
 	var orders []types.Order
-	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND status <> ?",
-		o.BotID, o.Exchange, o.Symbol, types.OrderStatusClosed).Find(&orders)
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND status <> ?",
+		o.BotID, o.Exchange, o.Symbol, o.Side, types.OrderStatusClosed).Find(&orders)
 	return orders
 }
 
 // GetProfitOrders returns the orders that are profitable
-func (d DB) GetProfitOrders(o types.Order) []types.Order {
+func (d DB) GetProfitOrders(o types.Order, t types.Ticker) []types.Order {
 	var orders []types.Order
-	fee := o.ClosePrice * 0.002 // tx fee is 0.2%
+	fee := t.Price * 0.002 * 2 // 0.002=transaction fee at 0.2%, 2=open and closed fees
 	if o.Side == types.OrderSideBuy {
-		priceWithFee := o.ClosePrice - fee
+		profit := t.Price - fee
 		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND status = ? AND open_price < ?",
-			o.BotID, o.Exchange, o.Symbol, o.Side, types.OrderStatusFilled, priceWithFee).Find(&orders)
+			o.BotID, o.Exchange, o.Symbol, o.Side, types.OrderStatusFilled, profit).Find(&orders)
 	} else if o.Side == types.OrderSideSell {
-		priceWithFee := o.ClosePrice + fee
+		profit := t.Price + fee
 		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND status = ? AND open_price > ?",
-			o.BotID, o.Exchange, o.Symbol, o.Side, types.OrderStatusFilled, priceWithFee).Find(&orders)
+			o.BotID, o.Exchange, o.Symbol, o.Side, types.OrderStatusFilled, profit).Find(&orders)
 	}
 	return orders
 }

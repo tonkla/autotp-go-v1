@@ -12,6 +12,7 @@ import (
 
 	"github.com/tonkla/autotp/db"
 	"github.com/tonkla/autotp/exchange/binance"
+	"github.com/tonkla/autotp/helper"
 	strategy "github.com/tonkla/autotp/strategy/gridtrend"
 	t "github.com/tonkla/autotp/types"
 )
@@ -79,7 +80,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.Printf("I'm a bot ID %d, trading on a Binance's Spot\n", botID)
+	log.Printf("\nI'm a bot ID [%d], trading [%s] on a Binance's Spot\n", botID, symbol)
 
 	params := t.BotParams{
 		BotID:        botID,
@@ -133,21 +134,13 @@ func main() {
 			continue
 		}
 
-		// Close orders ------------------------------------------------------------
+		// Close orders by using SL/TP ----------------------------------------------
 
 		for _, o := range tradeOrders.CloseOrders {
-			if exchange.PlaceOrder(o) == nil {
-				continue
-			}
-			// order.CloseTime = time.Now().Unix()
-			o.Exchange = t.ExcBinance
-			o.Status = t.OrderStatusClosed
 			err := db.UpdateOrder(o)
 			if err != nil {
 				log.Println(err)
-				continue
 			}
-			log.Printf("\t%s %.4f of %s at $%.2f (%s)\n", o.Side, o.Qty, o.Symbol, o.OpenPrice, o.Exchange)
 		}
 
 		// Open a new order --------------------------------------------------------
@@ -157,14 +150,12 @@ func main() {
 			if o == nil {
 				continue
 			}
-			o.Exchange = t.ExcBinance
 			err := db.CreateOrder(*o)
 			if err != nil {
 				log.Println(err)
 				continue
 			}
-
-			log.Printf("\t%s %.4f of %s at $%.2f (%s)\n", o.Side, o.Qty, o.Symbol, o.OpenPrice, o.Exchange)
+			log.Printf("\tOpen the %s %.4f at $%.2f\n", o.Side, o.Qty, o.OpenPrice)
 		}
 
 		// Place SL/TP with the order type STOP_LOSS_LIMIT / TAKE_PROFIT_LIMIT
@@ -176,26 +167,14 @@ func main() {
 		}
 		for _, o := range db.GetNewOrders(qo) {
 			exo := exchange.GetOrder(o)
-			if exo == nil {
-				continue
-			}
-
-			if exo.Status != t.OrderStatusFilled || !exo.IsWorking {
+			if exo == nil || exo.Status == t.OrderStatusNew {
 				continue
 			}
 
 			if o.SL > 0 {
 				o.Type = t.OrderTypeSL
 				o.ClosePrice = o.SL
-				order := exchange.PlaceOrder(o)
-				if order == nil {
-					continue
-				}
-
-				o.Status = t.OrderStatusFilled
-				err := db.UpdateOrder(o)
-				if err != nil {
-					log.Println(err)
+				if nil == exchange.PlaceOrder(o) {
 					continue
 				}
 			}
@@ -203,18 +182,39 @@ func main() {
 			if o.TP > 0 {
 				o.Type = t.OrderTypeTP
 				o.ClosePrice = o.TP
-				order := exchange.PlaceOrder(o)
-				if order == nil {
-					continue
-				}
-
-				o.Status = t.OrderStatusFilled
-				err := db.UpdateOrder(o)
-				if err != nil {
-					log.Println(err)
+				if nil == exchange.PlaceOrder(o) {
 					continue
 				}
 			}
+
+			o.Status = exo.Status
+			if !exo.IsWorking {
+				o.Status = t.OrderStatusClosed
+				o.CloseTime = helper.Now13()
+			}
+
+			err := db.UpdateOrder(o)
+			if err != nil {
+				log.Println(err)
+			}
+		}
+
+		// Update closed orders in the local DB
+
+		for _, o := range db.GetFilledOrders(qo) {
+			exo := exchange.GetOrder(o)
+			if exo == nil || exo.IsWorking {
+				continue
+			}
+
+			o.Status = t.OrderStatusClosed
+			o.CloseTime = helper.Now13()
+			err := db.UpdateOrder(o)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			log.Printf("\tClosed the %s %.4f at $%.2f\n", o.Side, o.Qty, o.ClosePrice)
 		}
 	}
 }

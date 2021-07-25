@@ -24,11 +24,12 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 	buyPrice, sellPrice, gridWidth := strategy.GetGridRange(ticker.Price, p.LowerPrice, p.UpperPrice, p.Grids)
 
 	order := t.Order{
-		BotID:  p.BotID,
-		Symbol: ticker.Symbol,
-		Qty:    p.Qty,
-		Status: t.OrderStatusNew,
-		Type:   t.OrderTypeLimit,
+		BotID:    p.BotID,
+		Exchange: ticker.Exchange,
+		Symbol:   ticker.Symbol,
+		Qty:      p.Qty,
+		Status:   t.OrderStatusNew,
+		Type:     t.OrderTypeLimit,
 	}
 
 	view := strings.ToUpper(p.View)
