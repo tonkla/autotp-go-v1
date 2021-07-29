@@ -24,13 +24,25 @@ func Get(url string) ([]byte, error) {
 	return call(http.Get(url))
 }
 
-// Post calls the URL with HTTP POST
-func Post(url string, header http.Header) ([]byte, error) {
-	return PostWithData(url, header, "")
+// GetH calls the URL with header attached, with HTTP GET
+func GetH(url string, header http.Header) ([]byte, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header = header
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	return call(client.Do(req))
 }
 
-// PostWithData calls the URL with HTTP POST
-func PostWithData(url string, header http.Header, data string) ([]byte, error) {
+// Post calls the URL with header attached, with HTTP POST
+func Post(url string, header http.Header) ([]byte, error) {
+	return PostD(url, header, "")
+}
+
+// PostD calls the URL with header and data attached, with HTTP POST
+func PostD(url string, header http.Header, data string) ([]byte, error) {
 	body := bytes.NewBuffer([]byte{})
 	if !strings.EqualFold(data, "") {
 		body = bytes.NewBuffer([]byte(data))

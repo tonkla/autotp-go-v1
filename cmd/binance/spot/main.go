@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path"
 	"time"
@@ -12,7 +11,7 @@ import (
 
 	"github.com/tonkla/autotp/db"
 	"github.com/tonkla/autotp/exchange/binance"
-	"github.com/tonkla/autotp/helper"
+	h "github.com/tonkla/autotp/helper"
 	strategy "github.com/tonkla/autotp/strategy/gridtrend"
 	t "github.com/tonkla/autotp/types"
 )
@@ -80,7 +79,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.Printf("\nI'm a bot ID [%d], trading [%s] on a Binance's Spot\n", botID, symbol)
+	h.Logf("I'm a bot ID [%d], trading [%s] on a Binance's Spot\n", botID, symbol)
 
 	params := t.BotParams{
 		BotID:        botID,
@@ -103,7 +102,7 @@ func main() {
 		intervalSec = 5
 	}
 
-	exchange := binance.NewTestSpotClient(apiKey, secretKey)
+	exchange := binance.NewSpotClient(apiKey, secretKey)
 
 	for range time.Tick(time.Duration(intervalSec) * time.Second) {
 		ticker := exchange.GetTicker(symbol)
@@ -134,12 +133,12 @@ func main() {
 			continue
 		}
 
-		// Close orders by using SL/TP ----------------------------------------------
+		// Close orders by using late SL/TP -----------------------------------------
 
-		for _, o := range tradeOrders.CloseOrders {
-			err := db.UpdateOrder(o)
+		for _, _o := range tradeOrders.CloseOrders {
+			err := db.UpdateOrder(_o)
 			if err != nil {
-				log.Println(err)
+				h.Log(err)
 			}
 		}
 
@@ -152,10 +151,10 @@ func main() {
 			}
 			err := db.CreateOrder(*o)
 			if err != nil {
-				log.Println(err)
+				h.Log(err)
 				continue
 			}
-			log.Printf("\tOpen the %s %.4f at $%.2f\n", o.Side, o.Qty, o.OpenPrice)
+			h.Logf("Open {side: %s, qty: %.4f, price: %.2f}\n", o.Side, o.Qty, o.OpenPrice)
 		}
 
 		// Place SL/TP with the order type STOP_LOSS_LIMIT / TAKE_PROFIT_LIMIT
@@ -169,6 +168,26 @@ func main() {
 			exo := exchange.GetOrder(o)
 			if exo == nil || exo.Status == t.OrderStatusNew {
 				continue
+			}
+
+			if exo.Status == t.OrderStatusCanceled || !exo.IsWorking {
+				o.CloseTime = h.Now13()
+				o.Status = t.OrderStatusCanceled
+				if exo.Status != t.OrderStatusCanceled && !exo.IsWorking {
+					o.Status = t.OrderStatusClosed
+				}
+				err := db.UpdateOrder(o)
+				if err != nil {
+					h.Log(err)
+				}
+				continue
+			}
+
+			// Swap a side before sending to Binance, because SL/TP needs an opposite side
+			if o.Side == t.OrderSideBuy {
+				o.Side = t.OrderSideSell
+			} else if o.Side == t.OrderSideSell {
+				o.Side = t.OrderSideBuy
 			}
 
 			if o.SL > 0 {
@@ -187,15 +206,17 @@ func main() {
 				}
 			}
 
-			o.Status = exo.Status
-			if !exo.IsWorking {
-				o.Status = t.OrderStatusClosed
-				o.CloseTime = helper.Now13()
+			// Swap back a side to the original one before update to DB
+			if o.Side == t.OrderSideBuy {
+				o.Side = t.OrderSideSell
+			} else if o.Side == t.OrderSideSell {
+				o.Side = t.OrderSideBuy
 			}
 
+			o.Status = exo.Status
 			err := db.UpdateOrder(o)
 			if err != nil {
-				log.Println(err)
+				h.Log(err)
 			}
 		}
 
@@ -208,13 +229,13 @@ func main() {
 			}
 
 			o.Status = t.OrderStatusClosed
-			o.CloseTime = helper.Now13()
+			o.CloseTime = h.Now13()
 			err := db.UpdateOrder(o)
 			if err != nil {
-				log.Println(err)
+				h.Log(err)
 				continue
 			}
-			log.Printf("\tClosed the %s %.4f at $%.2f\n", o.Side, o.Qty, o.ClosePrice)
+			h.Logf("Close {side: %s, qty: %.4f, price: %.2f}\n", o.Side, o.Qty, o.ClosePrice)
 		}
 	}
 }

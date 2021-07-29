@@ -60,6 +60,11 @@ func newHeader(apiKey string) http.Header {
 	return header
 }
 
+// Build a base query string
+func buildBaseQS(symbol string) string {
+	return fmt.Sprintf("timestamp=%d&recvWindow=20000&symbol=%s", h.Now13(), symbol)
+}
+
 // Public APIs -----------------------------------------------------------------
 
 // GetTicker returns the latest ticker
@@ -138,36 +143,41 @@ func (c Client) GetHistoricalPrices(symbol string, timeframe string, limit int) 
 
 // Private APIs ----------------------------------------------------------------
 
-// GetOrder returns the order by its ID
+// GetOrder returns the order by its IDs
 func (c Client) GetOrder(o t.Order) *t.Order {
 	var payload, url strings.Builder
-	fmt.Fprintf(&payload,
-		"timestamp=%d&symbol=%s&orderId=%d&origClientOrderId=%s", h.Now13(), o.Symbol, o.RefID1, o.RefID2)
+	fmt.Fprintf(&payload, "%s&orderId=%d&origClientOrderId=%s", buildBaseQS(o.Symbol), o.RefID1, o.RefID2)
 
 	signature := Sign(payload.String(), c.secretKey)
 
 	fmt.Fprintf(&url, "%s/order?%s&signature=%s", c.baseURL, payload.String(), signature)
-	data, err := h.Get(url.String())
+	data, err := h.GetH(url.String(), newHeader(c.apiKey))
 	if err != nil {
+		h.Log(err)
 		return nil
 	}
+
 	r := gjson.ParseBytes(data)
-	status := r.Get("status").String()
-	if o.Status != status {
-		o.Status = status
+
+	if r.Get("code").Int() < 0 {
+		h.Log(r)
+		return nil
 	}
+
+	o.Status = r.Get("status").String()
+	o.IsWorking = r.Get("isWorking").Bool()
 	return &o
 }
 
 // GetOpenOrders returns open orders
 func (c Client) GetOpenOrders(symbol string) []t.Order {
 	var payload, url strings.Builder
-	fmt.Fprintf(&payload, "symbol=%s&timestamp=%d", symbol, h.Now13())
+	fmt.Fprint(&payload, buildBaseQS(symbol))
 
 	signature := Sign(payload.String(), c.secretKey)
 
 	fmt.Fprintf(&url, "%s/openOrders?%s&signature=%s", c.baseURL, payload.String(), signature)
-	data, err := h.Get(url.String())
+	data, err := h.GetH(url.String(), newHeader(c.apiKey))
 	if err != nil {
 		return nil
 	}
@@ -194,7 +204,7 @@ func (c Client) GetOpenOrders(symbol string) []t.Order {
 // GetAllOrders returns all account orders; active, canceled, or filled
 func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime int) []t.Order {
 	var payload, url strings.Builder
-	fmt.Fprintf(&payload, "timestamp=%d&symbol=%s", h.Now13(), symbol)
+	fmt.Fprint(&payload, buildBaseQS(symbol))
 
 	if limit > 0 {
 		fmt.Fprintf(&payload, "&limit=%d", limit)
@@ -209,7 +219,7 @@ func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime in
 	signature := Sign(payload.String(), c.secretKey)
 
 	fmt.Fprintf(&url, "%s/allOrders?%s&signature=%s", c.baseURL, payload.String(), signature)
-	data, err := h.Get(url.String())
+	data, err := h.GetH(url.String(), newHeader(c.apiKey))
 	if err != nil {
 		return nil
 	}
@@ -240,8 +250,7 @@ func (c Client) PlaceOrder(o t.Order) *t.Order {
 	}
 
 	var payload, url strings.Builder
-	fmt.Fprintf(&payload, "timestamp=%d&symbol=%s&side=%s&type=%s&quantity=%f",
-		h.Now13(), o.Symbol, o.Side, o.Type, o.Qty)
+	fmt.Fprintf(&payload, "%s&side=%s&type=%s&quantity=%f", buildBaseQS(o.Symbol), o.Side, o.Type, o.Qty)
 
 	if o.Type == t.OrderTypeLimit || o.Type == t.OrderTypeTP || o.Type == t.OrderTypeSL {
 		fmt.Fprintf(&payload, "&timeInForce=GTC")
@@ -274,7 +283,14 @@ func (c Client) PlaceOrder(o t.Order) *t.Order {
 	if err != nil {
 		return nil
 	}
+
 	r := gjson.ParseBytes(data)
+
+	if r.Get("code").Int() < 0 {
+		h.Log(r)
+		return nil
+	}
+
 	status := r.Get("status").String()
 	if status != t.OrderStatusNew && status != t.OrderStatusFilled {
 		return nil
@@ -295,8 +311,7 @@ func (c Client) PlaceOrder(o t.Order) *t.Order {
 // CancelOrder cancels an order on the exchange
 func (c Client) CancelOrder(o t.Order) *t.Order {
 	var payload, url strings.Builder
-	fmt.Fprintf(&payload, "timestamp=%d&symbol=%s&orderId=%d&origClientOrderId=%s",
-		h.Now13(), o.Symbol, o.RefID1, o.RefID2)
+	fmt.Fprintf(&payload, "%s&orderId=%d&origClientOrderId=%s", buildBaseQS(o.Symbol), o.RefID1, o.RefID2)
 
 	signature := Sign(payload.String(), c.secretKey)
 

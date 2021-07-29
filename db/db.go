@@ -24,18 +24,28 @@ func Connect() *DB {
 }
 
 // GetActiveOrder returns the order that its status is not CLOSED
-func (d DB) GetActiveOrder(o types.Order, slippage float64) *types.Order {
+func (d DB) GetActiveOrder(o types.Order, slippage float64) types.Order {
 	var order types.Order
 	if slippage > 0 {
 		lowerPrice := o.OpenPrice - (o.OpenPrice * slippage)
 		upperPrice := o.OpenPrice + (o.OpenPrice * slippage)
-		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price BETWEEN ? AND ? AND side = ? AND status <> ?",
-			o.BotID, o.Exchange, o.Symbol, lowerPrice, upperPrice, o.Side, types.OrderStatusClosed).First(&order)
+		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price BETWEEN ? AND ? AND side = ? AND status <> ? AND status <> ?",
+			o.BotID, o.Exchange, o.Symbol, lowerPrice, upperPrice, o.Side,
+			types.OrderStatusClosed, types.OrderStatusCanceled).First(&order)
 	} else {
-		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price = ? AND side = ? AND status <> ?",
-			o.BotID, o.Exchange, o.Symbol, o.OpenPrice, o.Side, types.OrderStatusClosed).First(&order)
+		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price = ? AND side = ? AND status <> ? AND status <> ?",
+			o.BotID, o.Exchange, o.Symbol, o.OpenPrice, o.Side,
+			types.OrderStatusClosed, types.OrderStatusCanceled).First(&order)
 	}
-	return &order
+	return order
+}
+
+// GetActiveOrders returns the orders that their status is not CLOSED
+func (d DB) GetActiveOrders(o types.Order) []types.Order {
+	var orders []types.Order
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND status <> ? AND status <> ?",
+		o.BotID, o.Exchange, o.Symbol, o.Side, types.OrderStatusClosed, types.OrderStatusCanceled).Find(&orders)
+	return orders
 }
 
 // GetNewOrders returns the orders that their status is NEW
@@ -51,14 +61,6 @@ func (d DB) GetFilledOrders(o types.Order) []types.Order {
 	var orders []types.Order
 	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND status = ?",
 		o.BotID, o.Exchange, o.Symbol, types.OrderStatusFilled).Find(&orders)
-	return orders
-}
-
-// GetActiveOrders returns the orders that their status is not CLOSED
-func (d DB) GetActiveOrders(o types.Order) []types.Order {
-	var orders []types.Order
-	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND status <> ?",
-		o.BotID, o.Exchange, o.Symbol, o.Side, types.OrderStatusClosed).Find(&orders)
 	return orders
 }
 
@@ -90,5 +92,5 @@ func (d DB) CreateOrder(order types.Order) error {
 
 // UpdateOrder performs SQL update on the table orders
 func (d DB) UpdateOrder(order types.Order) error {
-	return d.db.Save(&order).Error
+	return d.db.Where("ref_id1 = ?", order.RefID1).Updates(&order).Error
 }
