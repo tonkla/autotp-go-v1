@@ -16,7 +16,10 @@ type OnTickParams struct {
 	DB        db.DB
 }
 
-const openGaps = 2
+const (
+	openGaps      = 2
+	triggerBefore = 0.002
+)
 
 func OnTick(params OnTickParams) *t.TradeOrders {
 	ticker := params.Ticker
@@ -40,36 +43,46 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 	view := strings.ToUpper(p.View)
 
 	if view == t.ViewNeutral || view == "N" || view == t.ViewLong || view == "L" {
+		order.Side = t.OrderSideBuy
 		order.OpenPrice = buyPrice
 		if trend <= t.TrendDown1 {
 			order.OpenPrice = buyPrice - gridWidth*openGaps
 		}
-		order.Side = t.OrderSideBuy
-		_o := db.GetActiveOrder(order, p.Slippage)
-		if _o.OpenPrice == 0 {
+
+		o := db.GetActiveOrder(order, p.Slippage)
+		if o != nil {
 			if p.SL > 0 {
-				order.SL = buyPrice - gridWidth*p.SL
+				closePrice := buyPrice - gridWidth*p.SL
+				order.SL = closePrice
+				order.StopPrice = closePrice + closePrice*triggerBefore
 			}
 			if p.TP > 0 {
-				order.TP = buyPrice + gridWidth*p.TP
+				closePrice := buyPrice + gridWidth*p.TP
+				order.TP = closePrice
+				order.StopPrice = closePrice - closePrice*triggerBefore
 			}
 			orders = append(orders, order)
 		}
 	}
 
 	if view == t.ViewNeutral || view == "N" || view == t.ViewShort || view == "S" {
+		order.Side = t.OrderSideSell
 		order.OpenPrice = sellPrice
 		if trend >= t.TrendUp1 {
 			order.OpenPrice = sellPrice + gridWidth*openGaps
 		}
-		order.Side = t.OrderSideSell
-		_o := db.GetActiveOrder(order, p.Slippage)
-		if _o.OpenPrice == 0 {
+
+		o := db.GetActiveOrder(order, p.Slippage)
+		if o != nil {
 			if p.SL > 0 {
-				order.SL = sellPrice + gridWidth*p.SL
+				closePrice := sellPrice + gridWidth*p.SL
+				order.SL = closePrice
+				order.StopPrice = closePrice - closePrice*triggerBefore
 			}
 			if p.TP > 0 {
-				order.TP = sellPrice - gridWidth*p.TP
+				closePrice := sellPrice - gridWidth*p.TP
+				order.TP = closePrice
+				order.StopPrice = closePrice + closePrice*triggerBefore
 			}
 			orders = append(orders, order)
 		}

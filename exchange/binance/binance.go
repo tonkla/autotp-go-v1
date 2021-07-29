@@ -61,8 +61,8 @@ func newHeader(apiKey string) http.Header {
 }
 
 // Build a base query string
-func buildBaseQS(symbol string) string {
-	return fmt.Sprintf("timestamp=%d&recvWindow=20000&symbol=%s", h.Now13(), symbol)
+func buildBaseQS(payload *strings.Builder, symbol string) {
+	fmt.Fprintf(payload, "timestamp=%d&recvWindow=20000&symbol=%s", h.Now13(), symbol)
 }
 
 // Public APIs -----------------------------------------------------------------
@@ -70,6 +70,7 @@ func buildBaseQS(symbol string) string {
 // GetTicker returns the latest ticker
 func (c Client) GetTicker(symbol string) *t.Ticker {
 	var url strings.Builder
+
 	fmt.Fprintf(&url, "%s/ticker/price?symbol=%s", c.baseURL, symbol)
 	data, err := h.Get(url.String())
 	if err != nil {
@@ -87,6 +88,7 @@ func (c Client) GetTicker(symbol string) *t.Ticker {
 // GetOrderBook returns an order book (market depth)
 func (c Client) GetOrderBook(symbol string, limit int) *t.OrderBook {
 	var url strings.Builder
+
 	fmt.Fprintf(&url, "%s/depth?symbol=%s&limit=%d", c.baseURL, symbol, limit)
 	data, err := h.Get(url.String())
 	if err != nil {
@@ -119,6 +121,7 @@ func (c Client) GetOrderBook(symbol string, limit int) *t.OrderBook {
 // GetHistoricalPrices returns historical prices in a format of k-lines/candlesticks
 func (c Client) GetHistoricalPrices(symbol string, timeframe string, limit int) []t.HistoricalPrice {
 	var url strings.Builder
+
 	fmt.Fprintf(&url, "%s/klines?symbol=%s&interval=%s&limit=%d", c.baseURL, symbol, timeframe, limit)
 	data, err := h.Get(url.String())
 	if err != nil {
@@ -146,7 +149,9 @@ func (c Client) GetHistoricalPrices(symbol string, timeframe string, limit int) 
 // GetOrder returns the order by its IDs
 func (c Client) GetOrder(o t.Order) *t.Order {
 	var payload, url strings.Builder
-	fmt.Fprintf(&payload, "%s&orderId=%d&origClientOrderId=%s", buildBaseQS(o.Symbol), o.RefID1, o.RefID2)
+
+	buildBaseQS(&payload, o.Symbol)
+	fmt.Fprintf(&payload, "&orderId=%d&origClientOrderId=%s", o.RefID1, o.RefID2)
 
 	signature := Sign(payload.String(), c.secretKey)
 
@@ -172,7 +177,8 @@ func (c Client) GetOrder(o t.Order) *t.Order {
 // GetOpenOrders returns open orders
 func (c Client) GetOpenOrders(symbol string) []t.Order {
 	var payload, url strings.Builder
-	fmt.Fprint(&payload, buildBaseQS(symbol))
+
+	buildBaseQS(&payload, symbol)
 
 	signature := Sign(payload.String(), c.secretKey)
 
@@ -204,7 +210,8 @@ func (c Client) GetOpenOrders(symbol string) []t.Order {
 // GetAllOrders returns all account orders; active, canceled, or filled
 func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime int) []t.Order {
 	var payload, url strings.Builder
-	fmt.Fprint(&payload, buildBaseQS(symbol))
+
+	buildBaseQS(&payload, symbol)
 
 	if limit > 0 {
 		fmt.Fprintf(&payload, "&limit=%d", limit)
@@ -245,35 +252,19 @@ func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime in
 
 // PlaceOrder sends an order to the exchange
 func (c Client) PlaceOrder(o t.Order) *t.Order {
-	if o.OpenPrice == 0 {
-		return nil
-	}
-
 	var payload, url strings.Builder
-	fmt.Fprintf(&payload, "%s&side=%s&type=%s&quantity=%f", buildBaseQS(o.Symbol), o.Side, o.Type, o.Qty)
 
-	if o.Type == t.OrderTypeLimit || o.Type == t.OrderTypeTP || o.Type == t.OrderTypeSL {
+	buildBaseQS(&payload, o.Symbol)
+	fmt.Fprintf(&payload, "&side=%s&type=%s&quantity=%f", o.Side, o.Type, o.Qty)
+
+	if o.Type == t.OrderTypeLimit || o.Type == t.OrderTypeSL || o.Type == t.OrderTypeTP {
 		fmt.Fprintf(&payload, "&timeInForce=GTC")
-	}
 
-	if o.Type == t.OrderTypeLimit {
-		fmt.Fprintf(&payload, "&price=%f", o.OpenPrice)
-	} else if o.Type == t.OrderTypeTP {
-		stopPrice := o.ClosePrice
-		if o.Side == t.OrderSideBuy {
-			stopPrice = o.ClosePrice - o.ClosePrice*0.002
-		} else if o.Side == t.OrderSideSell {
-			stopPrice = o.ClosePrice + o.ClosePrice*0.002
+		if o.Type == t.OrderTypeLimit {
+			fmt.Fprintf(&payload, "&price=%f", o.OpenPrice)
+		} else if o.Type == t.OrderTypeSL || o.Type == t.OrderTypeTP {
+			fmt.Fprintf(&payload, "&price=%f&stopPrice=%f", o.ClosePrice, o.StopPrice)
 		}
-		fmt.Fprintf(&payload, "&price=%f&stopPrice=%f", o.ClosePrice, stopPrice)
-	} else if o.Type == t.OrderTypeSL {
-		stopPrice := o.ClosePrice
-		if o.Side == t.OrderSideBuy {
-			stopPrice = o.ClosePrice + o.ClosePrice*0.002
-		} else if o.Side == t.OrderSideSell {
-			stopPrice = o.ClosePrice - o.ClosePrice*0.002
-		}
-		fmt.Fprintf(&payload, "&price=%f&stopPrice=%f", o.ClosePrice, stopPrice)
 	}
 
 	signature := Sign(payload.String(), c.secretKey)
@@ -311,7 +302,9 @@ func (c Client) PlaceOrder(o t.Order) *t.Order {
 // CancelOrder cancels an order on the exchange
 func (c Client) CancelOrder(o t.Order) *t.Order {
 	var payload, url strings.Builder
-	fmt.Fprintf(&payload, "%s&orderId=%d&origClientOrderId=%s", buildBaseQS(o.Symbol), o.RefID1, o.RefID2)
+
+	buildBaseQS(&payload, o.Symbol)
+	fmt.Fprintf(&payload, "&orderId=%d&origClientOrderId=%s", o.RefID1, o.RefID2)
 
 	signature := Sign(payload.String(), c.secretKey)
 

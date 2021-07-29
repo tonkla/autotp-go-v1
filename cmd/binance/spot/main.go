@@ -212,7 +212,7 @@ func main() {
 			} else if o.Side == t.OrderSideSell {
 				o.Side = t.OrderSideBuy
 			}
-
+			o.Type = t.OrderTypeLimit
 			o.Status = exo.Status
 			err := db.UpdateOrder(o)
 			if err != nil {

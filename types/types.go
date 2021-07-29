@@ -66,6 +66,7 @@ type Order struct {
 	OpenTime   int64  `gorm:"index"`
 	CloseTime  int64  `gorm:"index"`
 	Qty        float64
+	StopPrice  float64 `gorm:"-"`
 	OpenPrice  float64
 	ClosePrice float64
 	SL         float64

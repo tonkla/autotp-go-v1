@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/tonkla/autotp/types"
+	t "github.com/tonkla/autotp/types"
 )
 
 type DB struct {
@@ -19,78 +19,81 @@ func Connect() *DB {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	db.AutoMigrate(&types.Order{})
+	db.AutoMigrate(&t.Order{})
 	return &DB{db: db}
 }
 
 // GetActiveOrder returns the order that its status is not CLOSED
-func (d DB) GetActiveOrder(o types.Order, slippage float64) types.Order {
-	var order types.Order
+func (d DB) GetActiveOrder(o t.Order, slippage float64) *t.Order {
+	var order t.Order
 	if slippage > 0 {
 		lowerPrice := o.OpenPrice - (o.OpenPrice * slippage)
 		upperPrice := o.OpenPrice + (o.OpenPrice * slippage)
 		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price BETWEEN ? AND ? AND side = ? AND status <> ? AND status <> ?",
 			o.BotID, o.Exchange, o.Symbol, lowerPrice, upperPrice, o.Side,
-			types.OrderStatusClosed, types.OrderStatusCanceled).First(&order)
+			t.OrderStatusClosed, t.OrderStatusCanceled).First(&order)
 	} else {
 		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price = ? AND side = ? AND status <> ? AND status <> ?",
 			o.BotID, o.Exchange, o.Symbol, o.OpenPrice, o.Side,
-			types.OrderStatusClosed, types.OrderStatusCanceled).First(&order)
+			t.OrderStatusClosed, t.OrderStatusCanceled).First(&order)
 	}
-	return order
+	if order.OpenPrice == 0 {
+		return nil
+	}
+	return &order
 }
 
 // GetActiveOrders returns the orders that their status is not CLOSED
-func (d DB) GetActiveOrders(o types.Order) []types.Order {
-	var orders []types.Order
+func (d DB) GetActiveOrders(o t.Order) []t.Order {
+	var orders []t.Order
 	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND status <> ? AND status <> ?",
-		o.BotID, o.Exchange, o.Symbol, o.Side, types.OrderStatusClosed, types.OrderStatusCanceled).Find(&orders)
+		o.BotID, o.Exchange, o.Symbol, o.Side, t.OrderStatusClosed, t.OrderStatusCanceled).Find(&orders)
 	return orders
 }
 
 // GetNewOrders returns the orders that their status is NEW
-func (d DB) GetNewOrders(o types.Order) []types.Order {
-	var orders []types.Order
+func (d DB) GetNewOrders(o t.Order) []t.Order {
+	var orders []t.Order
 	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND status = ?",
-		o.BotID, o.Exchange, o.Symbol, types.OrderStatusNew).Find(&orders)
+		o.BotID, o.Exchange, o.Symbol, t.OrderStatusNew).Find(&orders)
 	return orders
 }
 
 // GetFilledOrders returns the orders that their status is FILLED
-func (d DB) GetFilledOrders(o types.Order) []types.Order {
-	var orders []types.Order
+func (d DB) GetFilledOrders(o t.Order) []t.Order {
+	var orders []t.Order
 	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND status = ?",
-		o.BotID, o.Exchange, o.Symbol, types.OrderStatusFilled).Find(&orders)
+		o.BotID, o.Exchange, o.Symbol, t.OrderStatusFilled).Find(&orders)
 	return orders
 }
 
 // GetProfitOrders returns the orders that are profitable
-func (d DB) GetProfitOrders(o types.Order, t types.Ticker) []types.Order {
-	var orders []types.Order
-	fee := t.Price * 0.002 * 2 // 0.002=transaction fee at 0.2%, 2=open and closed fees
-	if o.Side == types.OrderSideBuy {
-		profit := t.Price - fee
+func (d DB) GetProfitOrders(o t.Order, tk t.Ticker) []t.Order {
+	var orders []t.Order
+	fee := tk.Price * 0.002 * 2 // 0.002=transaction fee at 0.2%, 2=open and closed fees
+	if o.Side == t.OrderSideBuy {
+		profit := tk.Price - fee
 		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND status = ? AND open_price < ?",
-			o.BotID, o.Exchange, o.Symbol, o.Side, types.OrderStatusFilled, profit).Find(&orders)
-	} else if o.Side == types.OrderSideSell {
-		profit := t.Price + fee
+			o.BotID, o.Exchange, o.Symbol, o.Side, t.OrderStatusFilled, profit).Find(&orders)
+	} else if o.Side == t.OrderSideSell {
+		profit := tk.Price + fee
 		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND status = ? AND open_price > ?",
-			o.BotID, o.Exchange, o.Symbol, o.Side, types.OrderStatusFilled, profit).Find(&orders)
+			o.BotID, o.Exchange, o.Symbol, o.Side, t.OrderStatusFilled, profit).Find(&orders)
 	}
 	return orders
 }
 
 // IsOrderActive checks the order is active
-func (d DB) IsOrderActive(o types.Order, slippage float64) bool {
+func (d DB) IsOrderActive(o t.Order, slippage float64) bool {
 	return d.GetActiveOrder(o, slippage).RefID1 > 0
 }
 
 // CreateOrder performs SQL insert on the table orders
-func (d DB) CreateOrder(order types.Order) error {
+func (d DB) CreateOrder(order t.Order) error {
 	return d.db.Create(&order).Error
 }
 
 // UpdateOrder performs SQL update on the table orders
-func (d DB) UpdateOrder(order types.Order) error {
+func (d DB) UpdateOrder(order t.Order) error {
 	return d.db.Where("ref_id1 = ?", order.RefID1).Updates(&order).Error
 }
