@@ -14,8 +14,6 @@ type OnTickParams struct {
 	DB        db.DB
 }
 
-const triggerBefore = 0.002
-
 func OnTick(params OnTickParams) *t.TradeOrders {
 	ticker := params.Ticker
 	p := params.BotParams
@@ -40,16 +38,12 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		order.Side = t.OrderSideBuy
 		order.OpenPrice = buyPrice
 		o := db.GetActiveOrder(order, p.Slippage)
-		if o != nil {
+		if o == nil {
 			if p.SL > 0 {
-				closePrice := buyPrice - gridWidth*p.SL
-				order.SL = closePrice
-				order.StopPrice = closePrice + closePrice*triggerBefore
+				order.SL = buyPrice - gridWidth*p.SL
 			}
 			if p.TP > 0 {
-				closePrice := buyPrice + gridWidth*p.TP
-				order.TP = closePrice
-				order.StopPrice = closePrice - closePrice*triggerBefore
+				order.TP = buyPrice + gridWidth*p.TP
 			}
 			orders = append(orders, order)
 		}
@@ -59,16 +53,12 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		order.Side = t.OrderSideSell
 		order.OpenPrice = sellPrice
 		o := db.GetActiveOrder(order, p.Slippage)
-		if o != nil {
+		if o == nil {
 			if p.SL > 0 {
-				closePrice := sellPrice + gridWidth*p.SL
-				order.SL = closePrice
-				order.StopPrice = closePrice - closePrice*triggerBefore
+				order.SL = sellPrice + gridWidth*p.SL
 			}
 			if p.TP > 0 {
-				closePrice := sellPrice - gridWidth*p.TP
-				order.TP = closePrice
-				order.StopPrice = closePrice + closePrice*triggerBefore
+				order.TP = sellPrice - gridWidth*p.TP
 			}
 			orders = append(orders, order)
 		}

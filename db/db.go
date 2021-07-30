@@ -14,8 +14,11 @@ type DB struct {
 	db *gorm.DB
 }
 
-func Connect() *DB {
-	db, err := gorm.Open(sqlite.Open("autotp.db"), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
+func Connect(dbName string) *DB {
+	if dbName == "" {
+		dbName = "autotp.db"
+	}
+	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -27,8 +30,8 @@ func Connect() *DB {
 func (d DB) GetActiveOrder(o t.Order, slippage float64) *t.Order {
 	var order t.Order
 	if slippage > 0 {
-		lowerPrice := o.OpenPrice - (o.OpenPrice * slippage)
-		upperPrice := o.OpenPrice + (o.OpenPrice * slippage)
+		lowerPrice := o.OpenPrice - o.OpenPrice*slippage
+		upperPrice := o.OpenPrice + o.OpenPrice*slippage
 		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price BETWEEN ? AND ? AND side = ? AND status <> ? AND status <> ?",
 			o.BotID, o.Exchange, o.Symbol, lowerPrice, upperPrice, o.Side,
 			t.OrderStatusClosed, t.OrderStatusCanceled).First(&order)
@@ -45,6 +48,14 @@ func (d DB) GetActiveOrder(o t.Order, slippage float64) *t.Order {
 
 // GetActiveOrders returns the orders that their status is not CLOSED
 func (d DB) GetActiveOrders(o t.Order) []t.Order {
+	var orders []t.Order
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND status <> ? AND status <> ?",
+		o.BotID, o.Exchange, o.Symbol, t.OrderStatusClosed, t.OrderStatusCanceled).Find(&orders)
+	return orders
+}
+
+// GetActiveOrdersBySide returns the orders that their status is not CLOSED for specific side
+func (d DB) GetActiveOrdersBySide(o t.Order) []t.Order {
 	var orders []t.Order
 	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND status <> ? AND status <> ?",
 		o.BotID, o.Exchange, o.Symbol, o.Side, t.OrderStatusClosed, t.OrderStatusCanceled).Find(&orders)

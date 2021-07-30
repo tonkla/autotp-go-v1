@@ -1,5 +1,6 @@
 apiKey: API_KEY
 secretKey: SECRET_KEY
+dbName: autotp.db
 botID: 1
 intervalSec: 5
 symbol: BNBUSDT

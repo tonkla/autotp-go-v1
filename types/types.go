@@ -62,15 +62,21 @@ type Order struct {
 	Side       string `gorm:"index"`
 	Status     string `gorm:"index"`
 	Type       string `gorm:"-"`
-	IsWorking  bool   `gorm:"-"`
-	OpenTime   int64  `gorm:"index"`
-	CloseTime  int64  `gorm:"index"`
 	Qty        float64
-	StopPrice  float64 `gorm:"-"`
 	OpenPrice  float64
 	ClosePrice float64
 	SL         float64
 	TP         float64
+	SLStop     float64 `gorm:"-"` // A trigger price that activate SL
+	TPStop     float64 `gorm:"-"` // A trigger price that activate TP
+	SLRefID1   int64
+	SLRefID2   string
+	TPRefID1   int64
+	TPRefID2   string
+	IsWorking  bool `gorm:"-"`
+	UpdateTime int64
+	OpenTime   int64 `gorm:"index"`
+	CloseTime  int64 `gorm:"index"`
 }
 
 type TradeOrders struct {
@@ -92,16 +98,15 @@ type OrderBook struct {
 }
 
 type BotParams struct {
-	BotID        int64
-	LowerPrice   float64
-	UpperPrice   float64
-	Grids        float64
-	Qty          float64
-	View         string
-	SL           float64
-	TP           float64
-	TriggerPrice float64
-	Slippage     float64
-	MATimeframe  string
-	MAPeriod     int64
+	BotID       int64
+	LowerPrice  float64
+	UpperPrice  float64
+	Grids       float64
+	Qty         float64
+	View        string
+	SL          float64
+	TP          float64
+	Slippage    float64
+	MATimeframe string
+	MAPeriod    int64
 }

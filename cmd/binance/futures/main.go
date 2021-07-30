@@ -53,6 +53,7 @@ func main() {
 
 	apiKey := viper.GetString("apiKey")
 	secretKey := viper.GetString("secretKey")
+	dbName := viper.GetString("dbName")
 	botID := viper.GetInt64("botID")
 	symbol := viper.GetString("symbol")
 	lowerPrice := viper.GetFloat64("lowerPrice")
@@ -62,7 +63,6 @@ func main() {
 	view := viper.GetString("view")
 	sl := viper.GetFloat64("gridSL")
 	tp := viper.GetFloat64("gridTP")
-	triggerPrice := viper.GetFloat64("triggerPrice")
 	slippage := viper.GetFloat64("slippage")
 	intervalSec := viper.GetInt64("intervalSec")
 	maTimeframe := viper.GetString("maTimeframe")
@@ -82,21 +82,20 @@ func main() {
 	log.Printf("I'm a bot ID %d, working on Binance's USDⓈ-M Futures\n", botID)
 
 	params := types.BotParams{
-		BotID:        botID,
-		LowerPrice:   lowerPrice,
-		UpperPrice:   upperPrice,
-		Grids:        grids,
-		Qty:          qty,
-		View:         view,
-		SL:           sl,
-		TP:           tp,
-		TriggerPrice: triggerPrice,
-		Slippage:     slippage,
-		MATimeframe:  maTimeframe,
-		MAPeriod:     maPeriod,
+		BotID:       botID,
+		LowerPrice:  lowerPrice,
+		UpperPrice:  upperPrice,
+		Grids:       grids,
+		Qty:         qty,
+		View:        view,
+		SL:          sl,
+		TP:          tp,
+		Slippage:    slippage,
+		MATimeframe: maTimeframe,
+		MAPeriod:    maPeriod,
 	}
 
-	db := db.Connect()
+	db := db.Connect(dbName)
 
 	if intervalSec == 0 {
 		intervalSec = 5

@@ -53,6 +53,7 @@ func main() {
 
 	apiKey := viper.GetString("apiKey")
 	secretKey := viper.GetString("secretKey")
+	dbName := viper.GetString("dbName")
 	botID := viper.GetInt64("botID")
 	symbol := viper.GetString("symbol")
 	lowerPrice := viper.GetFloat64("lowerPrice")
@@ -62,7 +63,6 @@ func main() {
 	view := viper.GetString("view")
 	sl := viper.GetFloat64("gridSL")
 	tp := viper.GetFloat64("gridTP")
-	triggerPrice := viper.GetFloat64("triggerPrice")
 	slippage := viper.GetFloat64("slippage")
 	intervalSec := viper.GetInt64("intervalSec")
 	maTimeframe := viper.GetString("maTimeframe")
@@ -79,24 +79,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	h.Logf("I'm a bot ID [%d], trading [%s] on a Binance's Spot\n", botID, symbol)
+	h.Logf("{Exchange: 'Binance Spot', BotID: %d, Symbol: %s}\n", botID, symbol)
 
 	params := t.BotParams{
-		BotID:        botID,
-		LowerPrice:   lowerPrice,
-		UpperPrice:   upperPrice,
-		Grids:        grids,
-		Qty:          qty,
-		View:         view,
-		SL:           sl,
-		TP:           tp,
-		TriggerPrice: triggerPrice,
-		Slippage:     slippage,
-		MATimeframe:  maTimeframe,
-		MAPeriod:     maPeriod,
+		BotID:       botID,
+		LowerPrice:  lowerPrice,
+		UpperPrice:  upperPrice,
+		Grids:       grids,
+		Qty:         qty,
+		View:        view,
+		SL:          sl,
+		TP:          tp,
+		Slippage:    slippage,
+		MATimeframe: maTimeframe,
+		MAPeriod:    maPeriod,
 	}
 
-	db := db.Connect()
+	db := db.Connect(dbName)
 
 	if intervalSec == 0 {
 		intervalSec = 5
@@ -135,8 +134,8 @@ func main() {
 
 		// Close orders by using late SL/TP -----------------------------------------
 
-		for _, _o := range tradeOrders.CloseOrders {
-			err := db.UpdateOrder(_o)
+		for _, o := range tradeOrders.CloseOrders {
+			err := db.UpdateOrder(o)
 			if err != nil {
 				h.Log(err)
 			}
@@ -144,32 +143,32 @@ func main() {
 
 		// Open a new order --------------------------------------------------------
 
-		for _, _o := range tradeOrders.OpenOrders {
-			o := exchange.PlaceOrder(_o)
-			if o == nil {
+		for _, o := range tradeOrders.OpenOrders {
+			_o := exchange.PlaceOrder(o)
+			if _o == nil {
 				continue
 			}
-			err := db.CreateOrder(*o)
+			err := db.CreateOrder(*_o)
 			if err != nil {
 				h.Log(err)
 				continue
 			}
-			h.Logf("Open {side: %s, qty: %.4f, price: %.2f}\n", o.Side, o.Qty, o.OpenPrice)
+			h.Logf("{Action: Open, Side: %s, Qty: %.4f, Price: %.2f}\n", _o.Side, _o.Qty, _o.OpenPrice)
 		}
 
 		// Place SL/TP with the order type STOP_LOSS_LIMIT / TAKE_PROFIT_LIMIT
-
 		qo := t.Order{
 			BotID:    botID,
 			Exchange: t.ExcBinance,
 			Symbol:   symbol,
 		}
-		for _, o := range db.GetNewOrders(qo) {
+		for _, o := range db.GetActiveOrders(qo) {
 			exo := exchange.GetOrder(o)
 			if exo == nil || exo.Status == t.OrderStatusNew {
 				continue
 			}
 
+			// Synchronize canceled/closed orders
 			if exo.Status == t.OrderStatusCanceled || !exo.IsWorking {
 				o.CloseTime = h.Now13()
 				o.Status = t.OrderStatusCanceled
@@ -183,45 +182,49 @@ func main() {
 				continue
 			}
 
-			// Swap a side before sending to Binance, because SL/TP needs an opposite side
-			if o.Side == t.OrderSideBuy {
-				o.Side = t.OrderSideSell
-			} else if o.Side == t.OrderSideSell {
-				o.Side = t.OrderSideBuy
-			}
-
-			if o.SL > 0 {
+			// Update SL price
+			if o.SL > 0 && o.SLRefID1 == 0 {
 				o.Type = t.OrderTypeSL
-				o.ClosePrice = o.SL
-				if nil == exchange.PlaceOrder(o) {
+				if o.SLStop == 0 {
+					o.SLStop = h.CalSLStop(o.Side, o.SL, 0)
+				}
+				// SL in opposite side
+				o.Side = h.Reverse(o.Side)
+				_o := exchange.PlaceOrder(o)
+				if _o == nil {
 					continue
 				}
+				o.Side = h.Reverse(o.Side)
+				o.SLRefID1 = _o.RefID1
+				o.SLRefID2 = _o.RefID2
+				o.UpdateTime = _o.UpdateTime
 			}
 
-			if o.TP > 0 {
+			// Update TP price
+			if o.TP > 0 && o.TPRefID1 == 0 {
 				o.Type = t.OrderTypeTP
-				o.ClosePrice = o.TP
-				if nil == exchange.PlaceOrder(o) {
+				if o.TPStop == 0 {
+					o.TPStop = h.CalTPStop(o.Side, o.TP, 0)
+				}
+				// TP in opposite side
+				o.Side = h.Reverse(o.Side)
+				_o := exchange.PlaceOrder(o)
+				if _o == nil {
 					continue
 				}
+				o.Side = h.Reverse(o.Side)
+				o.TPRefID1 = _o.RefID1
+				o.TPRefID2 = _o.RefID2
+				o.UpdateTime = _o.UpdateTime
 			}
 
-			// Swap back a side to the original one before update to DB
-			if o.Side == t.OrderSideBuy {
-				o.Side = t.OrderSideSell
-			} else if o.Side == t.OrderSideSell {
-				o.Side = t.OrderSideBuy
-			}
-			o.Type = t.OrderTypeLimit
-			o.Status = exo.Status
 			err := db.UpdateOrder(o)
 			if err != nil {
 				h.Log(err)
 			}
 		}
 
-		// Update closed orders in the local DB
-
+		// Synchronize closed orders
 		for _, o := range db.GetFilledOrders(qo) {
 			exo := exchange.GetOrder(o)
 			if exo == nil || exo.IsWorking {
@@ -230,12 +233,13 @@ func main() {
 
 			o.Status = t.OrderStatusClosed
 			o.CloseTime = h.Now13()
+			o.ClosePrice = o.TP
 			err := db.UpdateOrder(o)
 			if err != nil {
 				h.Log(err)
 				continue
 			}
-			h.Logf("Close {side: %s, qty: %.4f, price: %.2f}\n", o.Side, o.Qty, o.ClosePrice)
+			h.Logf("{Action: Close, Side: %s, Qty: %.4f, Price: %.2f}\n", o.Side, o.Qty, o.ClosePrice)
 		}
 	}
 }

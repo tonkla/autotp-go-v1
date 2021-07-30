@@ -53,7 +53,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 	if trend >= t.TrendUp1 {
 		// Stop Loss, for SELL orders
 		qo.Side = t.OrderSideSell
-		for _, o := range db.GetActiveOrders(qo) {
+		for _, o := range db.GetActiveOrdersBySide(qo) {
 			o.Type = t.OrderTypeSL
 			o.SL = bidPrice
 			closeOrders = append(closeOrders, o)
@@ -76,7 +76,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 			qo.Side = t.OrderSideBuy
 			qo.OpenPrice = bidPrice
 			qo.Qty = p.Qty
-			if len(db.GetActiveOrders(qo)) == 0 {
+			if len(db.GetActiveOrdersBySide(qo)) == 0 {
 				openOrders = append(openOrders, qo)
 			}
 		}
@@ -86,7 +86,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 	if trend <= t.TrendDown1 {
 		// Stop Loss, for BUY orders
 		qo.Side = t.OrderSideBuy
-		for _, o := range db.GetActiveOrders(qo) {
+		for _, o := range db.GetActiveOrdersBySide(qo) {
 			o.Type = t.OrderTypeSL
 			o.SL = askPrice
 			closeOrders = append(closeOrders, o)
@@ -109,7 +109,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 			qo.Side = t.OrderSideSell
 			qo.OpenPrice = askPrice
 			qo.Qty = p.Qty
-			if len(db.GetActiveOrders(qo)) == 0 {
+			if len(db.GetActiveOrdersBySide(qo)) == 0 {
 				openOrders = append(openOrders, qo)
 			}
 		}

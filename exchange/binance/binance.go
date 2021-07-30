@@ -171,6 +171,7 @@ func (c Client) GetOrder(o t.Order) *t.Order {
 
 	o.Status = r.Get("status").String()
 	o.IsWorking = r.Get("isWorking").Bool()
+	o.UpdateTime = r.Get("updateTime").Int()
 	return &o
 }
 
@@ -191,16 +192,17 @@ func (c Client) GetOpenOrders(symbol string) []t.Order {
 	var orders []t.Order
 	for _, r := range gjson.ParseBytes(data).Array() {
 		order := t.Order{
-			Symbol:    symbol,
-			RefID1:    r.Get("orderId").Int(),
-			RefID2:    r.Get("clientOrderId").String(),
-			Side:      r.Get("side").String(),
-			Status:    r.Get("status").String(),
-			Type:      r.Get("type").String(),
-			OpenTime:  r.Get("time").Int(),
-			Qty:       r.Get("origQty").Float(),
-			OpenPrice: r.Get("price").Float(),
-			IsWorking: r.Get("isWorking").Bool(),
+			Symbol:     symbol,
+			RefID1:     r.Get("orderId").Int(),
+			RefID2:     r.Get("clientOrderId").String(),
+			Side:       r.Get("side").String(),
+			Status:     r.Get("status").String(),
+			Type:       r.Get("type").String(),
+			OpenTime:   r.Get("time").Int(),
+			Qty:        r.Get("origQty").Float(),
+			OpenPrice:  r.Get("price").Float(),
+			IsWorking:  r.Get("isWorking").Bool(),
+			UpdateTime: r.Get("updateTime").Int(),
 		}
 		orders = append(orders, order)
 	}
@@ -262,8 +264,12 @@ func (c Client) PlaceOrder(o t.Order) *t.Order {
 
 		if o.Type == t.OrderTypeLimit {
 			fmt.Fprintf(&payload, "&price=%f", o.OpenPrice)
-		} else if o.Type == t.OrderTypeSL || o.Type == t.OrderTypeTP {
-			fmt.Fprintf(&payload, "&price=%f&stopPrice=%f", o.ClosePrice, o.StopPrice)
+		} else {
+			if o.Type == t.OrderTypeSL {
+				fmt.Fprintf(&payload, "&price=%f&stopPrice=%f", o.SL, o.SLStop)
+			} else if o.Type == t.OrderTypeTP {
+				fmt.Fprintf(&payload, "&price=%f&stopPrice=%f", o.TP, o.TPStop)
+			}
 		}
 	}
 
@@ -280,6 +286,13 @@ func (c Client) PlaceOrder(o t.Order) *t.Order {
 	if r.Get("code").Int() < 0 {
 		h.Log(r)
 		return nil
+	}
+
+	if o.Type == t.OrderTypeSL || o.Type == t.OrderTypeTP {
+		o.RefID1 = r.Get("orderId").Int()
+		o.RefID2 = r.Get("clientOrderId").String()
+		o.UpdateTime = r.Get("transactTime").Int()
+		return &o
 	}
 
 	status := r.Get("status").String()
