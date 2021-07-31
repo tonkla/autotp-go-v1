@@ -32,13 +32,11 @@ func (d DB) GetActiveOrder(o t.Order, slippage float64) *t.Order {
 	if slippage > 0 {
 		lowerPrice := o.OpenPrice - o.OpenPrice*slippage
 		upperPrice := o.OpenPrice + o.OpenPrice*slippage
-		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price BETWEEN ? AND ? AND side = ? AND status <> ? AND status <> ?",
-			o.BotID, o.Exchange, o.Symbol, lowerPrice, upperPrice, o.Side,
-			t.OrderStatusClosed, t.OrderStatusCanceled).First(&order)
+		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price BETWEEN ? AND ? AND side = ? AND status <> ?",
+			o.BotID, o.Exchange, o.Symbol, lowerPrice, upperPrice, o.Side, t.OrderStatusCanceled).First(&order)
 	} else {
-		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price = ? AND side = ? AND status <> ? AND status <> ?",
-			o.BotID, o.Exchange, o.Symbol, o.OpenPrice, o.Side,
-			t.OrderStatusClosed, t.OrderStatusCanceled).First(&order)
+		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price = ? AND side = ? AND status <> ?",
+			o.BotID, o.Exchange, o.Symbol, o.OpenPrice, o.Side, t.OrderStatusCanceled).First(&order)
 	}
 	if order.OpenPrice == 0 {
 		return nil
@@ -49,16 +47,16 @@ func (d DB) GetActiveOrder(o t.Order, slippage float64) *t.Order {
 // GetActiveOrders returns the orders that their status is not CLOSED
 func (d DB) GetActiveOrders(o t.Order) []t.Order {
 	var orders []t.Order
-	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND status <> ? AND status <> ?",
-		o.BotID, o.Exchange, o.Symbol, t.OrderStatusClosed, t.OrderStatusCanceled).Find(&orders)
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND status <> ?",
+		o.BotID, o.Exchange, o.Symbol, t.OrderStatusCanceled).Find(&orders)
 	return orders
 }
 
-// GetActiveOrdersBySide returns the orders that their status is not CLOSED for specific side
+// GetActiveOrdersBySide returns the orders that their status is not canceled for the specific side
 func (d DB) GetActiveOrdersBySide(o t.Order) []t.Order {
 	var orders []t.Order
-	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND status <> ? AND status <> ?",
-		o.BotID, o.Exchange, o.Symbol, o.Side, t.OrderStatusClosed, t.OrderStatusCanceled).Find(&orders)
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND status <> ?",
+		o.BotID, o.Exchange, o.Symbol, o.Side, t.OrderStatusCanceled).Find(&orders)
 	return orders
 }
 
@@ -75,6 +73,14 @@ func (d DB) GetFilledOrders(o t.Order) []t.Order {
 	var orders []t.Order
 	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND status = ?",
 		o.BotID, o.Exchange, o.Symbol, t.OrderStatusFilled).Find(&orders)
+	return orders
+}
+
+// GetFilledOrdersBySide returns the orders that their status is FILLED for the specific side
+func (d DB) GetFilledOrdersBySide(o t.Order) []t.Order {
+	var orders []t.Order
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND SIDE = ? AND status = ?",
+		o.BotID, o.Exchange, o.Symbol, o.Side, t.OrderStatusFilled).Find(&orders)
 	return orders
 }
 

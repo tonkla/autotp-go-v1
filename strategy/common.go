@@ -117,17 +117,17 @@ func GetLowerPrice(price float64, digit int) float64 {
 }
 
 // GetGridRange returns the lower number and the upper number that closed to the target number
-func GetGridRange(target float64, lowerNum float64, upperNum float64, grids float64) (float64, float64, float64) {
-	if target <= lowerNum || lowerNum >= upperNum || grids < 2 {
+func GetGridRange(target float64, lowerNum float64, upperNum float64, gridSize float64) (float64, float64, float64) {
+	if target <= lowerNum || lowerNum >= upperNum || gridSize < 2 {
 		return 0, 0, 0
 	}
 
 	lower := lowerNum
 	upper := upperNum
 	zone := upper - lower
-	grid := zone / grids
+	gridWidth := zone / gridSize
 
-	if math.Mod(grids, 5) == 0 {
+	if math.Mod(gridSize, 5) == 0 {
 		div := zone / 5
 
 		if lower+div*4 < target {
@@ -149,7 +149,7 @@ func GetGridRange(target float64, lowerNum float64, upperNum float64, grids floa
 		} else if upper-div > target {
 			upper -= div
 		}
-	} else if math.Mod(grids, 4) == 0 {
+	} else if math.Mod(gridSize, 4) == 0 {
 		div := zone / 4
 
 		if lower+div*3 < target {
@@ -167,7 +167,7 @@ func GetGridRange(target float64, lowerNum float64, upperNum float64, grids floa
 		} else if upper-div > target {
 			upper -= div
 		}
-	} else if math.Mod(grids, 3) == 0 {
+	} else if math.Mod(gridSize, 3) == 0 {
 		div := zone / 3
 
 		if lower+div*2 < target {
@@ -181,7 +181,7 @@ func GetGridRange(target float64, lowerNum float64, upperNum float64, grids floa
 		} else if upper-div > target {
 			upper -= div
 		}
-	} else if math.Mod(grids, 2) == 0 {
+	} else if math.Mod(gridSize, 2) == 0 {
 		div := zone / 2
 
 		if lower+div < target {
@@ -193,23 +193,23 @@ func GetGridRange(target float64, lowerNum float64, upperNum float64, grids floa
 		}
 	}
 
-	for i := 0; i < int(grids); i++ {
-		if lower+grid < target {
-			lower += grid
+	for i := 0; i < int(gridSize); i++ {
+		if lower+gridWidth < target {
+			lower += gridWidth
 		} else {
 			break
 		}
 	}
 
-	for i := 0; i < int(grids); i++ {
-		if upper-grid > target {
-			upper -= grid
+	for i := 0; i < int(gridSize); i++ {
+		if upper-gridWidth > target {
+			upper -= gridWidth
 		} else {
 			break
 		}
 	}
 
-	return lower, upper, grid
+	return lower, upper, gridWidth
 }
 
 // GetGridZones returns all buyable zones of the grid
@@ -218,15 +218,15 @@ func GetGridZones(target float64, lowerNum float64, upperNum float64, grids floa
 		return nil, 0
 	}
 
-	start, _, grid := GetGridRange(target, lowerNum, upperNum, grids)
+	start, _, gridWidth := GetGridRange(target, lowerNum, upperNum, grids)
 
 	var zones []float64
 	for i := 0.0; i < grids; i++ {
-		num := start + i*grid
+		num := start + i*gridWidth
 		if num >= upperNum {
 			break
 		}
 		zones = append(zones, num)
 	}
-	return zones, grid
+	return zones, gridWidth
 }

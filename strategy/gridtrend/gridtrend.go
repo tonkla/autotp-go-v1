@@ -25,7 +25,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 
 	var orders []t.Order
 
-	buyPrice, sellPrice, gridWidth := strategy.GetGridRange(ticker.Price, p.LowerPrice, p.UpperPrice, p.Grids)
+	buyPrice, sellPrice, gridWidth := strategy.GetGridRange(ticker.Price, p.LowerPrice, p.UpperPrice, p.GridSize)
 	trend := strategy.GetTrend(params.HPrices, int(p.MAPeriod))
 
 	order := t.Order{
@@ -48,11 +48,8 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 
 		o := db.GetActiveOrder(order, p.Slippage)
 		if o == nil {
-			if p.SL > 0 {
-				order.SL = buyPrice - gridWidth*p.SL
-			}
-			if p.TP > 0 {
-				order.TP = buyPrice + gridWidth*p.TP
+			if p.GridTP > 0 {
+				order.TPPrice = buyPrice + gridWidth*p.GridTP
 			}
 			orders = append(orders, order)
 		}
@@ -67,11 +64,8 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 
 		o := db.GetActiveOrder(order, p.Slippage)
 		if o == nil {
-			if p.SL > 0 {
-				order.SL = sellPrice + gridWidth*p.SL
-			}
-			if p.TP > 0 {
-				order.TP = sellPrice - gridWidth*p.TP
+			if p.GridTP > 0 {
+				order.TPPrice = sellPrice - gridWidth*p.GridTP
 			}
 			orders = append(orders, order)
 		}

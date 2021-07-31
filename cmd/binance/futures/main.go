@@ -58,11 +58,10 @@ func main() {
 	symbol := viper.GetString("symbol")
 	lowerPrice := viper.GetFloat64("lowerPrice")
 	upperPrice := viper.GetFloat64("upperPrice")
-	grids := viper.GetFloat64("grids")
+	gridSize := viper.GetFloat64("gridSize")
+	gridTP := viper.GetFloat64("gridTP")
 	qty := viper.GetFloat64("qty")
 	view := viper.GetString("view")
-	sl := viper.GetFloat64("gridSL")
-	tp := viper.GetFloat64("gridTP")
 	slippage := viper.GetFloat64("slippage")
 	intervalSec := viper.GetInt64("intervalSec")
 	maTimeframe := viper.GetString("maTimeframe")
@@ -71,8 +70,8 @@ func main() {
 	if upperPrice <= lowerPrice {
 		fmt.Fprintln(os.Stderr, "The upper price must be greater than the lower price")
 		os.Exit(1)
-	} else if grids < 2 {
-		fmt.Fprintln(os.Stderr, "Size of the grids must be greater than 1")
+	} else if gridSize < 2 {
+		fmt.Fprintln(os.Stderr, "Grid size must be greater than 1")
 		os.Exit(1)
 	} else if qty <= 0 {
 		fmt.Fprintln(os.Stderr, "Quantity per grid must be greater than 0")
@@ -85,11 +84,10 @@ func main() {
 		BotID:       botID,
 		LowerPrice:  lowerPrice,
 		UpperPrice:  upperPrice,
-		Grids:       grids,
+		GridSize:    gridSize,
 		Qty:         qty,
 		View:        view,
-		SL:          sl,
-		TP:          tp,
+		GridTP:      gridTP,
 		Slippage:    slippage,
 		MATimeframe: maTimeframe,
 		MAPeriod:    maPeriod,
@@ -132,31 +130,13 @@ func main() {
 			continue
 		}
 
-		for _, order := range tradeOrders.CloseOrders {
-			if client.PlaceOrder(order) == nil {
-				continue
-			}
-			order.Status = types.OrderStatusClosed
-			err := db.UpdateOrder(order)
-			if err != nil {
-				log.Println(err)
-				continue
-			}
-			log.Printf("\t%s %.4f of %s at $%.2f (%s)\n",
-				order.Side, order.Qty, order.Symbol, order.OpenPrice, order.Exchange)
-		}
+		// Close orders by using late SL/TP ----------------------------------------
 
-		for _, order := range tradeOrders.OpenOrders {
-			if client.PlaceOrder(order) == nil {
-				continue
-			}
-			err := db.CreateOrder(order)
-			if err != nil {
-				log.Println(err)
-				continue
-			}
-			log.Printf("\t%s %.4f of %s at $%.2f (%s)\n",
-				order.Side, order.Qty, order.Symbol, order.OpenPrice, order.Exchange)
-		}
+		// for _, o := range tradeOrders.CloseOrders {
+		// 	err := db.UpdateOrder(o)
+		// 	if err != nil {
+		// 		h.Log(err)
+		// 	}
+		// }
 	}
 }

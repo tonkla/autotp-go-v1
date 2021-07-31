@@ -9,7 +9,6 @@ const (
 	OrderStatusNew      = "NEW"
 	OrderStatusFilled   = "FILLED"
 	OrderStatusCanceled = "CANCELED"
-	OrderStatusClosed   = "CLOSED"
 
 	OrderSideBuy  = "BUY"
 	OrderSideSell = "SELL"
@@ -65,18 +64,22 @@ type Order struct {
 	Qty        float64
 	OpenPrice  float64
 	ClosePrice float64
-	SL         float64
-	TP         float64
-	SLStop     float64 `gorm:"-"` // A trigger price that activate SL
-	TPStop     float64 `gorm:"-"` // A trigger price that activate TP
+	SLPrice    float64
+	TPPrice    float64
+	SLStop     float64 `gorm:"-"`
+	TPStop     float64 `gorm:"-"`
 	SLRefID1   int64
 	SLRefID2   string
+	SLRef      *Order `gorm:"foreignKey:SLRefID1,references:RefID1"`
 	TPRefID1   int64
 	TPRefID2   string
-	IsWorking  bool `gorm:"-"`
+	TPRef      *Order `gorm:"foreignKey:TPRefID1,references:RefID1"`
+	OPRefID1   int64
+	OPRefID2   string
+	OPRef      *Order `gorm:"foreignKey:OPRefID1,references:RefID1"`
+	OpenTime   int64
 	UpdateTime int64
-	OpenTime   int64 `gorm:"index"`
-	CloseTime  int64 `gorm:"index"`
+	CloseTime  int64
 }
 
 type TradeOrders struct {
@@ -101,12 +104,13 @@ type BotParams struct {
 	BotID       int64
 	LowerPrice  float64
 	UpperPrice  float64
-	Grids       float64
+	GridSize    float64
+	GridTP      float64
 	Qty         float64
 	View        string
-	SL          float64
-	TP          float64
 	Slippage    float64
 	MATimeframe string
 	MAPeriod    int64
+	AutoSL      bool
+	AutoTP      bool
 }

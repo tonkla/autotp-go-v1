@@ -52,19 +52,21 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 	// Uptrend
 	if trend >= t.TrendUp1 {
 		// Stop Loss, for SELL orders
-		qo.Side = t.OrderSideSell
-		for _, o := range db.GetActiveOrdersBySide(qo) {
-			o.Type = t.OrderTypeSL
-			o.SL = bidPrice
-			closeOrders = append(closeOrders, o)
+		if p.AutoSL {
+			qo.Side = t.OrderSideSell
+			for _, o := range db.GetFilledOrdersBySide(qo) {
+				o.Type = t.OrderTypeSL
+				o.SLPrice = bidPrice
+				closeOrders = append(closeOrders, o)
+			}
 		}
 
 		// Take Profit, when lower low or previous bar was red
-		if c_0 < l_1 || c_1 < o_1 {
+		if p.AutoTP && (c_0 < l_1 || c_1 < o_1) {
 			qo.Side = t.OrderSideBuy
 			for _, o := range db.GetProfitOrders(qo, ticker) {
 				o.Type = t.OrderTypeTP
-				o.TP = askPrice
+				o.TPPrice = askPrice
 				closeOrders = append(closeOrders, o)
 			}
 		}
@@ -85,19 +87,21 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 	// Downtrend
 	if trend <= t.TrendDown1 {
 		// Stop Loss, for BUY orders
-		qo.Side = t.OrderSideBuy
-		for _, o := range db.GetActiveOrdersBySide(qo) {
-			o.Type = t.OrderTypeSL
-			o.SL = askPrice
-			closeOrders = append(closeOrders, o)
+		if p.AutoSL {
+			qo.Side = t.OrderSideBuy
+			for _, o := range db.GetFilledOrdersBySide(qo) {
+				o.Type = t.OrderTypeSL
+				o.SLPrice = askPrice
+				closeOrders = append(closeOrders, o)
+			}
 		}
 
 		// Take Profit, when higher high or previous bar was green
-		if c_0 > h_1 || c_1 > o_1 {
+		if p.AutoTP && (c_0 > h_1 || c_1 > o_1) {
 			qo.Side = t.OrderSideSell
 			for _, o := range db.GetProfitOrders(qo, ticker) {
 				o.Type = t.OrderTypeTP
-				o.TP = bidPrice
+				o.TPPrice = bidPrice
 				closeOrders = append(closeOrders, o)
 			}
 		}

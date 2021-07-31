@@ -1,17 +1,20 @@
 apiKey: API_KEY
 secretKey: SECRET_KEY
+
 dbName: autotp.db
 botID: 1
 intervalSec: 5
 symbol: BNBUSDT
+view: NEUTRAL | LONG | SHORT
+qty: 0.1
+slippage: 0.001
+
 lowerPrice: 100
 upperPrice: 200
-grids: 10
-gridSL: 0
+gridSize: 10
 gridTP: 1
-slippage: 0.001
-qty: 0.1
-view: NEUTRAL | LONG | SHORT
-triggerPrice: 150
+
 maTimeframe: 1h
 maPeriod: 20
+autoSL: false
+autoTP: true
