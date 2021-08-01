@@ -53,33 +53,32 @@ type HistoricalPrice struct {
 }
 
 type Order struct {
-	RefID1     int64  `gorm:"index"`
-	RefID2     string `gorm:"index"`
-	BotID      int64  `gorm:"index"`
-	Exchange   string `gorm:"index"`
-	Symbol     string `gorm:"index"`
-	Side       string `gorm:"index"`
-	Status     string `gorm:"index"`
-	Type       string `gorm:"-"`
-	Qty        float64
+	ID       string `gorm:"index"`
+	RefID    string `gorm:"index"`
+	BotID    int64  `gorm:"index"`
+	Exchange string `gorm:"index"`
+	Symbol   string `gorm:"index"`
+	Side     string `gorm:"index"`
+	Type     string `gorm:"index"`
+	Status   string `gorm:"index"`
+	Qty      float64
+
 	OpenPrice  float64
-	ClosePrice float64
+	StopPrice  float64 `gorm:"-"`
 	SLPrice    float64
 	TPPrice    float64
-	SLStop     float64 `gorm:"-"`
-	TPStop     float64 `gorm:"-"`
-	SLRefID1   int64
-	SLRefID2   string
-	SLRef      *Order `gorm:"foreignKey:SLRefID1,references:RefID1"`
-	TPRefID1   int64
-	TPRefID2   string
-	TPRef      *Order `gorm:"foreignKey:TPRefID1,references:RefID1"`
-	OPRefID1   int64
-	OPRefID2   string
-	OPRef      *Order `gorm:"foreignKey:OPRefID1,references:RefID1"`
 	OpenTime   int64
 	UpdateTime int64
-	CloseTime  int64
+
+	OpenOrderID string `gorm:"index"`
+	OpenOrder   *Order `gorm:"foreignKey:OpenOrderID"`
+
+	CloseOrderID string `gorm:"index"`
+	CloseOrder   *Order `gorm:"foreignKey:CloseOrderID"`
+	ClosePrice   float64
+	CloseTime    int64
+
+	CloseOrders []Order `gorm:"foreignKey:OpenOrderID"`
 }
 
 type TradeOrders struct {

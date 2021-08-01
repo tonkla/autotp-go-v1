@@ -55,8 +55,9 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		if p.AutoSL {
 			qo.Side = t.OrderSideSell
 			for _, o := range db.GetFilledOrdersBySide(qo) {
-				o.Type = t.OrderTypeSL
-				o.SLPrice = bidPrice
+				o.Side = t.OrderSideBuy
+				o.Type = t.OrderTypeLimit
+				o.OpenPrice = bidPrice
 				closeOrders = append(closeOrders, o)
 			}
 		}
@@ -64,18 +65,18 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		// Take Profit, when lower low or previous bar was red
 		if p.AutoTP && (c_0 < l_1 || c_1 < o_1) {
 			qo.Side = t.OrderSideBuy
-			for _, o := range db.GetProfitOrders(qo, ticker) {
-				o.Type = t.OrderTypeTP
-				o.TPPrice = askPrice
+			for _, o := range db.GetProfitOrdersBySide(qo, ticker) {
+				o.Side = t.OrderSideSell
+				o.Type = t.OrderTypeLimit
+				o.OpenPrice = askPrice
 				closeOrders = append(closeOrders, o)
 			}
 		}
 
 		// Open a new limit order, when no active BUY order
 		if trend < t.TrendUp4 && (v == t.ViewNeutral || v == "N" || v == t.ViewLong || v == "L") {
-			qo.Status = t.OrderStatusNew
-			qo.Type = t.OrderTypeLimit
 			qo.Side = t.OrderSideBuy
+			qo.Type = t.OrderTypeLimit
 			qo.OpenPrice = bidPrice
 			qo.Qty = p.Qty
 			if len(db.GetActiveOrdersBySide(qo)) == 0 {
@@ -90,8 +91,9 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		if p.AutoSL {
 			qo.Side = t.OrderSideBuy
 			for _, o := range db.GetFilledOrdersBySide(qo) {
-				o.Type = t.OrderTypeSL
-				o.SLPrice = askPrice
+				o.Side = t.OrderSideSell
+				o.Type = t.OrderTypeLimit
+				o.OpenPrice = askPrice
 				closeOrders = append(closeOrders, o)
 			}
 		}
@@ -99,18 +101,18 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		// Take Profit, when higher high or previous bar was green
 		if p.AutoTP && (c_0 > h_1 || c_1 > o_1) {
 			qo.Side = t.OrderSideSell
-			for _, o := range db.GetProfitOrders(qo, ticker) {
-				o.Type = t.OrderTypeTP
-				o.TPPrice = bidPrice
+			for _, o := range db.GetProfitOrdersBySide(qo, ticker) {
+				o.Side = t.OrderSideBuy
+				o.Type = t.OrderTypeLimit
+				o.OpenPrice = bidPrice
 				closeOrders = append(closeOrders, o)
 			}
 		}
 
 		// Open a new limit order, when no active SELL order
 		if trend > t.TrendDown4 && (v == t.ViewNeutral || v == "N" || v == t.ViewShort || v == "S") {
-			qo.Status = t.OrderStatusNew
-			qo.Type = t.OrderTypeLimit
 			qo.Side = t.OrderSideSell
+			qo.Type = t.OrderTypeLimit
 			qo.OpenPrice = askPrice
 			qo.Qty = p.Qty
 			if len(db.GetActiveOrdersBySide(qo)) == 0 {

@@ -147,19 +147,19 @@ func (c Client) GetHistoricalPrices(symbol string, timeframe string, limit int) 
 // Private APIs ----------------------------------------------------------------
 
 // GetOrderByIDs returns the order by its IDs
-func (c Client) GetOrderByIDs(symbol string, refID1 int64, refID2 string) *t.Order {
-	if symbol == "" || (refID1 == 0 && refID2 == "") {
+func (c Client) GetOrderByIDs(symbol string, ID string, refID string) *t.Order {
+	if symbol == "" || (ID == "" && refID == "") {
 		return nil
 	}
 
 	var payload, url strings.Builder
 
 	buildBaseQS(&payload, symbol)
-	if refID1 > 0 {
-		fmt.Fprintf(&payload, "&orderId=%d", refID1)
+	if refID != "" {
+		fmt.Fprintf(&payload, "&orderId=%s", refID)
 	}
-	if refID2 != "" {
-		fmt.Fprintf(&payload, "&origClientOrderId=%s", refID2)
+	if ID != "" {
+		fmt.Fprintf(&payload, "&origClientOrderId=%s", ID)
 	}
 
 	signature := Sign(payload.String(), c.secretKey)
@@ -179,9 +179,9 @@ func (c Client) GetOrderByIDs(symbol string, refID1 int64, refID2 string) *t.Ord
 	}
 
 	return &t.Order{
+		ID:         ID,
+		RefID:      refID,
 		Symbol:     symbol,
-		RefID1:     refID1,
-		RefID2:     refID2,
 		Status:     r.Get("status").String(),
 		UpdateTime: r.Get("updateTime").Int(),
 	}
@@ -189,7 +189,7 @@ func (c Client) GetOrderByIDs(symbol string, refID1 int64, refID2 string) *t.Ord
 
 // GetOrder returns the order by its IDs
 func (c Client) GetOrder(o t.Order) *t.Order {
-	exo := c.GetOrderByIDs(o.Symbol, o.RefID1, o.RefID2)
+	exo := c.GetOrderByIDs(o.Symbol, o.ID, o.RefID)
 	if exo == nil {
 		return nil
 	}
@@ -219,14 +219,12 @@ func (c Client) GetOpenOrders(symbol string) []t.Order {
 		return nil
 	}
 
-	fmt.Printf("%+v\n\n", rs)
-
 	var orders []t.Order
 	for _, r := range rs.Array() {
 		order := t.Order{
 			Symbol:     symbol,
-			RefID1:     r.Get("orderId").Int(),
-			RefID2:     r.Get("clientOrderId").String(),
+			ID:         r.Get("clientOrderId").String(),
+			RefID:      r.Get("orderId").String(),
 			Side:       r.Get("side").String(),
 			Status:     r.Get("status").String(),
 			Type:       r.Get("type").String(),
@@ -275,8 +273,8 @@ func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime in
 	for _, r := range rs.Array() {
 		order := t.Order{
 			Symbol:    symbol,
-			RefID1:    r.Get("orderId").Int(),
-			RefID2:    r.Get("clientOrderId").String(),
+			ID:        r.Get("clientOrderId").String(),
+			RefID:     r.Get("orderId").String(),
 			Side:      r.Get("side").String(),
 			Status:    r.Get("status").String(),
 			Type:      r.Get("type").String(),
@@ -298,7 +296,8 @@ func (c Client) PlaceLimitOrder(o t.Order) *t.Order {
 	var payload, url strings.Builder
 
 	buildBaseQS(&payload, o.Symbol)
-	fmt.Fprintf(&payload, "&side=%s&type=%s&quantity=%f&price=%f&timeInForce=GTC", o.Side, o.Type, o.Qty, o.OpenPrice)
+	fmt.Fprintf(&payload, "&newClientOrderId=%s&side=%s&type=%s&quantity=%f&price=%f&timeInForce=GTC",
+		o.ID, o.Side, o.Type, o.Qty, o.OpenPrice)
 
 	signature := Sign(payload.String(), c.secretKey)
 
@@ -320,14 +319,11 @@ func (c Client) PlaceLimitOrder(o t.Order) *t.Order {
 		return nil
 	}
 	o.Status = status
-	if status == t.OrderStatusNew {
-		o.RefID1 = r.Get("orderId").Int()
-		o.RefID2 = r.Get("clientOrderId").String()
-		o.OpenTime = r.Get("transactTime").Int()
-		price := r.Get("price").Float()
-		if o.OpenPrice != price && price > 0 {
-			o.OpenPrice = price
-		}
+	o.RefID = r.Get("orderId").String()
+	o.OpenTime = r.Get("transactTime").Int()
+	price := r.Get("price").Float()
+	if price > 0 {
+		o.OpenPrice = price
 	}
 	return &o
 }
@@ -341,13 +337,8 @@ func (c Client) PlaceStopOrder(o t.Order) *t.Order {
 	var payload, url strings.Builder
 
 	buildBaseQS(&payload, o.Symbol)
-	fmt.Fprintf(&payload, "&side=%s&type=%s&quantity=%f&timeInForce=GTC", o.Side, o.Type, o.Qty)
-
-	if o.Type == t.OrderTypeSL {
-		fmt.Fprintf(&payload, "&price=%f&stopPrice=%f", o.SLPrice, o.SLStop)
-	} else if o.Type == t.OrderTypeTP {
-		fmt.Fprintf(&payload, "&price=%f&stopPrice=%f", o.TPPrice, o.TPStop)
-	}
+	fmt.Fprintf(&payload, "&newClientOrderId=%s&side=%s&type=%s&quantity=%f&price=%f&stopPrice=%f&timeInForce=GTC",
+		o.ID, o.Side, o.Type, o.Qty, o.OpenPrice, o.StopPrice)
 
 	signature := Sign(payload.String(), c.secretKey)
 
@@ -364,9 +355,9 @@ func (c Client) PlaceStopOrder(o t.Order) *t.Order {
 		return nil
 	}
 
-	o.RefID1 = r.Get("orderId").Int()
-	o.RefID2 = r.Get("clientOrderId").String()
-	o.UpdateTime = r.Get("transactTime").Int()
+	o.RefID = r.Get("orderId").String()
+	o.Status = r.Get("status").String()
+	o.OpenTime = r.Get("transactTime").Int()
 	return &o
 }
 
@@ -379,7 +370,8 @@ func (c Client) PlaceMarketOrder(o t.Order) *t.Order {
 	var payload, url strings.Builder
 
 	buildBaseQS(&payload, o.Symbol)
-	fmt.Fprintf(&payload, "&side=%s&type=%s&quantity=%f", o.Side, o.Type, o.Qty)
+	fmt.Fprintf(&payload, "&newClientOrderId=%s&side=%s&type=%s&quantity=%f",
+		o.ID, o.Side, o.Type, o.Qty)
 
 	signature := Sign(payload.String(), c.secretKey)
 
@@ -396,8 +388,7 @@ func (c Client) PlaceMarketOrder(o t.Order) *t.Order {
 		return nil
 	}
 
-	o.RefID1 = r.Get("orderId").Int()
-	o.RefID2 = r.Get("clientOrderId").String()
+	o.RefID = r.Get("orderId").String()
 	o.OpenTime = r.Get("transactTime").Int()
 	o.OpenPrice = r.Get("price").Float()
 	o.Status = r.Get("status").String()
@@ -409,7 +400,7 @@ func (c Client) CancelOrder(o t.Order) *t.Order {
 	var payload, url strings.Builder
 
 	buildBaseQS(&payload, o.Symbol)
-	fmt.Fprintf(&payload, "&orderId=%d&origClientOrderId=%s", o.RefID1, o.RefID2)
+	fmt.Fprintf(&payload, "&orderId=%s&origClientOrderId=%s", o.RefID, o.ID)
 
 	signature := Sign(payload.String(), c.secretKey)
 

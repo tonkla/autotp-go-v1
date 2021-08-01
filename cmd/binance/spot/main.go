@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"path"
 	"time"
@@ -104,13 +105,8 @@ func main() {
 	}
 
 	exchange := binance.NewSpotClient(apiKey, secretKey)
-	exchange.GetOpenOrders(symbol)
-	// fmt.Printf("%+v\n", orders)
 
 	for range time.Tick(time.Duration(intervalSec) * time.Second) {
-		if true {
-			continue
-		}
 		ticker := exchange.GetTicker(symbol)
 		if ticker == nil || ticker.Price <= 0 {
 			continue
@@ -142,42 +138,49 @@ func main() {
 		// Open new orders ---------------------------------------------------------
 
 		for _, o := range tradeOrders.OpenOrders {
-			_o := exchange.PlaceLimitOrder(o)
-			if _o == nil {
+			id, err := h.GenID(0)
+			if err != nil {
 				continue
 			}
-			err := db.CreateOrder(*_o)
+			o.ID = id
+			exo := exchange.PlaceLimitOrder(o)
+			if exo == nil {
+				continue
+			}
+			o.RefID = exo.RefID
+			o.Status = exo.Status
+			o.OpenTime = exo.OpenTime
+			o.OpenPrice = exo.OpenPrice
+			err = db.CreateOrder(o)
 			if err != nil {
 				h.Log(err)
 				continue
 			}
-			h.Logf("{Action: Open, Side: %s, Qty: %.4f, Price: %.2f}\n", _o.Side, _o.Qty, _o.OpenPrice)
+			h.Logf("{Action: Open, Side: %s, Qty: %.4f, Price: %.2f}\n", o.Side, o.Qty, o.OpenPrice)
 		}
 
 		// Close orders ------------------------------------------------------------
 
 		for _, o := range tradeOrders.CloseOrders {
-			opo := exchange.PlaceLimitOrder(o)
-			if opo == nil {
+			id, err := h.GenID(0)
+			if err != nil {
 				continue
 			}
-
-			opo.BotID = o.BotID
-			opo.Exchange = o.Exchange
-			opo.Symbol = o.Symbol
-			err := db.CreateOrder(*opo)
+			o.ID = id
+			exo := exchange.PlaceLimitOrder(o)
+			if exo == nil {
+				continue
+			}
+			o.RefID = exo.RefID
+			o.Status = exo.Status
+			o.OpenTime = exo.OpenTime
+			o.OpenPrice = exo.OpenPrice
+			err = db.CreateOrder(o)
 			if err != nil {
 				h.Log(err)
 				continue
 			}
-
-			err = db.UpdateOrder(o)
-			if err != nil {
-				h.Log(err)
-				continue
-			}
-
-			h.Logf("{Action: Close, Side: %s, Qty: %.4f, Price: %.2f}\n", opo.Side, opo.Qty, opo.OpenPrice)
+			h.Logf("{Action: Close, Side: %s, Qty: %.4f, Price: %.2f}\n", o.Side, o.Qty, o.OpenPrice)
 		}
 
 		// Stop Loss / Take Profit -------------------------------------------------
@@ -193,7 +196,7 @@ func main() {
 				continue
 			}
 
-			// Synchronize canceled orders
+			// Synchronize canceled order
 			if exo.Status == t.OrderStatusCanceled {
 				o.Status = t.OrderStatusCanceled
 				err := db.UpdateOrder(o)
@@ -203,47 +206,74 @@ func main() {
 				continue
 			}
 
-			// Update SL price
-			if o.SLPrice > 0 && o.SLRefID1 == 0 {
-				o.Type = t.OrderTypeSL
-				if o.SLStop == 0 {
-					o.SLStop = h.CalSLStop(o.Side, o.SLPrice, 0)
-				}
-				// SL in opposite side
-				o.Side = h.Reverse(o.Side)
-				_o := exchange.PlaceStopOrder(o)
-				if _o == nil {
+			// Place a new Stop Loss order
+			if o.SLPrice > 0 && db.GetSLOrder(o.ID) == nil {
+				id, err := h.GenID(0)
+				if err != nil {
 					continue
 				}
-				o.Side = h.Reverse(o.Side)
-				o.SLRefID1 = _o.RefID1
-				o.SLRefID2 = _o.RefID2
-				o.UpdateTime = _o.UpdateTime
-				o.Status = t.OrderStatusFilled
-			}
 
-			// Update TP price
-			if o.TPPrice > 0 && o.TPRefID1 == 0 {
-				o.Type = t.OrderTypeTP
-				if o.TPStop == 0 {
-					o.TPStop = h.CalTPStop(o.Side, o.TPPrice, 0)
+				slo := t.Order{
+					BotID:       o.BotID,
+					Exchange:    o.Exchange,
+					Symbol:      o.Symbol,
+					ID:          id,
+					OpenOrderID: o.ID,
+					Qty:         o.Qty,
+					Side:        h.Reverse(o.Side),
+					Type:        t.OrderTypeSL,
+					OpenPrice:   o.SLPrice,
+					StopPrice:   h.CalcSLStop(o.Side, o.SLPrice, 0),
 				}
-				// TP in opposite side
-				o.Side = h.Reverse(o.Side)
-				_o := exchange.PlaceStopOrder(o)
-				if _o == nil {
+				exo := exchange.PlaceStopOrder(slo)
+				if exo == nil {
 					continue
 				}
-				o.Side = h.Reverse(o.Side)
-				o.TPRefID1 = _o.RefID1
-				o.TPRefID2 = _o.RefID2
-				o.UpdateTime = _o.UpdateTime
-				o.Status = t.OrderStatusFilled
+				slo.RefID = exo.RefID
+				slo.Status = exo.Status
+				slo.OpenTime = exo.OpenTime
+				err = db.CreateOrder(slo)
+				if err != nil {
+					h.Log(err)
+					continue
+				}
+				h.Logf("{Action: SL, Side: %s, Qty: %.4f, Price: %.2f, OpenPrice: %.2f, Loss: -%.2f}\n",
+					slo.Side, slo.Qty, slo.OpenPrice, o.OpenPrice, math.Abs(slo.OpenPrice-o.OpenPrice)*slo.Qty)
 			}
 
-			err := db.UpdateOrder(o)
-			if err != nil {
-				h.Log(err)
+			// Place a new Take Profit order
+			if o.TPPrice > 0 && db.GetTPOrder(o.ID) == nil {
+				id, err := h.GenID(0)
+				if err != nil {
+					continue
+				}
+
+				tpo := t.Order{
+					BotID:       o.BotID,
+					Exchange:    o.Exchange,
+					Symbol:      o.Symbol,
+					ID:          id,
+					OpenOrderID: o.ID,
+					Qty:         o.Qty,
+					Side:        h.Reverse(o.Side),
+					Type:        t.OrderTypeTP,
+					OpenPrice:   o.TPPrice,
+					StopPrice:   h.CalcTPStop(o.Side, o.TPPrice, 0),
+				}
+				exo := exchange.PlaceStopOrder(tpo)
+				if exo == nil {
+					continue
+				}
+				tpo.RefID = exo.RefID
+				tpo.Status = exo.Status
+				tpo.OpenTime = exo.OpenTime
+				err = db.CreateOrder(tpo)
+				if err != nil {
+					h.Log(err)
+					continue
+				}
+				h.Logf("{Action: TP, Side: %s, Qty: %.4f, Price: %.2f, OpenPrice: %.2f, Profit: %.2f}\n",
+					tpo.Side, tpo.Qty, tpo.OpenPrice, o.OpenPrice, math.Abs(tpo.OpenPrice-o.OpenPrice)*tpo.Qty)
 			}
 		}
 	}

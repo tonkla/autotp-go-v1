@@ -3,6 +3,7 @@ module github.com/tonkla/autotp
 go 1.16
 
 require (
+	github.com/matoous/go-nanoid/v2 v2.0.0
 	github.com/mattn/go-sqlite3 v1.14.7 // indirect
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.8.1
