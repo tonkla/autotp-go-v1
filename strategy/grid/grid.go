@@ -37,7 +37,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 	if view == t.ViewLong || view == "L" || view == t.ViewNeutral || view == "N" {
 		order.Side = t.OrderSideBuy
 		order.OpenPrice = buyPrice
-		o := db.GetActiveOrder(order, p.Slippage)
+		o := db.GetLimitOrder(order, p.Slippage)
 		if o == nil {
 			if p.GridTP > 0 {
 				order.TPPrice = buyPrice + gridWidth*p.GridTP
@@ -49,7 +49,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 	if view == t.ViewShort || view == "S" || view == t.ViewNeutral || view == "N" {
 		order.Side = t.OrderSideSell
 		order.OpenPrice = sellPrice
-		o := db.GetActiveOrder(order, p.Slippage)
+		o := db.GetLimitOrder(order, p.Slippage)
 		if o == nil {
 			if p.GridTP > 0 {
 				order.TPPrice = sellPrice - gridWidth*p.GridTP

@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"math"
 	"time"
 
 	gonanoid "github.com/matoous/go-nanoid/v2"
@@ -21,25 +22,25 @@ func GenID(size int) (string, error) {
 }
 
 // CalcSLStop calculates a stop price of the stop loss price
-func CalcSLStop(side string, sl float64, trigger float64) float64 {
+func CalcSLStop(side string, sl float64, trigger float64, digits int64) float64 {
 	if trigger == 0 {
 		trigger = 0.002
 	}
 	if side == t.OrderSideBuy {
-		return sl + sl*trigger
+		return roundToDigits(sl+sl*trigger, digits)
 	}
-	return sl - sl*trigger
+	return roundToDigits(sl-sl*trigger, digits)
 }
 
 // CalcTPStop calculates a stop price of the take profit price
-func CalcTPStop(side string, tp float64, trigger float64) float64 {
+func CalcTPStop(side string, tp float64, trigger float64, digits int64) float64 {
 	if trigger == 0 {
 		trigger = 0.002
 	}
 	if side == t.OrderSideBuy {
-		return tp - tp*trigger
+		return roundToDigits(tp-tp*trigger, digits)
 	}
-	return tp + tp*trigger
+	return roundToDigits(tp+tp*trigger, digits)
 }
 
 // Reverse returns the opposite side
@@ -48,4 +49,9 @@ func Reverse(side string) string {
 		return t.OrderSideSell
 	}
 	return t.OrderSideBuy
+}
+
+func roundToDigits(number float64, digits int64) float64 {
+	pow := math.Pow(10, float64(digits))
+	return math.Round(number*pow) / pow
 }

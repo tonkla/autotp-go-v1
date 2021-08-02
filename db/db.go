@@ -26,17 +26,26 @@ func Connect(dbName string) *DB {
 	return &DB{db: db}
 }
 
-// GetActiveOrder returns the order that is not closed
-func (d DB) GetActiveOrder(o t.Order, slippage float64) *t.Order {
+func (d DB) GetOrderByID(id string) *t.Order {
+	var order t.Order
+	d.db.Where("id = ?", id).First(&order)
+	if order.ID == "" {
+		return nil
+	}
+	return &order
+}
+
+// GetLimitOrder returns the LIMIT order that is not canceled
+func (d DB) GetLimitOrder(o t.Order, slippage float64) *t.Order {
 	var order t.Order
 	if slippage > 0 {
 		lowerPrice := o.OpenPrice - o.OpenPrice*slippage
 		upperPrice := o.OpenPrice + o.OpenPrice*slippage
-		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price BETWEEN ? AND ? AND side = ? AND status <> ? AND close_order_id = ''",
-			o.BotID, o.Exchange, o.Symbol, lowerPrice, upperPrice, o.Side, t.OrderStatusCanceled).First(&order)
+		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price BETWEEN ? AND ? AND side = ? AND type = ? AND status <> ? AND close_order_id = ''",
+			o.BotID, o.Exchange, o.Symbol, lowerPrice, upperPrice, o.Side, t.OrderTypeLimit, t.OrderStatusCanceled).First(&order)
 	} else {
-		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price = ? AND side = ? AND status <> ? AND close_order_id = ''",
-			o.BotID, o.Exchange, o.Symbol, o.OpenPrice, o.Side, t.OrderStatusCanceled).First(&order)
+		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price = ? AND side = ? AND type = ? AND status <> ? AND close_order_id = ''",
+			o.BotID, o.Exchange, o.Symbol, o.OpenPrice, o.Side, t.OrderTypeLimit, t.OrderStatusCanceled).First(&order)
 	}
 	if order.OpenPrice == 0 {
 		return nil
@@ -44,19 +53,19 @@ func (d DB) GetActiveOrder(o t.Order, slippage float64) *t.Order {
 	return &order
 }
 
-// GetActiveOrders returns the orders that are not closed
-func (d DB) GetActiveOrders(o t.Order) []t.Order {
+// GetLimitOrders returns the LIMIT orders that are not canceled
+func (d DB) GetLimitOrders(o t.Order) []t.Order {
 	var orders []t.Order
-	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND status <> ? AND close_order_id = ''",
-		o.BotID, o.Exchange, o.Symbol, t.OrderStatusCanceled).Find(&orders)
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND status <> ? AND close_order_id = ''",
+		o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderStatusCanceled).Find(&orders)
 	return orders
 }
 
-// GetActiveOrdersBySide returns the orders that are not closed for the specific side
-func (d DB) GetActiveOrdersBySide(o t.Order) []t.Order {
+// GetLimitOrdersBySide returns the LIMIT orders that are not canceled for the specific side
+func (d DB) GetLimitOrdersBySide(o t.Order) []t.Order {
 	var orders []t.Order
-	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND status <> ? AND close_order_id = ''",
-		o.BotID, o.Exchange, o.Symbol, o.Side, t.OrderStatusCanceled).Find(&orders)
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND type = ? AND status <> ? AND close_order_id = ''",
+		o.BotID, o.Exchange, o.Symbol, o.Side, t.OrderTypeLimit, t.OrderStatusCanceled).Find(&orders)
 	return orders
 }
 
@@ -123,26 +132,42 @@ func (d DB) GetOppositeOrder(id string) *t.Order {
 	return &order
 }
 
-// GetSLOrder returns the Stop Loss order of this order
-func (d DB) GetSLOrder(id string) *t.Order {
+// GetSLOrder returns the Stop Loss order of the order
+func (d DB) GetSLOrder(openOrderID string) *t.Order {
 	var order t.Order
 	d.db.Where("open_order_id = ? AND type = ? AND status <> ?",
-		id, t.OrderTypeSL, t.OrderStatusCanceled).First(&order)
+		openOrderID, t.OrderTypeSL, t.OrderStatusCanceled).First(&order)
 	if order.ID == "" {
 		return nil
 	}
 	return &order
 }
 
-// GetTPOrder returns the Take Profit order of this order
-func (d DB) GetTPOrder(id string) *t.Order {
+// GetTPOrder returns the Take Profit order of the order
+func (d DB) GetTPOrder(openOrderID string) *t.Order {
 	var order t.Order
 	d.db.Where("open_order_id = ? AND type = ? AND status <> ?",
-		id, t.OrderTypeTP, t.OrderStatusCanceled).First(&order)
+		openOrderID, t.OrderTypeTP, t.OrderStatusCanceled).First(&order)
 	if order.ID == "" {
 		return nil
 	}
 	return &order
+}
+
+// GetSLOrders returns the STOP_LOSS_LIMIT orders that are not canceled
+func (d DB) GetSLOrders(o t.Order) []t.Order {
+	var orders []t.Order
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND status <> ?",
+		o.BotID, o.Exchange, o.Symbol, t.OrderTypeSL, t.OrderStatusCanceled).Find(&orders)
+	return orders
+}
+
+// GetTPOrders returns the TAKE_PROFIT_LIMIT orders that are not canceled
+func (d DB) GetTPOrders(o t.Order) []t.Order {
+	var orders []t.Order
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND status <> ?",
+		o.BotID, o.Exchange, o.Symbol, t.OrderTypeTP, t.OrderStatusCanceled).Find(&orders)
+	return orders
 }
 
 // CreateOrder performs SQL insert on the table orders

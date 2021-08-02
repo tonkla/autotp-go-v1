@@ -18,9 +18,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "autotp-grid",
-	Short: "AutoTP: Grid Strategy",
-	Long:  "AutoTP: Grid Strategy",
+	Use:   "autotp",
+	Short: "AutoTP: Auto Take Profit",
+	Long:  "AutoTP: Auto Trading Platform ",
 	Run:   func(cmd *cobra.Command, args []string) {},
 }
 
@@ -57,6 +57,7 @@ func main() {
 	dbName := viper.GetString("dbName")
 	botID := viper.GetInt64("botID")
 	symbol := viper.GetString("symbol")
+	digits := viper.GetInt64("digits")
 	lowerPrice := viper.GetFloat64("lowerPrice")
 	upperPrice := viper.GetFloat64("upperPrice")
 	gridSize := viper.GetFloat64("gridSize")
@@ -117,7 +118,7 @@ func main() {
 			continue
 		}
 
-		hprices := exchange.GetHistoricalPrices(ticker.Symbol, maTimeframe, 100)
+		hprices := exchange.GetHistoricalPrices(ticker.Symbol, maTimeframe, 50)
 		if len(hprices) == 0 {
 			continue
 		}
@@ -183,26 +184,30 @@ func main() {
 			h.Logf("{Action: Close, Side: %s, Qty: %.4f, Price: %.2f}\n", o.Side, o.Qty, o.OpenPrice)
 		}
 
-		// Stop Loss / Take Profit -------------------------------------------------
+		// Synchronize Stop Loss / Take Profit -------------------------------------
 
 		qo := t.Order{
 			BotID:    botID,
 			Exchange: t.ExcBinance,
 			Symbol:   symbol,
 		}
-		for _, o := range db.GetActiveOrders(qo) {
+		for _, o := range db.GetLimitOrders(qo) {
 			exo := exchange.GetOrder(o)
 			if exo == nil || exo.Status == t.OrderStatusNew {
 				continue
 			}
 
-			// Synchronize canceled order
-			if exo.Status == t.OrderStatusCanceled {
-				o.Status = t.OrderStatusCanceled
+			// Synchronize FILLED/CANCELED order
+			if o.Status != exo.Status {
+				o.Status = exo.Status
+				o.UpdateTime = exo.UpdateTime
 				err := db.UpdateOrder(o)
 				if err != nil {
 					h.Log(err)
+					continue
 				}
+			}
+			if exo.Status == t.OrderStatusCanceled {
 				continue
 			}
 
@@ -222,8 +227,9 @@ func main() {
 					Qty:         o.Qty,
 					Side:        h.Reverse(o.Side),
 					Type:        t.OrderTypeSL,
+					Status:      t.OrderStatusNew,
 					OpenPrice:   o.SLPrice,
-					StopPrice:   h.CalcSLStop(o.Side, o.SLPrice, 0),
+					StopPrice:   h.CalcSLStop(o.Side, o.SLPrice, 0, digits),
 				}
 				exo := exchange.PlaceStopOrder(slo)
 				if exo == nil {
@@ -237,7 +243,7 @@ func main() {
 					h.Log(err)
 					continue
 				}
-				h.Logf("{Action: SL, Side: %s, Qty: %.4f, Price: %.2f, OpenPrice: %.2f, Loss: -%.2f}\n",
+				h.Logf("{Action: Pre-SL, Side: %s, Qty: %.2f, Price: %.2f, OpenPrice: %.2f, Loss: -%.2f}\n",
 					slo.Side, slo.Qty, slo.OpenPrice, o.OpenPrice, math.Abs(slo.OpenPrice-o.OpenPrice)*slo.Qty)
 			}
 
@@ -257,8 +263,9 @@ func main() {
 					Qty:         o.Qty,
 					Side:        h.Reverse(o.Side),
 					Type:        t.OrderTypeTP,
+					Status:      t.OrderStatusNew,
 					OpenPrice:   o.TPPrice,
-					StopPrice:   h.CalcTPStop(o.Side, o.TPPrice, 0),
+					StopPrice:   h.CalcTPStop(o.Side, o.TPPrice, 0, digits),
 				}
 				exo := exchange.PlaceStopOrder(tpo)
 				if exo == nil {
@@ -272,8 +279,72 @@ func main() {
 					h.Log(err)
 					continue
 				}
-				h.Logf("{Action: TP, Side: %s, Qty: %.4f, Price: %.2f, OpenPrice: %.2f, Profit: %.2f}\n",
+				h.Logf("{Action: Pre-TP, Side: %s, Qty: %.2f, Price: %.2f, OpenPrice: %.2f, Profit: %.2f}\n",
 					tpo.Side, tpo.Qty, tpo.OpenPrice, o.OpenPrice, math.Abs(tpo.OpenPrice-o.OpenPrice)*tpo.Qty)
+			}
+		}
+
+		for _, slo := range db.GetSLOrders(qo) {
+			exo := exchange.GetOrder(slo)
+			if exo == nil || exo.Status == t.OrderStatusNew {
+				continue
+			}
+
+			if slo.Status != exo.Status {
+				slo.Status = exo.Status
+				slo.UpdateTime = exo.UpdateTime
+				err := db.UpdateOrder(slo)
+				if err != nil {
+					h.Log(err)
+					continue
+				}
+			}
+			if exo.Status == t.OrderStatusCanceled {
+				continue
+			}
+
+			oo := db.GetOrderByID(slo.OpenOrderID)
+			if (oo.Side == t.OrderSideBuy && ticker.Price < slo.OpenPrice) ||
+				(oo.Side == t.OrderSideSell && ticker.Price > slo.OpenPrice) {
+				oo.CloseOrderID = slo.ID
+				oo.ClosePrice = slo.OpenPrice
+				oo.CloseTime = h.Now13()
+				err := db.UpdateOrder(*oo)
+				if err != nil {
+					h.Log(err)
+				}
+			}
+		}
+
+		for _, tpo := range db.GetTPOrders(qo) {
+			exo := exchange.GetOrder(tpo)
+			if exo == nil || exo.Status == t.OrderStatusNew {
+				continue
+			}
+
+			if tpo.Status != exo.Status {
+				tpo.Status = exo.Status
+				tpo.UpdateTime = exo.UpdateTime
+				err := db.UpdateOrder(tpo)
+				if err != nil {
+					h.Log(err)
+					continue
+				}
+			}
+			if exo.Status == t.OrderStatusCanceled {
+				continue
+			}
+
+			oo := db.GetOrderByID(tpo.OpenOrderID)
+			if (oo.Side == t.OrderSideBuy && ticker.Price > tpo.OpenPrice) ||
+				(oo.Side == t.OrderSideSell && ticker.Price < tpo.OpenPrice) {
+				oo.CloseOrderID = tpo.ID
+				oo.ClosePrice = tpo.OpenPrice
+				oo.CloseTime = h.Now13()
+				err := db.UpdateOrder(*oo)
+				if err != nil {
+					h.Log(err)
+				}
 			}
 		}
 	}

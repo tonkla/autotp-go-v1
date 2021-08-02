@@ -45,7 +45,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		if trend < t.TrendDown1 {
 			order.OpenPrice = buyPrice - gridWidth*openGaps
 		}
-		o := db.GetActiveOrder(order, p.Slippage)
+		o := db.GetLimitOrder(order, p.Slippage)
 		if o == nil {
 			if p.GridTP > 0 {
 				order.TPPrice = buyPrice + gridWidth*p.GridTP
@@ -60,7 +60,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		if trend > t.TrendUp1 {
 			order.OpenPrice = sellPrice + gridWidth*openGaps
 		}
-		o := db.GetActiveOrder(order, p.Slippage)
+		o := db.GetLimitOrder(order, p.Slippage)
 		if o == nil {
 			if p.GridTP > 0 {
 				order.TPPrice = sellPrice - gridWidth*p.GridTP

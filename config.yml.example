@@ -5,6 +5,7 @@ dbName: autotp.db
 botID: 1
 intervalSec: 5
 symbol: BNBUSDT
+digits: 2
 view: NEUTRAL | LONG | SHORT
 qty: 0.1
 slippage: 0.001

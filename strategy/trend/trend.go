@@ -79,7 +79,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 			qo.Type = t.OrderTypeLimit
 			qo.OpenPrice = bidPrice
 			qo.Qty = p.Qty
-			if len(db.GetActiveOrdersBySide(qo)) == 0 {
+			if len(db.GetLimitOrdersBySide(qo)) == 0 {
 				openOrders = append(openOrders, qo)
 			}
 		}
@@ -115,7 +115,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 			qo.Type = t.OrderTypeLimit
 			qo.OpenPrice = askPrice
 			qo.Qty = p.Qty
-			if len(db.GetActiveOrdersBySide(qo)) == 0 {
+			if len(db.GetLimitOrdersBySide(qo)) == 0 {
 				openOrders = append(openOrders, qo)
 			}
 		}
