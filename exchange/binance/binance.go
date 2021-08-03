@@ -356,7 +356,6 @@ func (c Client) PlaceStopOrder(o t.Order) *t.Order {
 	}
 
 	o.RefID = r.Get("orderId").String()
-	o.Status = r.Get("status").String()
 	o.OpenTime = r.Get("transactTime").Int()
 	return &o
 }

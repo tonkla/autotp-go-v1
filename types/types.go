@@ -105,6 +105,8 @@ type BotParams struct {
 	UpperPrice  float64
 	GridSize    float64
 	GridTP      float64
+	FollowTrend bool
+	OpenAll     bool
 	Qty         float64
 	View        string
 	Slippage    float64

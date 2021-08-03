@@ -2,7 +2,7 @@ package kzm
 
 import (
 	"github.com/tonkla/autotp/db"
-	grid "github.com/tonkla/autotp/strategy/gridtrend"
+	"github.com/tonkla/autotp/strategy/grid"
 	"github.com/tonkla/autotp/strategy/trend"
 	"github.com/tonkla/autotp/types"
 )

@@ -13,7 +13,7 @@ import (
 	"github.com/tonkla/autotp/db"
 	"github.com/tonkla/autotp/exchange/binance"
 	h "github.com/tonkla/autotp/helper"
-	strategy "github.com/tonkla/autotp/strategy/gridtrend"
+	strategy "github.com/tonkla/autotp/strategy/grid"
 	t "github.com/tonkla/autotp/types"
 )
 
@@ -62,6 +62,8 @@ func main() {
 	upperPrice := viper.GetFloat64("upperPrice")
 	gridSize := viper.GetFloat64("gridSize")
 	gridTP := viper.GetFloat64("gridTP")
+	followTrend := viper.GetBool("followTrend")
+	openAll := viper.GetBool("openAllZones")
 	qty := viper.GetFloat64("qty")
 	view := viper.GetString("view")
 	slippage := viper.GetFloat64("slippage")
@@ -90,6 +92,8 @@ func main() {
 		UpperPrice:  upperPrice,
 		GridSize:    gridSize,
 		GridTP:      gridTP,
+		FollowTrend: followTrend,
+		OpenAll:     openAll,
 		Qty:         qty,
 		View:        view,
 		Slippage:    slippage,
@@ -139,11 +143,7 @@ func main() {
 		// Open new orders ---------------------------------------------------------
 
 		for _, o := range tradeOrders.OpenOrders {
-			id, err := h.GenID(0)
-			if err != nil {
-				continue
-			}
-			o.ID = id
+			o.ID = h.GenID()
 			exo := exchange.PlaceLimitOrder(o)
 			if exo == nil {
 				continue
@@ -163,11 +163,7 @@ func main() {
 		// Close orders ------------------------------------------------------------
 
 		for _, o := range tradeOrders.CloseOrders {
-			id, err := h.GenID(0)
-			if err != nil {
-				continue
-			}
-			o.ID = id
+			o.ID = h.GenID()
 			exo := exchange.PlaceLimitOrder(o)
 			if exo == nil {
 				continue
@@ -213,16 +209,11 @@ func main() {
 
 			// Place a new Stop Loss order
 			if o.SLPrice > 0 && db.GetSLOrder(o.ID) == nil {
-				id, err := h.GenID(0)
-				if err != nil {
-					continue
-				}
-
 				slo := t.Order{
 					BotID:       o.BotID,
 					Exchange:    o.Exchange,
 					Symbol:      o.Symbol,
-					ID:          id,
+					ID:          h.GenID(),
 					OpenOrderID: o.ID,
 					Qty:         o.Qty,
 					Side:        h.Reverse(o.Side),
@@ -236,7 +227,6 @@ func main() {
 					continue
 				}
 				slo.RefID = exo.RefID
-				slo.Status = exo.Status
 				slo.OpenTime = exo.OpenTime
 				err = db.CreateOrder(slo)
 				if err != nil {
@@ -249,16 +239,11 @@ func main() {
 
 			// Place a new Take Profit order
 			if o.TPPrice > 0 && db.GetTPOrder(o.ID) == nil {
-				id, err := h.GenID(0)
-				if err != nil {
-					continue
-				}
-
 				tpo := t.Order{
 					BotID:       o.BotID,
 					Exchange:    o.Exchange,
 					Symbol:      o.Symbol,
-					ID:          id,
+					ID:          h.GenID(),
 					OpenOrderID: o.ID,
 					Qty:         o.Qty,
 					Side:        h.Reverse(o.Side),
@@ -272,7 +257,6 @@ func main() {
 					continue
 				}
 				tpo.RefID = exo.RefID
-				tpo.Status = exo.Status
 				tpo.OpenTime = exo.OpenTime
 				err = db.CreateOrder(tpo)
 				if err != nil {
