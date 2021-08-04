@@ -144,7 +144,11 @@ func main() {
 
 		for _, o := range tradeOrders.OpenOrders {
 			o.ID = h.GenID()
-			exo := exchange.PlaceLimitOrder(o)
+			exo, err := exchange.PlaceLimitOrder(o)
+			if err != nil {
+				h.Log("OpenOrder")
+				os.Exit(1)
+			}
 			if exo == nil {
 				continue
 			}
@@ -164,7 +168,11 @@ func main() {
 
 		for _, o := range tradeOrders.CloseOrders {
 			o.ID = h.GenID()
-			exo := exchange.PlaceLimitOrder(o)
+			exo, err := exchange.PlaceLimitOrder(o)
+			if err != nil {
+				h.Log("CloseOrder")
+				os.Exit(1)
+			}
 			if exo == nil {
 				continue
 			}
@@ -188,7 +196,11 @@ func main() {
 			Symbol:   symbol,
 		}
 		for _, o := range db.GetLimitOrders(qo) {
-			exo := exchange.GetOrder(o)
+			exo, err := exchange.GetOrder(o)
+			if err != nil {
+				h.Log("GetLimitOrders")
+				os.Exit(1)
+			}
 			if exo == nil || exo.Status == t.OrderStatusNew {
 				continue
 			}
@@ -222,7 +234,11 @@ func main() {
 					OpenPrice:   o.SLPrice,
 					StopPrice:   h.CalcSLStop(o.Side, o.SLPrice, 0, digits),
 				}
-				exo := exchange.PlaceStopOrder(slo)
+				exo, err := exchange.PlaceStopOrder(slo)
+				if err != nil {
+					h.Log("PlaceSLOrder")
+					os.Exit(1)
+				}
 				if exo == nil {
 					continue
 				}
@@ -252,7 +268,11 @@ func main() {
 					OpenPrice:   o.TPPrice,
 					StopPrice:   h.CalcTPStop(o.Side, o.TPPrice, 0, digits),
 				}
-				exo := exchange.PlaceStopOrder(tpo)
+				exo, err := exchange.PlaceStopOrder(tpo)
+				if err != nil {
+					h.Log("PlaceTPOrder")
+					os.Exit(1)
+				}
 				if exo == nil {
 					continue
 				}
@@ -269,7 +289,11 @@ func main() {
 		}
 
 		for _, slo := range db.GetSLOrders(qo) {
-			exo := exchange.GetOrder(slo)
+			exo, err := exchange.GetOrder(slo)
+			if err != nil {
+				h.Log("GetSLOrders")
+				os.Exit(1)
+			}
 			if exo == nil || exo.Status == t.OrderStatusNew {
 				continue
 			}
@@ -288,8 +312,9 @@ func main() {
 			}
 
 			oo := db.GetOrderByID(slo.OpenOrderID)
-			if (oo.Side == t.OrderSideBuy && ticker.Price < slo.OpenPrice) ||
-				(oo.Side == t.OrderSideSell && ticker.Price > slo.OpenPrice) {
+			if (oo.Side == t.OrderSideBuy && ticker.Price < slo.OpenPrice && oo.CloseOrderID == "") ||
+				(oo.Side == t.OrderSideSell && ticker.Price > slo.OpenPrice && oo.CloseOrderID == "") {
+				oo.PL = (slo.OpenPrice - oo.OpenPrice) * oo.Qty
 				oo.CloseOrderID = slo.ID
 				oo.ClosePrice = slo.OpenPrice
 				oo.CloseTime = h.Now13()
@@ -301,7 +326,11 @@ func main() {
 		}
 
 		for _, tpo := range db.GetTPOrders(qo) {
-			exo := exchange.GetOrder(tpo)
+			exo, err := exchange.GetOrder(tpo)
+			if err != nil {
+				h.Log("GetTPOrders")
+				os.Exit(1)
+			}
 			if exo == nil || exo.Status == t.OrderStatusNew {
 				continue
 			}
@@ -320,8 +349,9 @@ func main() {
 			}
 
 			oo := db.GetOrderByID(tpo.OpenOrderID)
-			if (oo.Side == t.OrderSideBuy && ticker.Price > tpo.OpenPrice) ||
-				(oo.Side == t.OrderSideSell && ticker.Price < tpo.OpenPrice) {
+			if (oo.Side == t.OrderSideBuy && ticker.Price > tpo.OpenPrice && oo.CloseOrderID == "") ||
+				(oo.Side == t.OrderSideSell && ticker.Price < tpo.OpenPrice && oo.CloseOrderID == "") {
+				oo.PL = (tpo.OpenPrice - oo.OpenPrice) * oo.Qty
 				oo.CloseOrderID = tpo.ID
 				oo.ClosePrice = tpo.OpenPrice
 				oo.CloseTime = h.Now13()

@@ -16,7 +16,8 @@ type OnTickParams struct {
 	DB        db.DB
 }
 
-const openGaps = 2
+// A multiplier of deducted zones when a trend is strong
+const openGaps = 1
 
 func OnTick(params OnTickParams) *t.TradeOrders {
 	ticker := params.Ticker
@@ -25,7 +26,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 
 	var orders []t.Order
 
-	buyPrice, sellPrice, gridWidth := strategy.GetGridRange(ticker.Price, p.LowerPrice, p.UpperPrice, p.GridSize)
+	lowerPrice, upperPrice, gridWidth := strategy.GetGridRange(ticker.Price, p.LowerPrice, p.UpperPrice, p.GridSize)
 	trend := strategy.GetTrend(params.HPrices, int(p.MAPeriod))
 
 	order := t.Order{
@@ -39,10 +40,10 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 
 	view := strings.ToUpper(p.View)
 
-	if view == t.ViewNeutral || view == "N" || view == t.ViewLong || view == "L" {
-		lowerPrice := buyPrice
+	if view == t.ViewLong || view == "L" || view == t.ViewNeutral || view == "N" {
+		buyPrice := lowerPrice
 		if p.FollowTrend && trend < t.TrendDown2 {
-			lowerPrice = buyPrice - gridWidth*openGaps
+			buyPrice = lowerPrice - gridWidth*openGaps
 		}
 		if p.OpenAll {
 			// Buy all available zones of the grid, please ensure your fund is plenty
@@ -50,9 +51,9 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 			for _, zone := range zones {
 				_order := order
 				_order.Side = t.OrderSideBuy
-				_order.OpenPrice = zone
-				if db.GetLimitOrder(_order, p.Slippage) == nil {
-					_order.OpenPrice = lowerPrice
+				_order.OpenPrice = buyPrice
+				_order.ZonePrice = zone
+				if db.IsEmptyZone(_order) {
 					if p.GridTP > 0 {
 						_order.TPPrice = zone + gridWidth*p.GridTP
 					}
@@ -62,20 +63,21 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		} else {
 			_order := order
 			_order.Side = t.OrderSideBuy
-			_order.OpenPrice = lowerPrice
-			if db.GetLimitOrder(_order, p.Slippage) == nil {
+			_order.OpenPrice = buyPrice
+			_order.ZonePrice = buyPrice
+			if db.IsEmptyZone(_order) {
 				if p.GridTP > 0 {
-					_order.TPPrice = lowerPrice + gridWidth*p.GridTP
+					_order.TPPrice = buyPrice + gridWidth*p.GridTP
 				}
 				orders = append(orders, _order)
 			}
 		}
 	}
 
-	if view == t.ViewNeutral || view == "N" || view == t.ViewShort || view == "S" {
-		upperPrice := sellPrice
+	if view == t.ViewShort || view == "S" || view == t.ViewNeutral || view == "N" {
+		sellPrice := upperPrice
 		if p.FollowTrend && trend > t.TrendUp2 {
-			upperPrice = sellPrice + gridWidth*openGaps
+			sellPrice = upperPrice + gridWidth*openGaps
 		}
 		if p.OpenAll {
 			// Sell all available zones of the grid, please ensure your fund is plenty
@@ -83,9 +85,9 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 			for _, zone := range zones {
 				_order := order
 				_order.Side = t.OrderSideSell
-				_order.OpenPrice = zone
-				if db.GetLimitOrder(_order, p.Slippage) == nil {
-					_order.OpenPrice = upperPrice
+				_order.OpenPrice = sellPrice
+				_order.ZonePrice = zone
+				if db.IsEmptyZone(_order) {
 					if p.GridTP > 0 {
 						_order.TPPrice = zone - gridWidth*p.GridTP
 					}
@@ -95,10 +97,11 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		} else {
 			_order := order
 			_order.Side = t.OrderSideSell
-			_order.OpenPrice = upperPrice
-			if db.GetLimitOrder(_order, p.Slippage) == nil {
+			_order.OpenPrice = sellPrice
+			_order.ZonePrice = sellPrice
+			if db.IsEmptyZone(_order) {
 				if p.GridTP > 0 {
-					_order.TPPrice = upperPrice - gridWidth*p.GridTP
+					_order.TPPrice = sellPrice - gridWidth*p.GridTP
 				}
 				orders = append(orders, _order)
 			}

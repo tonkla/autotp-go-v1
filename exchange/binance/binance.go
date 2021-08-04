@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -62,7 +63,7 @@ func newHeader(apiKey string) http.Header {
 
 // Build a base query string
 func buildBaseQS(payload *strings.Builder, symbol string) {
-	fmt.Fprintf(payload, "timestamp=%d&recvWindow=20000&symbol=%s", h.Now13(), symbol)
+	fmt.Fprintf(payload, "timestamp=%d&recvWindow=50000&symbol=%s", h.Now13(), symbol)
 }
 
 // Public APIs -----------------------------------------------------------------
@@ -147,9 +148,9 @@ func (c Client) GetHistoricalPrices(symbol string, timeframe string, limit int) 
 // Private APIs ----------------------------------------------------------------
 
 // GetOrderByIDs returns the order by its IDs
-func (c Client) GetOrderByIDs(symbol string, ID string, refID string) *t.Order {
+func (c Client) GetOrderByIDs(symbol string, ID string, refID string) (*t.Order, error) {
 	if symbol == "" || (ID == "" && refID == "") {
-		return nil
+		return nil, nil
 	}
 
 	var payload, url strings.Builder
@@ -167,15 +168,14 @@ func (c Client) GetOrderByIDs(symbol string, ID string, refID string) *t.Order {
 	fmt.Fprintf(&url, "%s/order?%s&signature=%s", c.baseURL, payload.String(), signature)
 	data, err := h.GetH(url.String(), newHeader(c.apiKey))
 	if err != nil {
-		h.Log(err)
-		return nil
+		return nil, err
 	}
 
 	r := gjson.ParseBytes(data)
 
 	if r.Get("code").Int() < 0 {
-		h.Log(r)
-		return nil
+		h.Log("GetOrderByIDs", r)
+		return nil, errors.New(r.Get("msg").String())
 	}
 
 	return &t.Order{
@@ -184,18 +184,21 @@ func (c Client) GetOrderByIDs(symbol string, ID string, refID string) *t.Order {
 		Symbol:     symbol,
 		Status:     r.Get("status").String(),
 		UpdateTime: r.Get("updateTime").Int(),
-	}
+	}, nil
 }
 
 // GetOrder returns the order by its IDs
-func (c Client) GetOrder(o t.Order) *t.Order {
-	exo := c.GetOrderByIDs(o.Symbol, o.ID, o.RefID)
+func (c Client) GetOrder(o t.Order) (*t.Order, error) {
+	exo, err := c.GetOrderByIDs(o.Symbol, o.ID, o.RefID)
+	if err != nil {
+		return nil, err
+	}
 	if exo == nil {
-		return nil
+		return nil, nil
 	}
 	o.Status = exo.Status
 	o.UpdateTime = exo.UpdateTime
-	return &o
+	return &o, nil
 }
 
 // GetOpenOrders returns open orders
@@ -215,7 +218,7 @@ func (c Client) GetOpenOrders(symbol string) []t.Order {
 	rs := gjson.ParseBytes(data)
 
 	if rs.Get("code").Int() < 0 {
-		h.Log(rs)
+		h.Log("GetOpenOrders", rs)
 		return nil
 	}
 
@@ -265,7 +268,7 @@ func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime in
 	rs := gjson.ParseBytes(data)
 
 	if rs.Get("code").Int() < 0 {
-		h.Log(rs)
+		h.Log("GetAllOrders", rs)
 		return nil
 	}
 
@@ -288,9 +291,9 @@ func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime in
 }
 
 // PlaceLimitOrder places a limit order on the exchange
-func (c Client) PlaceLimitOrder(o t.Order) *t.Order {
+func (c Client) PlaceLimitOrder(o t.Order) (*t.Order, error) {
 	if o.Type != t.OrderTypeLimit {
-		return nil
+		return nil, nil
 	}
 
 	var payload, url strings.Builder
@@ -304,19 +307,19 @@ func (c Client) PlaceLimitOrder(o t.Order) *t.Order {
 	fmt.Fprintf(&url, "%s/order?%s&signature=%s", c.baseURL, payload.String(), signature)
 	data, err := h.Post(url.String(), newHeader(c.apiKey))
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	r := gjson.ParseBytes(data)
 
 	if r.Get("code").Int() < 0 {
-		h.Log(r)
-		return nil
+		h.Log("PlaceLimitOrder", r)
+		return nil, errors.New(r.Get("msg").String())
 	}
 
 	status := r.Get("status").String()
 	if status != t.OrderStatusNew && status != t.OrderStatusFilled {
-		return nil
+		return nil, nil
 	}
 	o.Status = status
 	o.RefID = r.Get("orderId").String()
@@ -325,13 +328,13 @@ func (c Client) PlaceLimitOrder(o t.Order) *t.Order {
 	if price > 0 {
 		o.OpenPrice = price
 	}
-	return &o
+	return &o, nil
 }
 
 // PlaceStopOrder places a stop order on the exchange
-func (c Client) PlaceStopOrder(o t.Order) *t.Order {
+func (c Client) PlaceStopOrder(o t.Order) (*t.Order, error) {
 	if o.Type != t.OrderTypeSL && o.Type != t.OrderTypeTP {
-		return nil
+		return nil, nil
 	}
 
 	var payload, url strings.Builder
@@ -345,19 +348,19 @@ func (c Client) PlaceStopOrder(o t.Order) *t.Order {
 	fmt.Fprintf(&url, "%s/order?%s&signature=%s", c.baseURL, payload.String(), signature)
 	data, err := h.Post(url.String(), newHeader(c.apiKey))
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	r := gjson.ParseBytes(data)
 
 	if r.Get("code").Int() < 0 {
-		h.Log(r)
-		return nil
+		h.Log("PlaceStopOrder", r)
+		return nil, errors.New(r.Get("msg").String())
 	}
 
 	o.RefID = r.Get("orderId").String()
 	o.OpenTime = r.Get("transactTime").Int()
-	return &o
+	return &o, nil
 }
 
 // PlaceMarketOrder places a market order on the exchange
@@ -383,7 +386,7 @@ func (c Client) PlaceMarketOrder(o t.Order) *t.Order {
 	r := gjson.ParseBytes(data)
 
 	if r.Get("code").Int() < 0 {
-		h.Log(r)
+		h.Log("PlaceMarketOrder", r)
 		return nil
 	}
 

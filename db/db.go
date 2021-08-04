@@ -26,6 +26,13 @@ func Connect(dbName string) *DB {
 	return &DB{db: db}
 }
 
+func (d DB) IsEmptyZone(o t.Order) bool {
+	var order t.Order
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND zone_price = ? AND side = ? AND type = ? AND status <> ? AND close_order_id = ''",
+		o.BotID, o.Exchange, o.Symbol, o.ZonePrice, o.Side, t.OrderTypeLimit, t.OrderStatusCanceled).First(&order)
+	return order.OpenPrice == 0
+}
+
 func (d DB) GetOrderByID(id string) *t.Order {
 	var order t.Order
 	d.db.Where("id = ?", id).First(&order)
