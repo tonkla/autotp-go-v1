@@ -16,9 +16,6 @@ type OnTickParams struct {
 	DB        db.DB
 }
 
-// A multiplier of deducted zones when a trend is strong
-const openGaps = 1
-
 func OnTick(params OnTickParams) *t.TradeOrders {
 	ticker := params.Ticker
 	p := params.BotParams
@@ -27,7 +24,11 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 	var orders []t.Order
 
 	lowerPrice, upperPrice, gridWidth := strategy.GetGridRange(ticker.Price, p.LowerPrice, p.UpperPrice, p.GridSize)
-	trend := strategy.GetTrend(params.HPrices, int(p.MAPeriod))
+
+	trend := 100
+	if len(params.HPrices) > 0 {
+		trend = strategy.GetTrend(params.HPrices, int(p.MAPeriod))
+	}
 
 	order := t.Order{
 		BotID:    p.BotID,
@@ -40,9 +41,12 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 
 	view := strings.ToUpper(p.View)
 
+	// A multiplier of deducted zones when a trend is strong
+	const openGaps = 1
+
 	if view == t.ViewLong || view == "L" || view == t.ViewNeutral || view == "N" {
 		buyPrice := lowerPrice
-		if p.FollowTrend && trend < t.TrendDown2 {
+		if p.FollowTrend && trend < 100 && trend < t.TrendDown2 {
 			buyPrice = lowerPrice - gridWidth*openGaps
 		}
 		if p.OpenAll {
@@ -76,7 +80,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 
 	if view == t.ViewShort || view == "S" || view == t.ViewNeutral || view == "N" {
 		sellPrice := upperPrice
-		if p.FollowTrend && trend > t.TrendUp2 {
+		if p.FollowTrend && trend < 100 && trend > t.TrendUp2 {
 			sellPrice = upperPrice + gridWidth*openGaps
 		}
 		if p.OpenAll {

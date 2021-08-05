@@ -398,7 +398,7 @@ func (c Client) PlaceMarketOrder(o t.Order) *t.Order {
 }
 
 // CancelOrder cancels an order on the exchange
-func (c Client) CancelOrder(o t.Order) *t.Order {
+func (c Client) CancelOrder(o t.Order) (*t.Order, error) {
 	var payload, url strings.Builder
 
 	buildBaseQS(&payload, o.Symbol)
@@ -409,12 +409,21 @@ func (c Client) CancelOrder(o t.Order) *t.Order {
 	fmt.Fprintf(&url, "%s/order?%s&signature=%s", c.baseURL, payload.String(), signature)
 	data, err := h.Delete(url.String(), newHeader(c.apiKey))
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	status := gjson.ParseBytes(data).Get("status").String()
+
+	r := gjson.ParseBytes(data)
+
+	if r.Get("code").Int() < 0 {
+		h.Log("CancelOrder", r)
+		return nil, errors.New(r.Get("msg").String())
+	}
+
+	status := r.Get("status").String()
 	if status != t.OrderStatusCanceled {
-		return nil
+		return nil, nil
 	}
 	o.Status = status
-	return &o
+	o.UpdateTime = h.Now13()
+	return &o, nil
 }
