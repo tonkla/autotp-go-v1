@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math"
 	"os"
 	"path"
 	"time"
@@ -57,7 +56,6 @@ func main() {
 	dbName := viper.GetString("dbName")
 	botID := viper.GetInt64("botID")
 	symbol := viper.GetString("symbol")
-	digits := viper.GetInt64("digits")
 	lowerPrice := viper.GetFloat64("lowerPrice")
 	upperPrice := viper.GetFloat64("upperPrice")
 	gridSize := viper.GetFloat64("gridSize")
@@ -83,7 +81,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	h.Logf("{Exchange: 'Binance Spot', BotID: %d, Symbol: %s}\n", botID, symbol)
+	h.Logf("{Exchange: BinanceSpot, BotID: %d, Symbol: %s}\n", botID, symbol)
 
 	params := t.BotParams{
 		BotID:       botID,
@@ -144,19 +142,20 @@ func main() {
 			if exo == nil {
 				continue
 			}
+
 			o.RefID = exo.RefID
 			o.Status = exo.Status
-			o.OpenTime = exo.OpenTime
 			o.OpenPrice = exo.OpenPrice
+			o.OpenTime = exo.OpenTime
 			err = db.CreateOrder(o)
 			if err != nil {
-				h.Log(err)
+				h.Log("CreateOrder", err)
 				continue
 			}
-			h.Logf("{Action: Open, Side: %s, Qty: %.4f, Zone: %.2f, Price: %.2f}\n", o.Side, o.Qty, o.ZonePrice, o.OpenPrice)
+			h.Logf("{Action: Open, Qty: %.2f, Price: %.2f, Zone: %.2f}\n", o.Qty, o.OpenPrice, o.ZonePrice)
 		}
 
-		// Synchronize order status ------------------------------------------------
+		// Synchronize order status / Take Profit ----------------------------------
 
 		qo := t.Order{
 			BotID:    botID,
@@ -179,7 +178,7 @@ func main() {
 				o.UpdateTime = exo.UpdateTime
 				err := db.UpdateOrder(o)
 				if err != nil {
-					h.Log(err)
+					h.Log("UpdateOrder", err)
 					continue
 				}
 			}
@@ -187,34 +186,15 @@ func main() {
 				continue
 			}
 
-			// Place a new Take Profit order
-			const maxNumAlgoOrders = 5
-			if o.TPPrice > 0 && db.GetTPOrder(o.ID) == nil {
-				// Remove the highest price TP order, because of 'MAX_NUM_ALGO_ORDERS=5'
-				tpOrders := db.GetNewTPOrders(qo)
-				if len(tpOrders) == maxNumAlgoOrders {
-					_tpo := tpOrders[len(tpOrders)-1]
-					// Ignore the far TP price, keep calm and waiting
-					if _tpo.OpenPrice < o.TPPrice {
-						continue
-					}
-					exo, err := exchange.CancelOrder(_tpo)
-					if err != nil {
-						h.Log("CancelOrder", err)
-						continue
-					}
-					if exo == nil {
-						continue
-					}
-					_tpo.Status = exo.Status
-					_tpo.UpdateTime = exo.UpdateTime
-					err = db.UpdateOrder(_tpo)
-					if err != nil {
-						h.Log(err)
-						continue
-					}
-					h.Logf("{Action: CancelTP, Side: %s, Qty: %.2f, Price: %.2f}\n",
-						_tpo.Side, _tpo.Qty, _tpo.OpenPrice)
+			// Close the order at the market price
+			if o.TPPrice > 0 && o.CloseOrderID == "" && db.GetTPOrder(o.ID) == nil {
+				bids := exchange.GetOrderBook(symbol, 5).Bids
+				if len(bids) == 0 {
+					continue
+				}
+				sellPrice := bids[0].Price
+				if o.TPPrice > sellPrice || sellPrice == 0 {
+					continue
 				}
 
 				tpo := t.Order{
@@ -225,70 +205,40 @@ func main() {
 					OpenOrderID: o.ID,
 					Qty:         o.Qty,
 					Side:        h.Reverse(o.Side),
-					Type:        t.OrderTypeTP,
+					Type:        t.OrderTypeMarket, // Place with a MARKET type
 					Status:      t.OrderStatusNew,
-					OpenPrice:   o.TPPrice,
-					StopPrice:   h.CalcTPStop(o.Side, o.TPPrice, 0, digits),
 				}
-				exo, err := exchange.PlaceStopOrder(tpo)
+				exo, err := exchange.PlaceMarketOrder(tpo)
 				if err != nil {
-					h.Log("PlaceTPOrder", tpo)
+					h.Log("PlaceMarketOrder", tpo)
 					os.Exit(1)
 				}
 				if exo == nil {
 					continue
 				}
+
+				tpo.Type = t.OrderTypeTP // Save to local DB with a TAKE_PROFIT_LIMIT type
 				tpo.RefID = exo.RefID
+				tpo.OpenPrice = sellPrice // MARKET order always return price=0
 				tpo.OpenTime = exo.OpenTime
+				tpo.Status = exo.Status
 				err = db.CreateOrder(tpo)
 				if err != nil {
-					h.Log(err)
+					h.Log("CreateTPOrder", err)
 					continue
 				}
-				h.Logf("{Action: NewTP, Side: %s, Qty: %.2f, Zone: %.2f, Price: %.2f, OpenPrice: %.2f",
-					tpo.Side, tpo.Qty, o.ZonePrice, tpo.OpenPrice, o.OpenPrice)
-			}
-		}
 
-		// Synchronize TP order status ---------------------------------------------
-
-		for _, tpo := range db.GetTPOrders(qo) {
-			exo, err := exchange.GetOrder(tpo)
-			if err != nil {
-				h.Log("GetTPOrders")
-				os.Exit(1)
-			}
-			if exo == nil || exo.Status == t.OrderStatusNew {
-				continue
-			}
-
-			if tpo.Status != exo.Status {
-				tpo.Status = exo.Status
-				tpo.UpdateTime = exo.UpdateTime
-				err := db.UpdateOrder(tpo)
+				o.CloseOrderID = tpo.ID
+				o.ClosePrice = tpo.OpenPrice
+				o.CloseTime = tpo.OpenTime
+				o.PL = (o.ClosePrice - o.OpenPrice) * o.Qty
+				err = db.UpdateOrder(o)
 				if err != nil {
-					h.Log(err)
+					h.Log("UpdateOrder", err)
 					continue
 				}
-			}
-			if exo.Status == t.OrderStatusCanceled {
-				continue
-			}
-
-			oo := db.GetOrderByID(tpo.OpenOrderID)
-			if (oo.Side == t.OrderSideBuy && ticker.Price > tpo.OpenPrice && oo.CloseOrderID == "") ||
-				(oo.Side == t.OrderSideSell && ticker.Price < tpo.OpenPrice && oo.CloseOrderID == "") {
-				oo.PL = (tpo.OpenPrice - oo.OpenPrice) * oo.Qty
-				oo.CloseOrderID = tpo.ID
-				oo.ClosePrice = tpo.OpenPrice
-				oo.CloseTime = h.Now13()
-				err := db.UpdateOrder(*oo)
-				if err != nil {
-					h.Log(err)
-					continue
-				}
-				h.Logf("{Action: TP, Side: %s, Qty: %.2f, Zone: %.2f, Price: %.2f, OpenPrice: %.2f, Profit: %.2f}\n",
-					tpo.Side, tpo.Qty, oo.ZonePrice, tpo.OpenPrice, oo.OpenPrice, math.Abs(tpo.OpenPrice-oo.OpenPrice)*tpo.Qty)
+				h.Logf("{Action: TP, Qty: %.2f, Price: %.2f, OpenPrice: %.2f, Zone: %.2f, Profit: %.2f}\n",
+					tpo.Qty, tpo.OpenPrice, o.OpenPrice, o.ZonePrice, o.PL)
 			}
 		}
 	}

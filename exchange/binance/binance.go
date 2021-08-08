@@ -364,9 +364,9 @@ func (c Client) PlaceStopOrder(o t.Order) (*t.Order, error) {
 }
 
 // PlaceMarketOrder places a market order on the exchange
-func (c Client) PlaceMarketOrder(o t.Order) *t.Order {
+func (c Client) PlaceMarketOrder(o t.Order) (*t.Order, error) {
 	if o.Type != t.OrderTypeMarket {
-		return nil
+		return nil, nil
 	}
 
 	var payload, url strings.Builder
@@ -380,21 +380,20 @@ func (c Client) PlaceMarketOrder(o t.Order) *t.Order {
 	fmt.Fprintf(&url, "%s/order?%s&signature=%s", c.baseURL, payload.String(), signature)
 	data, err := h.Post(url.String(), newHeader(c.apiKey))
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	r := gjson.ParseBytes(data)
 
 	if r.Get("code").Int() < 0 {
 		h.Log("PlaceMarketOrder", r)
-		return nil
+		return nil, errors.New(r.Get("msg").String())
 	}
 
 	o.RefID = r.Get("orderId").String()
 	o.OpenTime = r.Get("transactTime").Int()
-	o.OpenPrice = r.Get("price").Float()
 	o.Status = r.Get("status").String()
-	return &o
+	return &o, nil
 }
 
 // CancelOrder cancels an order on the exchange
