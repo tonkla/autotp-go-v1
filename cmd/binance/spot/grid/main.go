@@ -56,6 +56,7 @@ func main() {
 	dbName := viper.GetString("dbName")
 	botID := viper.GetInt64("botID")
 	symbol := viper.GetString("symbol")
+	digits := viper.GetInt64("digits")
 	lowerPrice := viper.GetFloat64("lowerPrice")
 	upperPrice := viper.GetFloat64("upperPrice")
 	gridSize := viper.GetFloat64("gridSize")
@@ -219,7 +220,9 @@ func main() {
 
 				tpo.Type = t.OrderTypeTP // Save to local DB with a TAKE_PROFIT_LIMIT type
 				tpo.RefID = exo.RefID
-				tpo.OpenPrice = sellPrice // MARKET order always return price=0
+				tpo.OpenPrice = exo.OpenPrice
+				tpo.Qty = exo.Qty
+				tpo.Commission = exo.Commission
 				tpo.OpenTime = exo.OpenTime
 				tpo.Status = exo.Status
 				err = db.CreateOrder(tpo)
@@ -231,7 +234,7 @@ func main() {
 				o.CloseOrderID = tpo.ID
 				o.ClosePrice = tpo.OpenPrice
 				o.CloseTime = tpo.OpenTime
-				o.PL = (o.ClosePrice - o.OpenPrice) * o.Qty
+				o.PL = h.RoundToDigits(((o.ClosePrice-o.OpenPrice)*tpo.Qty)-tpo.Commission, digits)
 				err = db.UpdateOrder(o)
 				if err != nil {
 					h.Log("UpdateOrder", err)

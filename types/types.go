@@ -63,12 +63,13 @@ type Order struct {
 	Status   string `gorm:"index"`
 	Qty      float64
 
-	OpenPrice float64
-	ZonePrice float64
-	StopPrice float64 `gorm:"-"`
-	TPPrice   float64
-	SLPrice   float64
-	PL        float64
+	OpenPrice  float64
+	ZonePrice  float64
+	StopPrice  float64 `gorm:"-"`
+	TPPrice    float64
+	SLPrice    float64
+	PL         float64
+	Commission float64
 
 	OpenOrderID string `gorm:"index"`
 	OpenOrder   *Order `gorm:"foreignKey:OpenOrderID"`

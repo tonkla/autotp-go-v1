@@ -68,7 +68,7 @@ func (d DB) GetLimitOrders(o t.Order) []t.Order {
 	return orders
 }
 
-// GetLimitOrdersBySide returns the LIMIT orders that are not canceled for the specific side
+// GetLimitOrdersBySide returns the LIMIT orders that are not canceled for the specified side
 func (d DB) GetLimitOrdersBySide(o t.Order) []t.Order {
 	var orders []t.Order
 	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND type = ? AND status <> ? AND close_order_id = ''",
@@ -84,7 +84,7 @@ func (d DB) GetNewOrders(o t.Order) []t.Order {
 	return orders
 }
 
-// GetNewOrdersBySide returns the orders that their status is NEW for the specific side
+// GetNewOrdersBySide returns the orders that their status is NEW for the specified side
 func (d DB) GetNewOrdersBySide(o t.Order) []t.Order {
 	var orders []t.Order
 	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND status = ? AND side = ?",
@@ -100,7 +100,7 @@ func (d DB) GetFilledOrders(o t.Order) []t.Order {
 	return orders
 }
 
-// GetFilledOrdersBySide returns the orders that their status is FILLED for the specific side
+// GetFilledOrdersBySide returns the orders that their status is FILLED for the specified side
 func (d DB) GetFilledOrdersBySide(o t.Order) []t.Order {
 	var orders []t.Order
 	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND status = ? AND side = ? AND close_order_id = ''",
@@ -108,7 +108,7 @@ func (d DB) GetFilledOrdersBySide(o t.Order) []t.Order {
 	return orders
 }
 
-// GetProfitOrdersBySide returns the orders that are profitable for the specific side
+// GetProfitOrdersBySide returns the orders that are profitable for the specified side
 func (d DB) GetProfitOrdersBySide(qo t.Order, tk t.Ticker) []t.Order {
 	var orders []t.Order
 	fee := tk.Price * 0.002 * 2 // 0.002=transaction fee at 0.2%, 2=open and closed fees

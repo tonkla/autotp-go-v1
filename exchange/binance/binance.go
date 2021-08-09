@@ -393,6 +393,14 @@ func (c Client) PlaceMarketOrder(o t.Order) (*t.Order, error) {
 	o.RefID = r.Get("orderId").String()
 	o.OpenTime = r.Get("transactTime").Int()
 	o.Status = r.Get("status").String()
+
+	fills := r.Get("fills").Array()
+	if len(fills) > 0 {
+		o.OpenPrice = fills[0].Get("price").Float()
+		o.Qty = fills[0].Get("qty").Float()
+		o.Commission = fills[0].Get("commission").Float()
+	}
+
 	return &o, nil
 }
 

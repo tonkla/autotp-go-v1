@@ -33,9 +33,9 @@ func CalcSLStop(side string, sl float64, trigger float64, digits int64) float64 
 		trigger = 0.002
 	}
 	if side == t.OrderSideBuy {
-		return roundToDigits(sl+sl*trigger, digits)
+		return RoundToDigits(sl+sl*trigger, digits)
 	}
-	return roundToDigits(sl-sl*trigger, digits)
+	return RoundToDigits(sl-sl*trigger, digits)
 }
 
 // CalcTPStop calculates a stop price of the take profit price
@@ -44,9 +44,9 @@ func CalcTPStop(side string, tp float64, trigger float64, digits int64) float64 
 		trigger = 0.002
 	}
 	if side == t.OrderSideBuy {
-		return roundToDigits(tp-tp*trigger, digits)
+		return RoundToDigits(tp-tp*trigger, digits)
 	}
-	return roundToDigits(tp+tp*trigger, digits)
+	return RoundToDigits(tp+tp*trigger, digits)
 }
 
 // Reverse returns the opposite side
@@ -57,7 +57,7 @@ func Reverse(side string) string {
 	return t.OrderSideBuy
 }
 
-func roundToDigits(number float64, digits int64) float64 {
+func RoundToDigits(number float64, digits int64) float64 {
 	pow := math.Pow(10, float64(digits))
 	return math.Round(number*pow) / pow
 }
