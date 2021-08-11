@@ -42,6 +42,14 @@ func (d DB) GetOrderByID(id string) *t.Order {
 	return &order
 }
 
+// GetActiveOrders returns all orders that are not canceled
+func (d DB) GetActiveOrders(o t.Order) []t.Order {
+	var orders []t.Order
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND status <> ? AND close_order_id = ''",
+		o.BotID, o.Exchange, o.Symbol, t.OrderStatusCanceled).Find(&orders)
+	return orders
+}
+
 // GetLimitOrder returns the LIMIT order that is not canceled
 func (d DB) GetLimitOrder(o t.Order, slippage float64) *t.Order {
 	var order t.Order

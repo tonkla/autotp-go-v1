@@ -10,6 +10,7 @@ view: NEUTRAL | LONG | SHORT
 qty: 0.1
 slippage: 0
 
+startPrice: 150
 lowerPrice: 100
 upperPrice: 200
 gridSize: 10

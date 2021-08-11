@@ -57,6 +57,7 @@ func main() {
 	botID := viper.GetInt64("botID")
 	symbol := viper.GetString("symbol")
 	digits := viper.GetInt64("digits")
+	startPrice := viper.GetFloat64("startPrice")
 	lowerPrice := viper.GetFloat64("lowerPrice")
 	upperPrice := viper.GetFloat64("upperPrice")
 	gridSize := viper.GetFloat64("gridSize")
@@ -114,6 +115,16 @@ func main() {
 			continue
 		}
 
+		qo := t.Order{
+			BotID:    botID,
+			Exchange: t.ExcBinance,
+			Symbol:   symbol,
+		}
+
+		if ticker.Price > startPrice && len(db.GetLimitOrders(qo)) == 0 {
+			continue
+		}
+
 		hprices := exchange.GetHistoricalPrices(ticker.Symbol, maTimeframe, 50)
 		if len(hprices) == 0 {
 			continue
@@ -158,11 +169,6 @@ func main() {
 
 		// Synchronize order status / Take Profit ----------------------------------
 
-		qo := t.Order{
-			BotID:    botID,
-			Exchange: t.ExcBinance,
-			Symbol:   symbol,
-		}
 		for _, o := range db.GetLimitOrders(qo) {
 			exo, err := exchange.GetOrder(o)
 			if err != nil {
