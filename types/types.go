@@ -105,11 +105,11 @@ type OrderBook struct {
 
 type BotParams struct {
 	BotID       int64
-	LowerPrice  float64
 	UpperPrice  float64
+	LowerPrice  float64
 	GridSize    float64
 	GridTP      float64
-	FollowTrend bool
+	ApplyTrend  bool
 	OpenAll     bool
 	Qty         float64
 	View        string

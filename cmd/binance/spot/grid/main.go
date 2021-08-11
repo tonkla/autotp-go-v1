@@ -35,20 +35,20 @@ func init() {
 func main() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		os.Exit(0)
 	} else if _, err := os.Stat(configFile); os.IsNotExist(err) {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		os.Exit(0)
 	} else if ext := path.Ext(configFile); ext != ".yml" && ext != ".yaml" {
 		fmt.Fprintln(os.Stderr, "Accept only YAML file")
-		os.Exit(1)
+		os.Exit(0)
 	}
 
 	viper.SetConfigFile(configFile)
 	err := viper.ReadInConfig()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		os.Exit(0)
 	}
 
 	apiKey := viper.GetString("apiKey")
@@ -56,15 +56,17 @@ func main() {
 	dbName := viper.GetString("dbName")
 	botID := viper.GetInt64("botID")
 	symbol := viper.GetString("symbol")
-	digits := viper.GetInt64("digits")
+	priceDigits := viper.GetInt64("priceDigits")
+	qtyDigits := viper.GetInt64("qtyDigits")
 	startPrice := viper.GetFloat64("startPrice")
-	lowerPrice := viper.GetFloat64("lowerPrice")
 	upperPrice := viper.GetFloat64("upperPrice")
+	lowerPrice := viper.GetFloat64("lowerPrice")
 	gridSize := viper.GetFloat64("gridSize")
 	gridTP := viper.GetFloat64("gridTP")
-	followTrend := viper.GetBool("followTrend")
+	applyTrend := viper.GetBool("applyTrend")
 	openAll := viper.GetBool("openAllZones")
 	qty := viper.GetFloat64("qty")
+	minQuoteTrade := viper.GetFloat64("minQuoteTrade")
 	view := viper.GetString("view")
 	slippage := viper.GetFloat64("slippage")
 	intervalSec := viper.GetInt64("intervalSec")
@@ -74,24 +76,24 @@ func main() {
 
 	if upperPrice <= lowerPrice {
 		fmt.Fprintln(os.Stderr, "The upper price must be greater than the lower price")
-		os.Exit(1)
+		os.Exit(0)
 	} else if gridSize < 2 {
 		fmt.Fprintln(os.Stderr, "Grid size must be greater than 1")
-		os.Exit(1)
-	} else if qty <= 0 {
+		os.Exit(0)
+	} else if qty == 0 && minQuoteTrade == 0 {
 		fmt.Fprintln(os.Stderr, "Quantity per grid must be greater than 0")
-		os.Exit(1)
+		os.Exit(0)
 	}
 
 	h.Logf("{Exchange: BinanceSpot, BotID: %d, Symbol: %s}\n", botID, symbol)
 
 	params := t.BotParams{
 		BotID:       botID,
-		LowerPrice:  lowerPrice,
 		UpperPrice:  upperPrice,
+		LowerPrice:  lowerPrice,
 		GridSize:    gridSize,
 		GridTP:      gridTP,
-		FollowTrend: followTrend,
+		ApplyTrend:  applyTrend,
 		OpenAll:     openAll,
 		Qty:         qty,
 		View:        view,
@@ -146,6 +148,13 @@ func main() {
 
 		for _, o := range tradeOrders.OpenOrders {
 			o.ID = h.GenID()
+			if o.Qty == 0 {
+				o.Qty = h.RoundToDigits(minQuoteTrade/o.OpenPrice, qtyDigits)
+				if o.Qty <= 0 {
+					h.Logf("Quantity (%f) must be greater than zero", o.Qty)
+					continue
+				}
+			}
 			exo, err := exchange.PlaceLimitOrder(o)
 			if err != nil {
 				h.Log("OpenOrder")
@@ -240,7 +249,7 @@ func main() {
 				o.CloseOrderID = tpo.ID
 				o.ClosePrice = tpo.OpenPrice
 				o.CloseTime = tpo.OpenTime
-				o.PL = h.RoundToDigits(((o.ClosePrice-o.OpenPrice)*tpo.Qty)-tpo.Commission, digits)
+				o.PL = h.RoundToDigits(((o.ClosePrice-o.OpenPrice)*tpo.Qty)-tpo.Commission, priceDigits)
 				err = db.UpdateOrder(o)
 				if err != nil {
 					h.Log("UpdateOrder", err)

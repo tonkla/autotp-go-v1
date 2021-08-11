@@ -5,17 +5,19 @@ dbName: autotp.db
 botID: 1
 intervalSec: 5
 symbol: BNBUSDT
-digits: 2
+priceDigits: 2
+qtyDigits: 5
 view: NEUTRAL | LONG | SHORT
 qty: 0.1
+minQuoteTrade: 10
 slippage: 0
 
 startPrice: 150
-lowerPrice: 100
 upperPrice: 200
+lowerPrice: 100
 gridSize: 10
 gridTP: 1
-followTrend: false
+applyTrend: false
 openAllZones: false
 
 maTimeframe: 1h

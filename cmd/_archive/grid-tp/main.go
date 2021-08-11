@@ -60,7 +60,7 @@ func main() {
 	upperPrice := viper.GetFloat64("upperPrice")
 	gridSize := viper.GetFloat64("gridSize")
 	gridTP := viper.GetFloat64("gridTP")
-	followTrend := viper.GetBool("followTrend")
+	ApplyTrend := viper.GetBool("applyTrend")
 	openAll := viper.GetBool("openAllZones")
 	qty := viper.GetFloat64("qty")
 	view := viper.GetString("view")
@@ -89,7 +89,7 @@ func main() {
 		UpperPrice:  upperPrice,
 		GridSize:    gridSize,
 		GridTP:      gridTP,
-		FollowTrend: followTrend,
+		ApplyTrend:  applyTrend,
 		OpenAll:     openAll,
 		Qty:         qty,
 		View:        view,

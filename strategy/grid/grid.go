@@ -46,7 +46,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 
 	if view == t.ViewLong || view == "L" || view == t.ViewNeutral || view == "N" {
 		buyPrice := lowerPrice
-		if p.FollowTrend && trend < 100 && trend < t.TrendDown2 {
+		if p.ApplyTrend && trend < 100 && trend < t.TrendDown2 {
 			buyPrice = lowerPrice - gridWidth*openGaps
 		}
 		if p.OpenAll {
@@ -80,7 +80,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 
 	if view == t.ViewShort || view == "S" || view == t.ViewNeutral || view == "N" {
 		sellPrice := upperPrice
-		if p.FollowTrend && trend < 100 && trend > t.TrendUp2 {
+		if p.ApplyTrend && trend < 100 && trend > t.TrendUp2 {
 			sellPrice = upperPrice + gridWidth*openGaps
 		}
 		if p.OpenAll {
