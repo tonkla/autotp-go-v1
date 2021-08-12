@@ -4,10 +4,10 @@ AutoTP aims to be an automated trading platform that supports multiple exchanges
 
 ## Usage
 
-1. Craft your trading robot and place it inside `cmd/`
-2. Build it with `go build -o autotp cmd/binance/spot/grid/main.go`
-3. Copy `config.yml.example` to `config.yml`, configure your parameters
-4. Run `./autotp -c config.yml`
+1. Craft your trading robot inside `robot/`
+2. Compile it with `go build -o autotp robot/binance/spot/grid/main.go`
+3. Copy `config.yml.example` to `config.yml`, configure your preferred parameters
+4. Run `./autotp -c config.yml`, or `./monit` for infinite running until the world ends
 
 ### (Work-in-Progress) Supported Exchanges
 

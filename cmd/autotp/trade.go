@@ -1,3 +1,0 @@
-package autotp
-
-func Trade() {}

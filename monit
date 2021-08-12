@@ -3,7 +3,7 @@
 cmd='./autotp -c config.yml'
 
 until $cmd; do
-  echo "AutoTP crashed with exit code $?. Respawning..." >&2
+  echo "AutoTP crashed with exit code $?. Respawning...\n" >&2
   sleep 3
 done
 
