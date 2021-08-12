@@ -54,21 +54,20 @@ func main() {
 	apiKey := viper.GetString("apiKey")
 	secretKey := viper.GetString("secretKey")
 	dbName := viper.GetString("dbName")
-	botID := viper.GetInt64("botID")
 	symbol := viper.GetString("symbol")
+	botID := viper.GetInt64("botID")
 	priceDigits := viper.GetInt64("priceDigits")
 	qtyDigits := viper.GetInt64("qtyDigits")
-	startPrice := viper.GetFloat64("startPrice")
 	upperPrice := viper.GetFloat64("upperPrice")
 	lowerPrice := viper.GetFloat64("lowerPrice")
+	startPrice := viper.GetFloat64("startPrice")
 	gridSize := viper.GetFloat64("gridSize")
 	gridTP := viper.GetFloat64("gridTP")
 	applyTrend := viper.GetBool("applyTrend")
 	openAll := viper.GetBool("openAllZones")
-	qty := viper.GetFloat64("qty")
-	minQuoteTrade := viper.GetFloat64("minQuoteTrade")
+	baseQty := viper.GetFloat64("baseQty")
+	quoteQty := viper.GetFloat64("quoteQty")
 	view := viper.GetString("view")
-	slippage := viper.GetFloat64("slippage")
 	intervalSec := viper.GetInt64("intervalSec")
 	maTimeframe := viper.GetString("maTimeframe")
 	maPeriod := viper.GetInt64("maPeriod")
@@ -80,12 +79,12 @@ func main() {
 	} else if gridSize < 2 {
 		fmt.Fprintln(os.Stderr, "Grid size must be greater than 1")
 		os.Exit(0)
-	} else if qty == 0 && minQuoteTrade == 0 {
+	} else if baseQty == 0 && quoteQty == 0 {
 		fmt.Fprintln(os.Stderr, "Quantity per grid must be greater than 0")
 		os.Exit(0)
 	}
 
-	h.Logf("{Exchange: BinanceSpot, BotID: %d, Symbol: %s}\n", botID, symbol)
+	h.Logf("{Exchange:BinanceSpot Symbol:%s BotID:%d}\n", symbol, botID)
 
 	params := t.BotParams{
 		BotID:       botID,
@@ -95,9 +94,8 @@ func main() {
 		GridTP:      gridTP,
 		ApplyTrend:  applyTrend,
 		OpenAll:     openAll,
-		Qty:         qty,
+		Qty:         baseQty,
 		View:        view,
-		Slippage:    slippage,
 		MATimeframe: maTimeframe,
 		MAPeriod:    maPeriod,
 		AutoTP:      autoTP,
@@ -108,7 +106,7 @@ func main() {
 	exchange := binance.NewSpotClient(apiKey, secretKey)
 
 	if intervalSec == 0 {
-		intervalSec = 5
+		intervalSec = 3
 	}
 
 	for range time.Tick(time.Duration(intervalSec) * time.Second) {
@@ -149,7 +147,7 @@ func main() {
 		for _, o := range tradeOrders.OpenOrders {
 			o.ID = h.GenID()
 			if o.Qty == 0 {
-				o.Qty = h.RoundToDigits(minQuoteTrade/o.OpenPrice, qtyDigits)
+				o.Qty = h.RoundToDigits(quoteQty/o.OpenPrice, qtyDigits)
 				if o.Qty <= 0 {
 					h.Logf("Quantity (%f) must be greater than zero", o.Qty)
 					continue
@@ -173,7 +171,13 @@ func main() {
 				h.Log("CreateOrder", err)
 				continue
 			}
-			h.Logf("{Action: Open, Qty: %.2f, Price: %.2f, Zone: %.2f}\n", o.Qty, o.OpenPrice, o.ZonePrice)
+			log := t.LogOrder{
+				Action: "New",
+				Qty:    o.Qty,
+				Open:   o.OpenPrice,
+				Zone:   o.ZonePrice,
+			}
+			h.Log(log)
 		}
 
 		// Synchronize order status / Take Profit ----------------------------------
@@ -198,17 +202,26 @@ func main() {
 					continue
 				}
 			}
+			if exo.Status == t.OrderStatusFilled {
+				log := t.LogOrder{
+					Action: "Filled",
+					Qty:    o.Qty,
+					Open:   o.OpenPrice,
+					Zone:   o.ZonePrice,
+				}
+				h.Log(log)
+			}
 			if exo.Status == t.OrderStatusCanceled {
 				continue
 			}
 
 			// Close the order at the market price
 			if o.TPPrice > 0 && o.CloseOrderID == "" && db.GetTPOrder(o.ID) == nil {
-				bids := exchange.GetOrderBook(symbol, 5).Bids
-				if len(bids) == 0 {
+				book := exchange.GetOrderBook(symbol, 5)
+				if book == nil || len(book.Bids) == 0 {
 					continue
 				}
-				sellPrice := bids[0].Price
+				sellPrice := book.Bids[0].Price
 				if o.TPPrice > sellPrice || sellPrice == 0 {
 					continue
 				}
@@ -255,8 +268,15 @@ func main() {
 					h.Log("UpdateOrder", err)
 					continue
 				}
-				h.Logf("{Action: TP, Qty: %.2f, Price: %.2f, OpenPrice: %.2f, Zone: %.2f, Profit: %.2f}\n",
-					tpo.Qty, tpo.OpenPrice, o.OpenPrice, o.ZonePrice, o.PL)
+				log := t.LogOrder{
+					Action: "TP",
+					Qty:    tpo.Qty,
+					Close:  o.ClosePrice,
+					Open:   o.OpenPrice,
+					Zone:   o.ZonePrice,
+					Profit: o.PL,
+				}
+				h.Log(log)
 			}
 		}
 	}

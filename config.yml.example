@@ -1,26 +1,70 @@
+# The Exchange's API Keys
 apiKey: API_KEY
 secretKey: SECRET_KEY
 
+# The SQLite database name
 dbName: autotp.db
-botID: 1
-intervalSec: 5
+
+# One robot per symbol
 symbol: BNBUSDT
+
+# Use along with the Exchange and the Symbol to identify the robot
+botID: 1
+
+# The interval seconds of each trading
+intervalSec: 5
+
+# The price digits of the symbol
 priceDigits: 2
+
+# The quantity digits of the symbol
 qtyDigits: 5
+
+# Your view about the trend
 view: NEUTRAL | LONG | SHORT
-qty: 0.1
-minQuoteTrade: 10
+
+# The fixed quantity of a base currency
+# For BNBBUSD pair, a base currency is BNB
+baseQty: 0.1
+
+# The fixed quantity of a quote currency
+# If baseQty=0, a quoteQty will be applied
+# For BNBBUSD pair, a quote currency is BUSD
+quoteQty: 10
+
+# The padding (+/-) percentage from the price of an order
+# For LIMIT order, slippage is normally 0
 slippage: 0
 
+# The trigger price, start to buy when the Ask price is lower than this price
 startPrice: 150
+
+# The highest price of the grid
 upperPrice: 200
+
+# The lowest price of the grid
 lowerPrice: 100
+
+# The size of the grid between 'upperPrice' and 'lowerPrice'
 gridSize: 10
-gridTP: 1
+
+# The grid size of a Take Profit price, 2 means 2 grids above the opening price
+gridTP: 2
+
+# Will the trend is applied to find the open price of the grid zone?
 applyTrend: false
+
+# Will open (buy) all available higher zones at the cheaper price?
 openAllZones: false
 
+# The timeframe that use to calculate a Moving Average
 maTimeframe: 1h
+
+# The period that use to calculate a Moving Average
 maPeriod: 20
+
+# Will Stop Loss automatically?
 autoSL: false
+
+# Will Take Profit automatically?
 autoTP: true

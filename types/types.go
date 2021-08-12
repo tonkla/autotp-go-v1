@@ -85,6 +85,15 @@ type Order struct {
 	CloseOrders []Order `gorm:"foreignKey:OpenOrderID"`
 }
 
+type LogOrder struct {
+	Action string
+	Qty    float64
+	Close  float64
+	Open   float64
+	Zone   float64
+	Profit float64
+}
+
 type TradeOrders struct {
 	OpenOrders  []Order
 	CloseOrders []Order
