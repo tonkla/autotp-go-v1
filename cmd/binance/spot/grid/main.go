@@ -201,15 +201,15 @@ func main() {
 					h.Log("UpdateOrder", err)
 					continue
 				}
-			}
-			if exo.Status == t.OrderStatusFilled {
-				log := t.LogOrder{
-					Action: "Filled",
-					Qty:    o.Qty,
-					Open:   o.OpenPrice,
-					Zone:   o.ZonePrice,
+				if exo.Status == t.OrderStatusFilled {
+					log := t.LogOrder{
+						Action: "Filled",
+						Qty:    o.Qty,
+						Open:   o.OpenPrice,
+						Zone:   o.ZonePrice,
+					}
+					h.Log(log)
 				}
-				h.Log(log)
 			}
 			if exo.Status == t.OrderStatusCanceled {
 				continue
