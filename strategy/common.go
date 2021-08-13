@@ -7,6 +7,11 @@ import (
 	"github.com/tonkla/autotp/types"
 )
 
+// IsDown returns true when the Close price is lower than the Open price
+func IsDown(hprices types.HistoricalPrice) bool {
+	return hprices.Close < hprices.Open
+}
+
 // GetTrend returns a stupid trend, do not trust him
 func GetTrend(hprices []types.HistoricalPrice, period int) int {
 	trend := types.TrendNo
@@ -104,16 +109,6 @@ func GetATR(hprices []types.HistoricalPrice, period int) float64 {
 	lwma := talib.WMA(l, period)
 	lma_0 := lwma[len(lwma)-1]
 	return hma_0 - lma_0
-}
-
-// GetUpperPrice returns the nearest rounded upper price
-func GetUpperPrice(price float64, digit int) float64 {
-	return 0
-}
-
-// GetLowerPrice returns the nearest rounded lower price
-func GetLowerPrice(price float64, digit int) float64 {
-	return 0
 }
 
 // GetGridRange returns the lower number and the upper number that closed to the target number

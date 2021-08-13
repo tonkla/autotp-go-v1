@@ -43,20 +43,6 @@ func TestGetATR(t *testing.T) {
 	t.Error("Skip")
 }
 
-func TestGetUpperPrice(t *testing.T) {
-	p := GetUpperPrice(100, 2)
-	if p != 100 {
-		t.Fail()
-	}
-}
-
-func TestGetLowerPrice(t *testing.T) {
-	p := GetLowerPrice(100, 2)
-	if p != 100 {
-		t.Fail()
-	}
-}
-
 func TestGetGridRange(t *testing.T) {
 	// 60%5=0, width=300/60=5
 	lower, upper, grid := GetGridRange(554, 500, 800, 60)

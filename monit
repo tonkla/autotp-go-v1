@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/usr/bin/bash
 
 cmd='./autotp -c config.yml'
 
 until $cmd; do
-  echo "AutoTP crashed with exit code $?. Respawning...\n" >&2
-  sleep 3
+  printf "AutoTP crashed with exit code $?. Respawning...\n" >&2
+  sleep 5
 done
 
 # crontab -e

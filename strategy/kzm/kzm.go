@@ -12,6 +12,8 @@ type OnTickParams struct {
 	OrderBook types.OrderBook
 	BotParams types.BotParams
 	HPrices   []types.HistoricalPrice
+	D1HPrices []types.HistoricalPrice
+	H1HPrices []types.HistoricalPrice
 	DB        db.DB
 }
 
@@ -19,19 +21,19 @@ func OnTick(params OnTickParams) *types.TradeOrders {
 	ticker := params.Ticker
 	odbook := params.OrderBook
 	p := params.BotParams
-	prices := params.HPrices
 	db := params.DB
 
 	var openOrders, closeOrders []types.Order
 
-	orders := grid.OnTick(grid.OnTickParams{Ticker: ticker, BotParams: p, HPrices: prices, DB: db})
+	orders := grid.OnTick(grid.OnTickParams{Ticker: ticker, BotParams: p, D1HPrices: params.D1HPrices,
+		H1HPrices: params.H1HPrices, DB: db})
 	if orders != nil {
 		openOrders = append(openOrders, orders.OpenOrders...)
 		closeOrders = append(closeOrders, orders.CloseOrders...)
 	}
 
 	orders = trend.OnTick(trend.OnTickParams{
-		Ticker: ticker, BotParams: p, OrderBook: odbook, HPrices: prices, DB: db})
+		Ticker: ticker, BotParams: p, OrderBook: odbook, HPrices: params.HPrices, DB: db})
 	if orders != nil {
 		openOrders = append(openOrders, orders.OpenOrders...)
 		closeOrders = append(openOrders, orders.OpenOrders...)

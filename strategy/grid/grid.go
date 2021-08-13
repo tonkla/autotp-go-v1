@@ -12,7 +12,8 @@ type OnTickParams struct {
 	Ticker    t.Ticker
 	OrderBook t.OrderBook
 	BotParams t.BotParams
-	HPrices   []t.HistoricalPrice
+	D1HPrices []t.HistoricalPrice
+	H1HPrices []t.HistoricalPrice
 	DB        db.DB
 }
 
@@ -25,11 +26,6 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 
 	lowerPrice, upperPrice, gridWidth := strategy.GetGridRange(ticker.Price, p.LowerPrice, p.UpperPrice, p.GridSize)
 
-	trend := 100
-	if len(params.HPrices) > 0 {
-		trend = strategy.GetTrend(params.HPrices, int(p.MAPeriod))
-	}
-
 	order := t.Order{
 		BotID:    p.BotID,
 		Exchange: ticker.Exchange,
@@ -41,13 +37,12 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 
 	view := strings.ToUpper(p.View)
 
-	// A multiplier of deducted zones when a trend is strong
-	const openGaps = 1
-
 	if view == t.ViewLong || view == "L" || view == t.ViewNeutral || view == "N" {
 		buyPrice := lowerPrice
-		if p.ApplyTrend && trend < 100 && trend < t.TrendDown2 {
-			buyPrice = lowerPrice - gridWidth*openGaps
+		if p.ApplyTrend &&
+			strategy.IsDown(params.D1HPrices[len(params.D1HPrices)-1]) &&
+			strategy.IsDown(params.H1HPrices[len(params.H1HPrices)-1]) {
+			buyPrice = lowerPrice - gridWidth
 		}
 		if p.OpenAll {
 			// Buy all available zones of the grid, please ensure your fund is plenty
@@ -80,8 +75,10 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 
 	if view == t.ViewShort || view == "S" || view == t.ViewNeutral || view == "N" {
 		sellPrice := upperPrice
-		if p.ApplyTrend && trend < 100 && trend > t.TrendUp2 {
-			sellPrice = upperPrice + gridWidth*openGaps
+		if p.ApplyTrend &&
+			!strategy.IsDown(params.D1HPrices[len(params.D1HPrices)-1]) &&
+			!strategy.IsDown(params.H1HPrices[len(params.H1HPrices)-1]) {
+			sellPrice = upperPrice + gridWidth
 		}
 		if p.OpenAll {
 			// Sell all available zones of the grid, please ensure your fund is plenty

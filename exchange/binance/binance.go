@@ -68,6 +68,22 @@ func buildBaseQS(payload *strings.Builder, symbol string) {
 
 // Public APIs -----------------------------------------------------------------
 
+// GetExchangeInfo returns the exchange information of the specified symbol
+func (c Client) GetExchangeInfo(symbol string) error {
+	var url strings.Builder
+
+	fmt.Fprintf(&url, "%s/exchangeInfo?symbol=%s", c.baseURL, symbol)
+	data, err := h.Get(url.String())
+	if err != nil {
+		return err
+	}
+	r := gjson.ParseBytes(data)
+	if r.Get("code").Int() < 0 {
+		return errors.New("")
+	}
+	return nil
+}
+
 // GetTicker returns the latest ticker
 func (c Client) GetTicker(symbol string) *t.Ticker {
 	var url strings.Builder
@@ -143,6 +159,31 @@ func (c Client) GetHistoricalPrices(symbol string, timeframe string, limit int) 
 		hPrices = append(hPrices, p)
 	}
 	return hPrices
+}
+
+// Get1wHistoricalPrices returns '1w' historical prices in a format of k-lines/candlesticks
+func (c Client) Get1wHistoricalPrices(symbol string, limit int) []t.HistoricalPrice {
+	return c.GetHistoricalPrices(symbol, "1w", limit)
+}
+
+// Get1dHistoricalPrices returns '1d' historical prices in a format of k-lines/candlesticks
+func (c Client) Get1dHistoricalPrices(symbol string, limit int) []t.HistoricalPrice {
+	return c.GetHistoricalPrices(symbol, "1d", limit)
+}
+
+// Get4hHistoricalPrices returns '4h' historical prices in a format of k-lines/candlesticks
+func (c Client) Get4hHistoricalPrices(symbol string, limit int) []t.HistoricalPrice {
+	return c.GetHistoricalPrices(symbol, "4h", limit)
+}
+
+// Get1hHistoricalPrices returns '1h' historical prices in a format of k-lines/candlesticks
+func (c Client) Get1hHistoricalPrices(symbol string, limit int) []t.HistoricalPrice {
+	return c.GetHistoricalPrices(symbol, "1h", limit)
+}
+
+// Get5mHistoricalPrices returns '5m' historical prices in a format of k-lines/candlesticks
+func (c Client) Get5mHistoricalPrices(symbol string, limit int) []t.HistoricalPrice {
+	return c.GetHistoricalPrices(symbol, "5m", limit)
 }
 
 // Private APIs ----------------------------------------------------------------

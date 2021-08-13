@@ -67,10 +67,7 @@ func main() {
 	openAll := viper.GetBool("openAllZones")
 	baseQty := viper.GetFloat64("baseQty")
 	quoteQty := viper.GetFloat64("quoteQty")
-	view := viper.GetString("view")
 	intervalSec := viper.GetInt64("intervalSec")
-	maTimeframe := viper.GetString("maTimeframe")
-	maPeriod := viper.GetInt64("maPeriod")
 	autoTP := viper.GetBool("autoTP")
 
 	if upperPrice <= lowerPrice {
@@ -87,18 +84,16 @@ func main() {
 	h.Logf("{Exchange:BinanceSpot Symbol:%s BotID:%d}\n", symbol, botID)
 
 	params := t.BotParams{
-		BotID:       botID,
-		UpperPrice:  upperPrice,
-		LowerPrice:  lowerPrice,
-		GridSize:    gridSize,
-		GridTP:      gridTP,
-		ApplyTrend:  applyTrend,
-		OpenAll:     openAll,
-		Qty:         baseQty,
-		View:        view,
-		MATimeframe: maTimeframe,
-		MAPeriod:    maPeriod,
-		AutoTP:      autoTP,
+		BotID:      botID,
+		UpperPrice: upperPrice,
+		LowerPrice: lowerPrice,
+		GridSize:   gridSize,
+		GridTP:     gridTP,
+		ApplyTrend: applyTrend,
+		OpenAll:    openAll,
+		Qty:        baseQty,
+		View:       "LONG",
+		AutoTP:     autoTP,
 	}
 
 	db := db.Connect(dbName)
@@ -125,15 +120,11 @@ func main() {
 			continue
 		}
 
-		hprices := exchange.GetHistoricalPrices(ticker.Symbol, maTimeframe, 50)
-		if len(hprices) == 0 {
-			continue
-		}
-
 		p := grid.OnTickParams{
 			Ticker:    *ticker,
 			BotParams: params,
-			HPrices:   hprices,
+			D1HPrices: exchange.Get1dHistoricalPrices(symbol, 1),
+			H1HPrices: exchange.Get1hHistoricalPrices(symbol, 1),
 			DB:        *db,
 		}
 
@@ -149,7 +140,7 @@ func main() {
 			if o.Qty == 0 {
 				o.Qty = h.RoundToDigits(quoteQty/o.OpenPrice, qtyDigits)
 				if o.Qty <= 0 {
-					h.Logf("Quantity (%f) must be greater than zero", o.Qty)
+					h.Log("Quantity must be greater than zero")
 					continue
 				}
 			}

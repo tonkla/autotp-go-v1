@@ -36,14 +36,14 @@ quoteQty: 10
 # For LIMIT order, slippage is normally 0
 slippage: 0
 
-# The trigger price, start to buy when the Ask price is lower than this price
-startPrice: 150
-
 # The highest price of the grid
 upperPrice: 200
 
 # The lowest price of the grid
 lowerPrice: 100
+
+# The trigger price, start to buy when the Ask price is lower than this price
+startPrice: 150
 
 # The size of the grid between 'upperPrice' and 'lowerPrice'
 gridSize: 10
