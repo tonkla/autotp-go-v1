@@ -144,18 +144,7 @@ func main() {
 					continue
 				}
 			}
-
-			book := exchange.GetOrderBook(symbol, 5)
-			if book == nil || len(book.Asks) == 0 {
-				continue
-			}
-			buyPrice := book.Asks[0].Price
-			if o.OpenPrice < buyPrice || buyPrice == 0 {
-				continue
-			}
-
-			o.Type = t.OrderTypeMarket // Place with a MARKET type
-			exo, err := exchange.PlaceMarketOrder(o)
+			exo, err := exchange.PlaceLimitOrder(o)
 			if err != nil {
 				h.Log("OpenOrder")
 				os.Exit(1)
@@ -164,20 +153,17 @@ func main() {
 				continue
 			}
 
-			o.Type = t.OrderTypeLimit // Save to local DB with a LIMIT type
 			o.RefID = exo.RefID
 			o.Status = exo.Status
-			o.OpenTime = exo.OpenTime
 			o.OpenPrice = exo.OpenPrice
-			o.Qty = exo.Qty
-			o.Commission = exo.Commission
+			o.OpenTime = exo.OpenTime
 			err = db.CreateOrder(o)
 			if err != nil {
 				h.Log("CreateOrder", err)
 				continue
 			}
 			log := t.LogOrder{
-				Action: "Filled",
+				Action: "New",
 				Qty:    o.Qty,
 				Open:   o.OpenPrice,
 				Zone:   o.ZonePrice,
@@ -193,7 +179,7 @@ func main() {
 				h.Log("GetLimitOrders")
 				os.Exit(1)
 			}
-			if exo == nil {
+			if exo == nil || exo.Status == t.OrderStatusNew {
 				continue
 			}
 
@@ -205,6 +191,15 @@ func main() {
 				if err != nil {
 					h.Log("UpdateOrder", err)
 					continue
+				}
+				if exo.Status == t.OrderStatusFilled {
+					log := t.LogOrder{
+						Action: "Filled",
+						Qty:    o.Qty,
+						Open:   o.OpenPrice,
+						Zone:   o.ZonePrice,
+					}
+					h.Log(log)
 				}
 			}
 			if exo.Status == t.OrderStatusCanceled {
@@ -230,10 +225,9 @@ func main() {
 					OpenOrderID: o.ID,
 					Qty:         o.Qty,
 					Side:        h.Reverse(o.Side),
-					Status:      t.OrderStatusNew,
 					Type:        t.OrderTypeMarket, // Place with a MARKET type
+					Status:      t.OrderStatusNew,
 				}
-
 				exo, err := exchange.PlaceMarketOrder(tpo)
 				if err != nil {
 					h.Log("PlaceMarketOrder", tpo)
