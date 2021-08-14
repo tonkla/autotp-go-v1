@@ -164,7 +164,6 @@ func main() {
 				continue
 			}
 
-			o.Type = t.OrderTypeLimit // Save to local DB with a LIMIT type
 			o.RefID = exo.RefID
 			o.Status = exo.Status
 			o.OpenTime = exo.OpenTime
@@ -177,7 +176,7 @@ func main() {
 				continue
 			}
 			log := t.LogOrder{
-				Action: "Filled",
+				Action: "Open",
 				Qty:    o.Qty,
 				Open:   o.OpenPrice,
 				Zone:   o.ZonePrice,
@@ -185,34 +184,10 @@ func main() {
 			h.Log(log)
 		}
 
-		// Synchronize order status / Take Profit ----------------------------------
+		// Take Profit -------------------------------------------------------------
 
-		for _, o := range db.GetLimitOrders(qo) {
-			exo, err := exchange.GetOrder(o)
-			if err != nil {
-				h.Log("GetLimitOrders")
-				os.Exit(1)
-			}
-			if exo == nil {
-				continue
-			}
-
-			// Synchronize FILLED/CANCELED order
-			if o.Status != exo.Status {
-				o.Status = exo.Status
-				o.UpdateTime = exo.UpdateTime
-				err := db.UpdateOrder(o)
-				if err != nil {
-					h.Log("UpdateOrder", err)
-					continue
-				}
-			}
-			if exo.Status == t.OrderStatusCanceled {
-				continue
-			}
-
-			// Close the order at the market price
-			if o.TPPrice > 0 && o.CloseOrderID == "" && db.GetTPOrder(o.ID) == nil {
+		for _, o := range db.GetActiveOrders(qo) {
+			if o.TPPrice > 0 && db.GetTPOrder(o.ID) == nil {
 				book := exchange.GetOrderBook(symbol, 5)
 				if book == nil || len(book.Bids) == 0 {
 					continue
@@ -245,11 +220,11 @@ func main() {
 
 				tpo.Type = t.OrderTypeTP // Save to local DB with a TAKE_PROFIT_LIMIT type
 				tpo.RefID = exo.RefID
+				tpo.Status = exo.Status
+				tpo.OpenTime = exo.OpenTime
 				tpo.OpenPrice = exo.OpenPrice
 				tpo.Qty = exo.Qty
 				tpo.Commission = exo.Commission
-				tpo.OpenTime = exo.OpenTime
-				tpo.Status = exo.Status
 				err = db.CreateOrder(tpo)
 				if err != nil {
 					h.Log("CreateTPOrder", err)
@@ -259,7 +234,7 @@ func main() {
 				o.CloseOrderID = tpo.ID
 				o.ClosePrice = tpo.OpenPrice
 				o.CloseTime = tpo.OpenTime
-				o.PL = h.RoundToDigits(((o.ClosePrice-o.OpenPrice)*tpo.Qty)-tpo.Commission, priceDigits)
+				o.PL = h.RoundToDigits(((o.ClosePrice-o.OpenPrice)*tpo.Qty)-o.Commission-tpo.Commission, priceDigits)
 				err = db.UpdateOrder(o)
 				if err != nil {
 					h.Log("UpdateOrder", err)

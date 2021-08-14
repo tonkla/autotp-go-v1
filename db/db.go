@@ -28,8 +28,10 @@ func Connect(dbName string) *DB {
 
 func (d DB) IsEmptyZone(o t.Order) bool {
 	var order t.Order
-	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND zone_price = ? AND side = ? AND type = ? AND status <> ? AND close_order_id = ''",
-		o.BotID, o.Exchange, o.Symbol, o.ZonePrice, o.Side, t.OrderTypeLimit, t.OrderStatusCanceled).First(&order)
+	d.db.Where(`bot_id = ? AND exchange = ? AND symbol = ? AND zone_price = ? AND side = ?
+	AND (type = ? OR type = ?) AND status <> ? AND close_order_id = ''`,
+		o.BotID, o.Exchange, o.Symbol, o.ZonePrice, o.Side, t.OrderTypeLimit, t.OrderTypeMarket,
+		t.OrderStatusCanceled).First(&order)
 	return order.OpenPrice == 0
 }
 
@@ -42,11 +44,11 @@ func (d DB) GetOrderByID(id string) *t.Order {
 	return &order
 }
 
-// GetActiveOrders returns all orders that are not canceled
+// GetActiveOrders returns all open orders that are not canceled
 func (d DB) GetActiveOrders(o t.Order) []t.Order {
 	var orders []t.Order
-	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND status <> ? AND close_order_id = ''",
-		o.BotID, o.Exchange, o.Symbol, t.OrderStatusCanceled).Find(&orders)
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND (type = ? OR type = ?) AND status <> ? AND close_order_id = ''",
+		o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderTypeMarket, t.OrderStatusCanceled).Find(&orders)
 	return orders
 }
 
