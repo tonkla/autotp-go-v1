@@ -1,6 +1,7 @@
 package grid
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/tonkla/autotp/db"
@@ -12,8 +13,6 @@ type OnTickParams struct {
 	Ticker    t.Ticker
 	OrderBook t.OrderBook
 	BotParams t.BotParams
-	D1HPrices []t.HistoricalPrice
-	H1HPrices []t.HistoricalPrice
 	DB        db.DB
 }
 
@@ -24,7 +23,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 
 	var orders []t.Order
 
-	lowerPrice, upperPrice, gridWidth := strategy.GetGridRange(ticker.Price, p.LowerPrice, p.UpperPrice, p.GridSize)
+	buyPrice, sellPrice, gridWidth := strategy.GetGridRange(ticker.Price, p.LowerPrice, p.UpperPrice, p.GridSize)
 
 	order := t.Order{
 		BotID:    p.BotID,
@@ -35,76 +34,52 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		Type:     t.OrderTypeLimit,
 	}
 
+	if p.OpenZones < 1 {
+		p.OpenZones = 1
+	}
+
 	view := strings.ToUpper(p.View)
 
 	if view == t.ViewLong || view == "L" || view == t.ViewNeutral || view == "N" {
-		buyPrice := lowerPrice
-		if p.ApplyTrend &&
-			strategy.IsDown(params.D1HPrices[len(params.D1HPrices)-1]) &&
-			strategy.IsDown(params.H1HPrices[len(params.H1HPrices)-1]) {
-			buyPrice = lowerPrice - gridWidth
-		}
-		if p.OpenAll {
-			// Buy all available zones of the grid, please ensure your fund is plenty
-			zones, _ := strategy.GetGridZones(ticker.Price, p.LowerPrice, p.UpperPrice, p.GridSize)
-			for _, zone := range zones {
-				_order := order
-				_order.Side = t.OrderSideBuy
-				_order.OpenPrice = buyPrice
-				_order.ZonePrice = zone
-				if db.IsEmptyZone(_order) {
-					if p.GridTP > 0 {
-						_order.TPPrice = zone + gridWidth*p.GridTP
-					}
-					orders = append(orders, _order)
-				}
-			}
-		} else {
+		var count int64 = 0
+		zones, _ := strategy.GetGridZones(ticker.Price, p.LowerPrice, p.UpperPrice, p.GridSize)
+		for _, zone := range zones {
 			_order := order
 			_order.Side = t.OrderSideBuy
 			_order.OpenPrice = buyPrice
-			_order.ZonePrice = buyPrice
+			_order.ZonePrice = zone
 			if db.IsEmptyZone(_order) {
 				if p.GridTP > 0 {
-					_order.TPPrice = buyPrice + gridWidth*p.GridTP
+					_order.TPPrice = zone + gridWidth*p.GridTP
 				}
 				orders = append(orders, _order)
+			}
+			if count++; count == p.OpenZones {
+				break
 			}
 		}
 	}
 
 	if view == t.ViewShort || view == "S" || view == t.ViewNeutral || view == "N" {
-		sellPrice := upperPrice
-		if p.ApplyTrend &&
-			!strategy.IsDown(params.D1HPrices[len(params.D1HPrices)-1]) &&
-			!strategy.IsDown(params.H1HPrices[len(params.H1HPrices)-1]) {
-			sellPrice = upperPrice + gridWidth
-		}
-		if p.OpenAll {
-			// Sell all available zones of the grid, please ensure your fund is plenty
-			zones, _ := strategy.GetGridZones(ticker.Price, p.LowerPrice, p.UpperPrice, p.GridSize)
-			for _, zone := range zones {
-				_order := order
-				_order.Side = t.OrderSideSell
-				_order.OpenPrice = sellPrice
-				_order.ZonePrice = zone
-				if db.IsEmptyZone(_order) {
-					if p.GridTP > 0 {
-						_order.TPPrice = zone - gridWidth*p.GridTP
-					}
-					orders = append(orders, _order)
-				}
-			}
-		} else {
+		var count int64 = 0
+		zones, _ := strategy.GetGridZones(ticker.Price, p.LowerPrice, p.UpperPrice, p.GridSize)
+		// Sort DESC
+		sort.Slice(zones, func(i, j int) bool {
+			return zones[i] > zones[j]
+		})
+		for _, zone := range zones {
 			_order := order
 			_order.Side = t.OrderSideSell
 			_order.OpenPrice = sellPrice
-			_order.ZonePrice = sellPrice
+			_order.ZonePrice = zone
 			if db.IsEmptyZone(_order) {
 				if p.GridTP > 0 {
-					_order.TPPrice = sellPrice - gridWidth*p.GridTP
+					_order.TPPrice = zone - gridWidth*p.GridTP
 				}
 				orders = append(orders, _order)
+			}
+			if count++; count == p.OpenZones {
+				break
 			}
 		}
 	}

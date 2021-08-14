@@ -57,6 +57,7 @@ func Reverse(side string) string {
 	return t.OrderSideBuy
 }
 
+// RoundToDigits rounds a floating-point number to the specified digits
 func RoundToDigits(number float64, digits int64) float64 {
 	pow := math.Pow(10, float64(digits))
 	return math.Round(number*pow) / pow

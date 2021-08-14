@@ -119,7 +119,7 @@ type BotParams struct {
 	GridSize    float64
 	GridTP      float64
 	ApplyTrend  bool
-	OpenAll     bool
+	OpenZones   int64
 	Qty         float64
 	View        string
 	Slippage    float64

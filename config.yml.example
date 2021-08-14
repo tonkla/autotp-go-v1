@@ -23,12 +23,11 @@ qtyDigits: 5
 # Your view about the trend
 view: NEUTRAL | LONG | SHORT
 
-# The fixed quantity of a base currency
+# The fixed quantity in a base currency
 # For BNBBUSD pair, a base currency is BNB
 baseQty: 0.1
 
-# The fixed quantity of a quote currency
-# If baseQty=0, a quoteQty will be applied
+# The fixed quantity in a quote currency
 # For BNBBUSD pair, a quote currency is BUSD
 quoteQty: 10
 
@@ -54,8 +53,8 @@ gridTP: 2
 # Will the trend is applied to find the open price of the grid zone?
 applyTrend: false
 
-# Will open (buy) all available higher zones at the cheaper price?
-openAllZones: false
+# The available zones that will be open at the ticker price
+openZones: 1
 
 # The timeframe that use to calculate a Moving Average
 maTimeframe: 1h

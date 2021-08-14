@@ -63,8 +63,7 @@ func main() {
 	startPrice := viper.GetFloat64("startPrice")
 	gridSize := viper.GetFloat64("gridSize")
 	gridTP := viper.GetFloat64("gridTP")
-	applyTrend := viper.GetBool("applyTrend")
-	openAll := viper.GetBool("openAllZones")
+	openZones := viper.GetInt64("openZones")
 	baseQty := viper.GetFloat64("baseQty")
 	quoteQty := viper.GetFloat64("quoteQty")
 	intervalSec := viper.GetInt64("intervalSec")
@@ -89,8 +88,7 @@ func main() {
 		LowerPrice: lowerPrice,
 		GridSize:   gridSize,
 		GridTP:     gridTP,
-		ApplyTrend: applyTrend,
-		OpenAll:    openAll,
+		OpenZones:  openZones,
 		Qty:        baseQty,
 		View:       "LONG",
 		AutoTP:     autoTP,
@@ -116,15 +114,13 @@ func main() {
 			Symbol:   symbol,
 		}
 
-		if ticker.Price > startPrice && len(db.GetLimitOrders(qo)) == 0 {
+		if ticker.Price > startPrice && len(db.GetActiveOrders(qo)) == 0 {
 			continue
 		}
 
 		p := grid.OnTickParams{
 			Ticker:    *ticker,
 			BotParams: params,
-			D1HPrices: exchange.Get1dHistoricalPrices(symbol, 1),
-			H1HPrices: exchange.Get1hHistoricalPrices(symbol, 1),
 			DB:        *db,
 		}
 
@@ -136,32 +132,25 @@ func main() {
 		// Open new orders ---------------------------------------------------------
 
 		for _, o := range tradeOrders.OpenOrders {
-			o.ID = h.GenID()
-			if o.Qty == 0 {
-				o.Qty = h.RoundToDigits(quoteQty/o.OpenPrice, qtyDigits)
-				if o.Qty <= 0 {
-					h.Log("Quantity must be greater than zero")
-					continue
-				}
-			}
-
 			book := exchange.GetOrderBook(symbol, 5)
 			if book == nil || len(book.Asks) == 0 {
 				continue
 			}
 			buyPrice := book.Asks[0].Price
-			if o.OpenPrice < buyPrice || buyPrice == 0 {
+			if o.ZonePrice < buyPrice || buyPrice == 0 {
 				continue
 			}
 
-			o.Type = t.OrderTypeMarket // Place with a MARKET type
+			o.ID = h.GenID()
+			_qty := h.RoundToDigits(quoteQty/buyPrice, qtyDigits)
+			if _qty > o.Qty {
+				o.Qty = _qty
+			}
+			o.Type = t.OrderTypeMarket // Place as a MARKET type
 			exo, err := exchange.PlaceMarketOrder(o)
-			if err != nil {
+			if err != nil || exo == nil {
 				h.Log("OpenOrder")
 				os.Exit(1)
-			}
-			if exo == nil {
-				continue
 			}
 
 			o.RefID = exo.RefID
@@ -206,7 +195,7 @@ func main() {
 					Qty:         o.Qty,
 					Side:        h.Reverse(o.Side),
 					Status:      t.OrderStatusNew,
-					Type:        t.OrderTypeMarket, // Place with a MARKET type
+					Type:        t.OrderTypeMarket, // Place as a MARKET type
 				}
 
 				exo, err := exchange.PlaceMarketOrder(tpo)
@@ -218,7 +207,7 @@ func main() {
 					continue
 				}
 
-				tpo.Type = t.OrderTypeTP // Save to local DB with a TAKE_PROFIT_LIMIT type
+				tpo.Type = t.OrderTypeTP // Save to local DB as a TAKE_PROFIT_LIMIT type
 				tpo.RefID = exo.RefID
 				tpo.Status = exo.Status
 				tpo.OpenTime = exo.OpenTime
