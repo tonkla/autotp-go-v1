@@ -164,11 +164,12 @@ func main() {
 				h.Log("CreateOrder", err)
 				continue
 			}
-			log := t.LogOrder{
+			log := t.LogOpenOrder{
 				Action: "Open",
 				Qty:    o.Qty,
 				Open:   o.OpenPrice,
 				Zone:   o.ZonePrice,
+				TP:     o.TPPrice,
 			}
 			h.Log(log)
 		}
@@ -229,7 +230,7 @@ func main() {
 					h.Log("UpdateOrder", err)
 					continue
 				}
-				log := t.LogOrder{
+				log := t.LogTPOrder{
 					Action: "TP",
 					Qty:    tpo.Qty,
 					Close:  o.ClosePrice,
