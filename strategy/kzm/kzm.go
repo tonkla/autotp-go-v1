@@ -25,7 +25,7 @@ func OnTick(params OnTickParams) *types.TradeOrders {
 
 	var openOrders, closeOrders []types.Order
 
-	orders := grid.OnTick(grid.OnTickParams{Ticker: ticker, BotParams: p, DB: db})
+	orders := grid.OnTick(grid.OnTickParams{DB: &db, Ticker: &ticker, BotParams: p})
 	if orders != nil {
 		openOrders = append(openOrders, orders.OpenOrders...)
 		closeOrders = append(closeOrders, orders.CloseOrders...)

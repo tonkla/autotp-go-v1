@@ -20,9 +20,6 @@ priceDigits: 2
 # The quantity digits of the symbol
 qtyDigits: 5
 
-# Your view about the trend
-view: NEUTRAL | LONG | SHORT
-
 # The fixed quantity in a base currency
 # For BNBBUSD pair, a base currency is BNB
 baseQty: 0.1
@@ -50,10 +47,16 @@ gridSize: 10
 # The grid size of a Take Profit price, 2 means 2 grids above the opening price
 gridTP: 2
 
+# The type of a new order
+orderType: LIMIT | MARKET
+
+# The direction of a new order
+view: NEUTRAL | LONG | SHORT
+
 # Will the trend is applied to find the open price of the grid zone?
 applyTrend: false
 
-# The available zones that will be open at the ticker price
+# The available zones that will be open at the market price (cheaper)
 openZones: 1
 
 # The timeframe that use to calculate a Moving Average

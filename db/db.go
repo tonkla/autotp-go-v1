@@ -174,7 +174,7 @@ func (d DB) GetTPOrder(openOrderID string) *t.Order {
 // GetSLOrders returns the STOP_LOSS_LIMIT orders that are not canceled
 func (d DB) GetSLOrders(o t.Order) []t.Order {
 	var orders []t.Order
-	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND status <> ? ORDER BY open_price DESC",
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND status <> ? ORDER BY open_price ASC",
 		o.BotID, o.Exchange, o.Symbol, t.OrderTypeSL, t.OrderStatusCanceled).Find(&orders)
 	return orders
 }
@@ -182,7 +182,7 @@ func (d DB) GetSLOrders(o t.Order) []t.Order {
 // GetTPOrders returns the TAKE_PROFIT_LIMIT orders that are not canceled
 func (d DB) GetTPOrders(o t.Order) []t.Order {
 	var orders []t.Order
-	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND status <> ? ORDER BY open_price ASC",
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND status <> ? ORDER BY open_price DESC",
 		o.BotID, o.Exchange, o.Symbol, t.OrderTypeTP, t.OrderStatusCanceled).Find(&orders)
 	return orders
 }
@@ -190,7 +190,7 @@ func (d DB) GetTPOrders(o t.Order) []t.Order {
 // GetNewSLOrders returns the STOP_LOSS_LIMIT orders that their status is NEW
 func (d DB) GetNewSLOrders(o t.Order) []t.Order {
 	var orders []t.Order
-	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND status = ? ORDER BY open_price DESC",
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND status = ? ORDER BY open_price ASC",
 		o.BotID, o.Exchange, o.Symbol, t.OrderTypeSL, t.OrderStatusNew).Find(&orders)
 	return orders
 }
@@ -198,7 +198,7 @@ func (d DB) GetNewSLOrders(o t.Order) []t.Order {
 // GetNewTPOrders returns the TAKE_PROFIT_LIMIT orders that their status is NEW
 func (d DB) GetNewTPOrders(o t.Order) []t.Order {
 	var orders []t.Order
-	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND status = ? ORDER BY open_price ASC",
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND status = ? ORDER BY open_price DESC",
 		o.BotID, o.Exchange, o.Symbol, t.OrderTypeTP, t.OrderStatusNew).Find(&orders)
 	return orders
 }

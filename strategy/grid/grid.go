@@ -2,7 +2,6 @@ package grid
 
 import (
 	"sort"
-	"strings"
 
 	"github.com/tonkla/autotp/db"
 	"github.com/tonkla/autotp/strategy"
@@ -10,10 +9,10 @@ import (
 )
 
 type OnTickParams struct {
-	Ticker    t.Ticker
+	DB        *db.DB
+	Ticker    *t.Ticker
 	OrderBook t.OrderBook
 	BotParams t.BotParams
-	DB        db.DB
 }
 
 func OnTick(params OnTickParams) *t.TradeOrders {
@@ -38,9 +37,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		p.OpenZones = 1
 	}
 
-	view := strings.ToUpper(p.View)
-
-	if view == t.ViewLong || view == "L" || view == t.ViewNeutral || view == "N" {
+	if p.View == t.ViewLong || p.View == t.ViewNeutral {
 		var count int64 = 0
 		zones, _ := strategy.GetGridZones(ticker.Price, p.LowerPrice, p.UpperPrice, p.GridSize)
 		for _, zone := range zones {
@@ -60,7 +57,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		}
 	}
 
-	if view == t.ViewShort || view == "S" || view == t.ViewNeutral || view == "N" {
+	if p.View == t.ViewShort || p.View == t.ViewNeutral {
 		var count int64 = 0
 		zones, _ := strategy.GetGridZones(ticker.Price, p.LowerPrice, p.UpperPrice, p.GridSize)
 		// Sort DESC
