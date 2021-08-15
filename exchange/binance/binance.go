@@ -272,9 +272,9 @@ func (c Client) GetOpenOrders(symbol string) []t.Order {
 			Side:       r.Get("side").String(),
 			Status:     r.Get("status").String(),
 			Type:       r.Get("type").String(),
-			OpenTime:   r.Get("time").Int(),
 			Qty:        r.Get("origQty").Float(),
 			OpenPrice:  r.Get("price").Float(),
+			OpenTime:   r.Get("time").Int(),
 			UpdateTime: r.Get("updateTime").Int(),
 		}
 		orders = append(orders, order)
@@ -316,15 +316,16 @@ func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime in
 	var orders []t.Order
 	for _, r := range rs.Array() {
 		order := t.Order{
-			Symbol:    symbol,
-			ID:        r.Get("clientOrderId").String(),
-			RefID:     r.Get("orderId").String(),
-			Side:      r.Get("side").String(),
-			Status:    r.Get("status").String(),
-			Type:      r.Get("type").String(),
-			OpenTime:  r.Get("time").Int(),
-			Qty:       r.Get("origQty").Float(),
-			OpenPrice: r.Get("price").Float(),
+			Symbol:     symbol,
+			ID:         r.Get("clientOrderId").String(),
+			RefID:      r.Get("orderId").String(),
+			Side:       r.Get("side").String(),
+			Status:     r.Get("status").String(),
+			Type:       r.Get("type").String(),
+			Qty:        r.Get("origQty").Float(),
+			OpenPrice:  r.Get("price").Float(),
+			OpenTime:   r.Get("time").Int(),
+			UpdateTime: r.Get("updateTime").Int(),
 		}
 		orders = append(orders, order)
 	}
