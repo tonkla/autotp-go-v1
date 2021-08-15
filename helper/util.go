@@ -28,25 +28,27 @@ func RandomStr(size int) (string, error) {
 }
 
 // CalcSLStop calculates a stop price of the stop loss price
-func CalcSLStop(side string, sl float64, trigger float64, digits int64) float64 {
-	if trigger == 0 {
-		trigger = 0.002
+func CalcSLStop(side string, sl float64, gap float64, digits int64) float64 {
+	if gap == 0 {
+		gap = 500
 	}
+	pow := math.Pow(10, float64(digits))
 	if side == t.OrderSideBuy {
-		return RoundToDigits(sl+sl*trigger, digits)
+		return round((sl*pow+gap)/pow, pow)
 	}
-	return RoundToDigits(sl-sl*trigger, digits)
+	return round((sl*pow-gap)/pow, pow)
 }
 
 // CalcTPStop calculates a stop price of the take profit price
-func CalcTPStop(side string, tp float64, trigger float64, digits int64) float64 {
-	if trigger == 0 {
-		trigger = 0.002
+func CalcTPStop(side string, tp float64, gap float64, digits int64) float64 {
+	if gap == 0 {
+		gap = 500
 	}
+	pow := math.Pow(10, float64(digits))
 	if side == t.OrderSideBuy {
-		return RoundToDigits(tp-tp*trigger, digits)
+		return round((tp*pow-gap)/pow, pow)
 	}
-	return RoundToDigits(tp+tp*trigger, digits)
+	return round((tp*pow+gap)/pow, pow)
 }
 
 // Reverse returns the opposite side
@@ -60,5 +62,9 @@ func Reverse(side string) string {
 // RoundToDigits rounds a floating-point number to the specified digits
 func RoundToDigits(number float64, digits int64) float64 {
 	pow := math.Pow(10, float64(digits))
+	return math.Round(number*pow) / pow
+}
+
+func round(number float64, pow float64) float64 {
 	return math.Round(number*pow) / pow
 }

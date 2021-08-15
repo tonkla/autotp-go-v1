@@ -270,15 +270,12 @@ func placeAsLimit(p *params) {
 				h.Log(log)
 			}
 
-			book := p.exchange.GetOrderBook(p.symbol, 5)
-			if book == nil || len(book.Asks) == 0 {
+			var stopGap float64 = 500
+			if p.ticker.Price < h.CalcTPStop(o.Side, o.TPPrice, stopGap, p.priceDigits) {
 				continue
 			}
-			stopPrice := book.Asks[1].Price
-			sellPrice := book.Asks[3].Price
-			if sellPrice < o.TPPrice {
-				continue
-			}
+			stopGap = 300
+			stopPrice := h.CalcTPStop(o.Side, o.TPPrice, stopGap, p.priceDigits)
 
 			tpo := t.Order{
 				BotID:       o.BotID,
@@ -291,7 +288,7 @@ func placeAsLimit(p *params) {
 				Type:        t.OrderTypeTP,
 				Status:      t.OrderStatusNew,
 				StopPrice:   stopPrice,
-				OpenPrice:   sellPrice,
+				OpenPrice:   o.TPPrice,
 			}
 			exo, err := p.exchange.PlaceStopOrder(tpo)
 			if err != nil || exo == nil {
