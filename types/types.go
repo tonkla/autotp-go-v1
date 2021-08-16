@@ -127,6 +127,7 @@ type BotParams struct {
 	GridTP      float64
 	ApplyTrend  bool
 	OpenZones   int64
+	PriceDigits int64
 	Qty         float64
 	View        string
 	Slippage    float64

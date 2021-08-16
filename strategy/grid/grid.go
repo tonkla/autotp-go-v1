@@ -4,6 +4,7 @@ import (
 	"sort"
 
 	"github.com/tonkla/autotp/db"
+	h "github.com/tonkla/autotp/helper"
 	"github.com/tonkla/autotp/strategy"
 	t "github.com/tonkla/autotp/types"
 )
@@ -43,11 +44,11 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		for _, zone := range zones {
 			_order := order
 			_order.Side = t.OrderSideBuy
-			_order.OpenPrice = buyPrice
-			_order.ZonePrice = zone
+			_order.OpenPrice = h.NormalizeDouble(buyPrice, p.PriceDigits)
+			_order.ZonePrice = h.NormalizeDouble(zone, p.PriceDigits)
 			if db.IsEmptyZone(_order) {
 				if p.GridTP > 0 {
-					_order.TPPrice = zone + gridWidth*p.GridTP
+					_order.TPPrice = h.NormalizeDouble(zone+gridWidth*p.GridTP, p.PriceDigits)
 				}
 				orders = append(orders, _order)
 			}
@@ -67,11 +68,11 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		for _, zone := range zones {
 			_order := order
 			_order.Side = t.OrderSideSell
-			_order.OpenPrice = sellPrice
-			_order.ZonePrice = zone
+			_order.OpenPrice = h.NormalizeDouble(sellPrice, p.PriceDigits)
+			_order.ZonePrice = h.NormalizeDouble(zone, p.PriceDigits)
 			if db.IsEmptyZone(_order) {
 				if p.GridTP > 0 {
-					_order.TPPrice = zone - gridWidth*p.GridTP
+					_order.TPPrice = h.NormalizeDouble(zone-gridWidth*p.GridTP, p.PriceDigits)
 				}
 				orders = append(orders, _order)
 			}

@@ -98,15 +98,16 @@ func main() {
 	exchange := binance.NewSpotClient(apiKey, secretKey)
 
 	bp := t.BotParams{
-		BotID:      botID,
-		UpperPrice: upperPrice,
-		LowerPrice: lowerPrice,
-		GridSize:   gridSize,
-		GridTP:     gridTP,
-		OpenZones:  openZones,
-		Qty:        baseQty,
-		View:       "LONG",
-		AutoTP:     autoTP,
+		BotID:       botID,
+		UpperPrice:  upperPrice,
+		LowerPrice:  lowerPrice,
+		GridSize:    gridSize,
+		GridTP:      gridTP,
+		OpenZones:   openZones,
+		PriceDigits: priceDigits,
+		Qty:         baseQty,
+		View:        "LONG",
+		AutoTP:      autoTP,
 	}
 
 	queryOrder := t.Order{
@@ -163,7 +164,7 @@ func placeAsLimit(p *params) {
 	// Open new orders -----------------------------------------------------------
 	for _, o := range p.tradeOrders.OpenOrders {
 		o.ID = h.GenID()
-		_qty := h.RoundToDigits(p.quoteQty/o.OpenPrice, p.qtyDigits)
+		_qty := h.NormalizeDouble(p.quoteQty/o.OpenPrice, p.qtyDigits)
 		if _qty > o.Qty {
 			o.Qty = _qty
 		}
@@ -351,7 +352,7 @@ func placeAsLimit(p *params) {
 			oo.CloseOrderID = tpo.ID
 			oo.ClosePrice = tpo.OpenPrice
 			oo.CloseTime = h.Now13()
-			oo.PL = h.RoundToDigits(((oo.ClosePrice-oo.OpenPrice)*tpo.Qty)-oo.Commission-tpo.Commission, p.priceDigits)
+			oo.PL = h.NormalizeDouble(((oo.ClosePrice-oo.OpenPrice)*tpo.Qty)-oo.Commission-tpo.Commission, p.priceDigits)
 			err := p.db.UpdateOrder(*oo)
 			if err != nil {
 				h.Log(err)
@@ -383,7 +384,7 @@ func placeAsMarket(p *params) {
 		}
 
 		o.ID = h.GenID()
-		_qty := h.RoundToDigits(p.quoteQty/buyPrice, p.qtyDigits)
+		_qty := h.NormalizeDouble(p.quoteQty/buyPrice, p.qtyDigits)
 		if _qty > o.Qty {
 			o.Qty = _qty
 		}
@@ -460,7 +461,7 @@ func placeAsMarket(p *params) {
 			o.CloseOrderID = tpo.ID
 			o.ClosePrice = tpo.OpenPrice
 			o.CloseTime = tpo.OpenTime
-			o.PL = h.RoundToDigits(((o.ClosePrice-o.OpenPrice)*tpo.Qty)-o.Commission-tpo.Commission, p.priceDigits)
+			o.PL = h.NormalizeDouble(((o.ClosePrice-o.OpenPrice)*tpo.Qty)-o.Commission-tpo.Commission, p.priceDigits)
 			err = p.db.UpdateOrder(o)
 			if err != nil {
 				h.Log("UpdateOrder", err)
