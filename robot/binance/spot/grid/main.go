@@ -123,6 +123,7 @@ func main() {
 		symbol:      symbol,
 		priceDigits: priceDigits,
 		qtyDigits:   qtyDigits,
+		quoteQty:    quoteQty,
 	}
 
 	if intervalSec == 0 {
@@ -174,6 +175,7 @@ func openNewOrders(p *params) {
 		if _qty > o.Qty {
 			o.Qty = _qty
 		}
+
 		exo, err := p.exchange.PlaceLimitOrder(o)
 		if err != nil || exo == nil {
 			h.Log("OpenOrder")
@@ -203,7 +205,7 @@ func openNewOrders(p *params) {
 func syncHighestNewOrder(p *params) {
 	// Synchronize order status
 	o := p.db.GetHighestNewBuyOrder(*p.queryOrder)
-	if o != nil {
+	if o == nil {
 		return
 	}
 	exo, err := p.exchange.GetOrder(*o)
