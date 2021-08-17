@@ -105,9 +105,9 @@ func main() {
 		GridTP:      gridTP,
 		OpenZones:   openZones,
 		PriceDigits: priceDigits,
-		Qty:         baseQty,
-		View:        "LONG",
+		BaseQty:     baseQty,
 		AutoTP:      autoTP,
+		View:        "LONG",
 	}
 
 	queryOrder := t.Order{

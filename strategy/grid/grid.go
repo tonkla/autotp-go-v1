@@ -29,7 +29,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		BotID:    p.BotID,
 		Exchange: ticker.Exchange,
 		Symbol:   ticker.Symbol,
-		Qty:      p.Qty,
+		Qty:      p.BaseQty,
 		Status:   t.OrderStatusNew,
 		Type:     t.OrderTypeLimit,
 	}
