@@ -128,11 +128,15 @@ type BotParams struct {
 	ApplyTrend  bool
 	OpenZones   int64
 	PriceDigits int64
-	Qty         float64
+	QtyDigits   int64
+	BaseQty     float64
+	QuoteQty    float64
 	View        string
 	Slippage    float64
 	MATimeframe string
 	MAPeriod    int64
 	AutoSL      bool
 	AutoTP      bool
+	AtrSL       float64
+	AtrTP       float64
 }

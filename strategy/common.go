@@ -97,7 +97,7 @@ func GetTrend(hprices []types.HistoricalPrice, period int) int {
 	return trend
 }
 
-// GetATR returns my ATR that is not the J. Welles Wilder Jr.'s ATR :-P
+// GetATR returns @tonkla's ATR, that is not the "J. Welles Wilder Jr."'s ATR :-P
 func GetATR(hprices []types.HistoricalPrice, period int) float64 {
 	var h, l []float64
 	for _, p := range hprices {
