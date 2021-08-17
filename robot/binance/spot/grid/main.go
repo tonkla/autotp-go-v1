@@ -290,6 +290,19 @@ func syncLowestFilledOrder(p *params) {
 		stopGap = 300
 		stopPrice := h.CalcTPStop(o.Side, o.TPPrice, stopGap, p.priceDigits)
 
+		// The price moves so fast
+		if p.ticker.Price > stopPrice {
+			o.CloseOrderID = "0"
+			o.ClosePrice = o.TPPrice
+			o.CloseTime = h.Now13()
+			o.PL = h.NormalizeDouble(((o.ClosePrice - o.OpenPrice) * o.Qty), p.priceDigits)
+			err := p.db.UpdateOrder(*o)
+			if err != nil {
+				h.Log(err)
+			}
+			return
+		}
+
 		tpo := t.Order{
 			BotID:       o.BotID,
 			Exchange:    o.Exchange,
