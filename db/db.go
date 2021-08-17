@@ -262,7 +262,7 @@ func (d DB) GetLowestTPBuyOrder(o t.Order) *t.Order {
 	var orders []t.Order
 	d.db.Where(`bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND type = ?
 	AND status = ? AND close_time = 0`, o.BotID, o.Exchange, o.Symbol, t.OrderSideSell, t.OrderTypeTP,
-		t.OrderStatusFilled).Order("open_price asc").Limit(1).Find(&orders)
+		t.OrderStatusNew).Order("open_price asc").Limit(1).Find(&orders)
 	if len(orders) == 0 {
 		return nil
 	}
