@@ -291,7 +291,7 @@ func syncLowestFilledOrder(p *params) {
 		stopPrice := h.CalcTPStop(o.Side, o.TPPrice, stopGap, p.priceDigits)
 
 		// The price moves so fast
-		if p.ticker.Price > stopPrice {
+		if p.ticker.Price > stopPrice && o.CloseOrderID == "" {
 			o.CloseOrderID = "0"
 			o.ClosePrice = o.TPPrice
 			o.CloseTime = h.Now13()
@@ -376,7 +376,7 @@ func syncLowestTPOrder(p *params) {
 	}
 
 	oo := p.db.GetOrderByID(tpo.OpenOrderID)
-	if oo.CloseOrderID == "" && p.ticker.Price > tpo.OpenPrice {
+	if oo != nil && oo.CloseOrderID == "" && p.ticker.Price > tpo.OpenPrice {
 		oo.CloseOrderID = tpo.ID
 		oo.ClosePrice = tpo.OpenPrice
 		oo.CloseTime = h.Now13()
