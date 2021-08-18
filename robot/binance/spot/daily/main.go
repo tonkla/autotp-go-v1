@@ -79,6 +79,7 @@ func main() {
 	maPeriod := viper.GetInt64("maPeriod")
 	autoSL := viper.GetBool("autoSL")
 	autoTP := viper.GetBool("autoTP")
+	mos := viper.GetFloat64("mos")
 	atrTP := viper.GetFloat64("atrTP")
 	orderType := viper.GetString("orderType")
 
@@ -97,6 +98,7 @@ func main() {
 		AutoSL:      autoSL,
 		AutoTP:      autoTP,
 		AtrTP:       atrTP,
+		MoS:         mos,
 		View:        "LONG",
 	}
 
@@ -159,6 +161,150 @@ func main() {
 }
 
 func placeAsMaker(p *params) {
+	for _, o := range p.tradeOrders.CloseOrders {
+		exo, err := p.exchange.PlaceStopOrder(o)
+		if err != nil || exo == nil {
+			os.Exit(1)
+		}
+		log := t.LogTPOrder{
+			Action: "NEW_TP",
+			Qty:    o.Qty,
+			Stop:   o.StopPrice,
+			Close:  o.OpenPrice,
+		}
+		h.Log(log)
+	}
+
+	for _, o := range p.tradeOrders.OpenOrders {
+		exo, err := p.exchange.PlaceLimitOrder(o)
+		if err != nil || exo == nil {
+			os.Exit(1)
+		}
+		log := t.LogOpenOrder{
+			Action: "NEW",
+			Qty:    o.Qty,
+			Open:   o.OpenPrice,
+		}
+		h.Log(log)
+	}
+
+	syncTPOrder(p)
+	syncLimitOrder(p)
+}
+
+func syncTPOrder(p *params) {
+	tpo := p.db.GetLowestTPBuyOrder(*p.queryOrder)
+	if tpo == nil {
+		return
+	}
+	exo, err := p.exchange.GetOrder(*tpo)
+	if err != nil || exo == nil {
+		os.Exit(1)
+	}
+	if exo.Status == t.OrderStatusNew {
+		return
+	}
+
+	if tpo.Status != exo.Status {
+		tpo.Status = exo.Status
+		tpo.UpdateTime = exo.UpdateTime
+		err := p.db.UpdateOrder(*tpo)
+		if err != nil {
+			h.Log(err)
+			return
+		}
+
+		if exo.Status == t.OrderStatusFilled {
+			log := t.LogTPOrder{
+				Action: "FILLED_TP",
+				Qty:    tpo.Qty,
+				Open:   tpo.OpenPrice,
+			}
+			h.Log(log)
+		}
+
+		if exo.Status == t.OrderStatusCanceled {
+			log := t.LogTPOrder{
+				Action: "CANCELED_TP",
+				Qty:    tpo.Qty,
+				Open:   tpo.OpenPrice,
+			}
+			h.Log(log)
+		}
+	}
+
+	if p.ticker.Price > tpo.OpenPrice && tpo.CloseTime == 0 {
+		o := tpo.OpenOrder
+		if o == nil {
+			return
+		}
+
+		o.CloseOrderID = tpo.ID
+		o.ClosePrice = tpo.OpenPrice
+		o.CloseTime = h.Now13()
+		o.PL = h.NormalizeDouble(((o.ClosePrice-o.OpenPrice)*tpo.Qty)-o.Commission-tpo.Commission, p.priceDigits)
+		err := p.db.UpdateOrder(*o)
+		if err != nil {
+			h.Log(err)
+			return
+		}
+
+		tpo.CloseTime = o.CloseTime
+		err = p.db.UpdateOrder(*tpo)
+		if err != nil {
+			h.Log(err)
+			return
+		}
+
+		log := t.LogTPOrder{
+			Action: "CLOSED_TP",
+			Qty:    tpo.Qty,
+			Close:  o.ClosePrice,
+			Open:   o.OpenPrice,
+			Profit: o.PL,
+		}
+		h.Log(log)
+	}
+}
+
+func syncLimitOrder(p *params) {
+	o := p.db.GetHighestNewBuyOrder(*p.queryOrder)
+	if o == nil {
+		return
+	}
+	exo, err := p.exchange.GetOrder(*o)
+	if err != nil || exo == nil {
+		os.Exit(1)
+	}
+	if exo.Status == t.OrderStatusNew {
+		return
+	}
+
+	if o.Status != exo.Status {
+		o.Status = exo.Status
+		o.UpdateTime = exo.UpdateTime
+		err := p.db.UpdateOrder(*o)
+		if err != nil {
+			h.Log(err)
+			return
+		}
+		if exo.Status == t.OrderStatusFilled {
+			log := t.LogOpenOrder{
+				Action: "FILLED",
+				Qty:    o.Qty,
+				Open:   o.OpenPrice,
+			}
+			h.Log(log)
+		}
+		if exo.Status == t.OrderStatusCanceled {
+			log := t.LogOpenOrder{
+				Action: "CANCELED",
+				Qty:    o.Qty,
+				Open:   o.OpenPrice,
+			}
+			h.Log(log)
+		}
+	}
 }
 
 func placeAsTaker(p *params) {

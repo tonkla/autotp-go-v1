@@ -30,7 +30,7 @@ func RandomStr(size int) (string, error) {
 // CalcSLStop calculates a stop price of the stop loss price
 func CalcSLStop(side string, sl float64, gap float64, digits int64) float64 {
 	if gap == 0 {
-		gap = 500
+		gap = 300
 	}
 	pow := math.Pow(10, float64(digits))
 	if side == t.OrderSideBuy {
@@ -42,13 +42,18 @@ func CalcSLStop(side string, sl float64, gap float64, digits int64) float64 {
 // CalcTPStop calculates a stop price of the take profit price
 func CalcTPStop(side string, tp float64, gap float64, digits int64) float64 {
 	if gap == 0 {
-		gap = 500
+		gap = 300
 	}
 	pow := math.Pow(10, float64(digits))
 	if side == t.OrderSideBuy {
 		return round((tp*pow-gap)/pow, pow)
 	}
 	return round((tp*pow+gap)/pow, pow)
+}
+
+// CalcLimitStop calculates a stop limit price from the ticker price
+func CalcLimitStop(side string, tickerPrice float64, gap float64, digits int64) float64 {
+	return CalcTPStop(side, tickerPrice, gap, digits)
 }
 
 // Reverse returns the opposite side

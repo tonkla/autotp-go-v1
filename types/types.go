@@ -79,7 +79,7 @@ type Order struct {
 	OpenTime   int64
 	UpdateTime int64
 
-	// OpenOrder   *Order  `gorm:"foreignKey:OpenOrderID"`
+	OpenOrder *Order `gorm:"foreignKey:OpenOrderID"`
 	// CloseOrder  *Order  `gorm:"foreignKey:CloseOrderID"`
 	// CloseOrders []Order `gorm:"foreignKey:OpenOrderID"`
 }
@@ -95,6 +95,7 @@ type LogOpenOrder struct {
 type LogTPOrder struct {
 	Action string
 	Qty    float64
+	Stop   float64
 	Close  float64
 	Open   float64
 	Zone   float64
@@ -137,6 +138,7 @@ type BotParams struct {
 	MAPeriod    int64
 	AutoSL      bool
 	AutoTP      bool
+	MoS         float64
 	AtrSL       float64
 	AtrTP       float64
 }

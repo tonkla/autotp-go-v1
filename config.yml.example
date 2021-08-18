@@ -68,6 +68,9 @@ autoSL: false
 # Will Take Profit automatically?
 autoTP: true
 
+# The Margin-of-Safety multiplier from the previous bar
+mos: 0.5
+
 # The multiplier of the "maTimeframe"'s ATR that use to calculate a Volatility Stop (SL)
 # Read more, https://tradeciety.com/stop-loss-tips/
 atrSL: 0.5
