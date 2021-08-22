@@ -96,7 +96,10 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		// Open a new limit order, when no active BUY order
 		if (p.View == t.ViewLong || p.View == t.ViewNeutral) && ticker.Price < h_1-mos && ticker.Price < c_1 {
 			qo.Side = t.OrderSideBuy
-			if len(db.GetLimitOrdersBySide(qo)) == 0 {
+			qo.OpenTime = p_0.Time
+			activeOrders := db.GetLimitOrdersBySide(qo)
+			maxOrders := 3
+			if len(activeOrders) == 0 || (activeOrders[0].OpenTime < p_0.Time && len(activeOrders) < maxOrders) {
 				o := t.Order{
 					ID:        h.GenID(),
 					BotID:     p.BotID,
@@ -162,7 +165,10 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		// Open a new limit order, when no active SELL order
 		if (p.View == t.ViewShort || p.View == t.ViewNeutral) && ticker.Price > l_1+mos && ticker.Price > c_1 {
 			qo.Side = t.OrderSideSell
-			if len(db.GetLimitOrdersBySide(qo)) == 0 {
+			qo.OpenTime = p_0.Time
+			activeOrders := db.GetLimitOrdersBySide(qo)
+			maxOrders := 3
+			if len(activeOrders) == 0 || (activeOrders[0].OpenTime < p_0.Time && len(activeOrders) < maxOrders) {
 				o := t.Order{
 					ID:        h.GenID(),
 					BotID:     p.BotID,

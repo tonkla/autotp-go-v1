@@ -18,8 +18,8 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "autotp",
-	Short: "AutoTP: Auto Take Profit (Grid)",
-	Long:  "AutoTP: Auto Trading Platform (Grid)",
+	Short: "AutoTP: Auto Take Profit (Daily)",
+	Long:  "AutoTP: Auto Trading Platform (Daily)",
 	Run:   func(cmd *cobra.Command, args []string) {},
 }
 
@@ -166,6 +166,15 @@ func placeAsMaker(p *params) {
 		if err != nil || exo == nil {
 			os.Exit(1)
 		}
+
+		o.RefID = exo.RefID
+		o.OpenTime = exo.OpenTime
+		err = p.db.CreateOrder(o)
+		if err != nil {
+			h.Log(err)
+			return
+		}
+
 		log := t.LogTPOrder{
 			Action: "NEW_TP",
 			Qty:    o.Qty,
@@ -180,6 +189,17 @@ func placeAsMaker(p *params) {
 		if err != nil || exo == nil {
 			os.Exit(1)
 		}
+
+		o.RefID = exo.RefID
+		o.Status = exo.Status
+		o.OpenTime = exo.OpenTime
+		o.OpenPrice = exo.OpenPrice
+		err = p.db.CreateOrder(o)
+		if err != nil {
+			h.Log(err)
+			return
+		}
+
 		log := t.LogOpenOrder{
 			Action: "NEW",
 			Qty:    o.Qty,

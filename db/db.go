@@ -149,9 +149,17 @@ func (d DB) GetLimitOrdersBySide(o t.Order) []t.Order {
 	q := d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND type = ? AND status <> ? AND close_order_id = ''",
 		o.BotID, o.Exchange, o.Symbol, o.Side, t.OrderTypeLimit, t.OrderStatusCanceled)
 	if o.Side == t.OrderSideBuy {
-		q.Order("zone_price asc").Find(&orders)
+		if o.OpenTime > 0 {
+			q.Order("open_time desc").Find(&orders)
+		} else {
+			q.Order("zone_price asc").Find(&orders)
+		}
 	} else if o.Side == t.OrderSideSell {
-		q.Order("zone_price desc").Find(&orders)
+		if o.OpenTime > 0 {
+			q.Order("open_time desc").Find(&orders)
+		} else {
+			q.Order("zone_price desc").Find(&orders)
+		}
 	}
 	return orders
 }
