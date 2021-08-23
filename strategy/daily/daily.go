@@ -53,6 +53,9 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		if p.AutoSL {
 			qo.Side = t.OrderSideSell
 			for _, o := range db.GetFilledOrdersBySide(qo) {
+				if db.GetSLOrder(o.ID) != nil {
+					continue
+				}
 				slo := t.Order{
 					ID:          h.GenID(),
 					BotID:       p.BotID,
@@ -74,7 +77,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		if p.AutoTP {
 			qo.Side = t.OrderSideBuy
 			for _, o := range db.GetFilledOrdersBySide(qo) {
-				if ticker.Price > o.OpenPrice+atr*p.AtrTP {
+				if ticker.Price > o.OpenPrice+atr*p.AtrTP && db.GetTPOrder(o.ID) == nil {
 					tpo := t.Order{
 						ID:          h.GenID(),
 						BotID:       p.BotID,
@@ -122,6 +125,9 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		if p.AutoSL {
 			qo.Side = t.OrderSideBuy
 			for _, o := range db.GetFilledOrdersBySide(qo) {
+				if db.GetSLOrder(o.ID) != nil {
+					continue
+				}
 				slo := t.Order{
 					ID:          h.GenID(),
 					BotID:       p.BotID,
@@ -143,7 +149,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		if p.AutoTP {
 			qo.Side = t.OrderSideSell
 			for _, o := range db.GetFilledOrdersBySide(qo) {
-				if ticker.Price < o.OpenPrice-atr*p.AtrTP {
+				if ticker.Price < o.OpenPrice-atr*p.AtrTP && db.GetTPOrder(o.ID) == nil {
 					tpo := t.Order{
 						ID:          h.GenID(),
 						BotID:       p.BotID,
