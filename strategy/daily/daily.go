@@ -60,7 +60,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		// Stop Loss, for SELL orders
 		if p.AutoSL {
 			qo.Side = t.OrderSideSell
-			for _, o := range db.GetFilledOrdersBySide(qo) {
+			for _, o := range db.GetFilledLimitOrdersBySide(qo) {
 				if db.GetSLOrder(o.ID) != nil {
 					continue
 				}
@@ -84,7 +84,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		// Take Profit, by the configured Volatility Stop (TP)
 		if p.AutoTP {
 			qo.Side = t.OrderSideBuy
-			for _, o := range db.GetFilledOrdersBySide(qo) {
+			for _, o := range db.GetFilledLimitOrdersBySide(qo) {
 				if ticker.Price > o.OpenPrice+atr*p.AtrTP && db.GetTPOrder(o.ID) == nil {
 					tpo := t.Order{
 						ID:          h.GenID(),
@@ -132,7 +132,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		// Stop Loss, for BUY orders
 		if p.AutoSL {
 			qo.Side = t.OrderSideBuy
-			for _, o := range db.GetFilledOrdersBySide(qo) {
+			for _, o := range db.GetFilledLimitOrdersBySide(qo) {
 				if db.GetSLOrder(o.ID) != nil {
 					continue
 				}
@@ -156,7 +156,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		// Take Profit, by the configured Volatility Stop (TP)
 		if p.AutoTP {
 			qo.Side = t.OrderSideSell
-			for _, o := range db.GetFilledOrdersBySide(qo) {
+			for _, o := range db.GetFilledLimitOrdersBySide(qo) {
 				if ticker.Price < o.OpenPrice-atr*p.AtrTP && db.GetTPOrder(o.ID) == nil {
 					tpo := t.Order{
 						ID:          h.GenID(),

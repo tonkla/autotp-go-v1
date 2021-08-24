@@ -164,6 +164,14 @@ func (d DB) GetLimitOrdersBySide(o t.Order) []t.Order {
 	return orders
 }
 
+// GetFilledLimitOrdersBySide returns the LIMIT orders that their status is FILLED for the specified side
+func (d DB) GetFilledLimitOrdersBySide(o t.Order) []t.Order {
+	var orders []t.Order
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND type = ? AND status = ? AND close_order_id = ''",
+		o.BotID, o.Exchange, o.Symbol, o.Side, t.OrderTypeLimit, t.OrderStatusFilled).Find(&orders)
+	return orders
+}
+
 // GetNewOrders returns the orders that their status is NEW
 func (d DB) GetNewOrders(o t.Order) []t.Order {
 	var orders []t.Order
@@ -185,34 +193,6 @@ func (d DB) GetFilledOrders(o t.Order) []t.Order {
 	var orders []t.Order
 	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND status = ? AND close_order_id = ''",
 		o.BotID, o.Exchange, o.Symbol, t.OrderStatusFilled).Find(&orders)
-	return orders
-}
-
-// GetFilledOrdersBySide returns the orders that their status is FILLED for the specified side
-func (d DB) GetFilledOrdersBySide(o t.Order) []t.Order {
-	var orders []t.Order
-	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND status = ? AND side = ? AND close_order_id = ''",
-		o.BotID, o.Exchange, o.Symbol, t.OrderStatusFilled, o.Side).Find(&orders)
-	return orders
-}
-
-// GetProfitOrdersBySide returns the orders that are profitable for the specified side
-func (d DB) GetProfitOrdersBySide(qo t.Order, tk t.Ticker) []t.Order {
-	var orders []t.Order
-	fee := tk.Price * 0.002 * 2 // 0.002=transaction fee at 0.2%, 2=open and closed fees
-	for _, o := range d.GetFilledOrdersBySide(qo) {
-		if o.Side == t.OrderSideBuy {
-			profit := tk.Price - fee
-			if o.OpenPrice < profit {
-				orders = append(orders, o)
-			}
-		} else if o.Side == t.OrderSideSell {
-			profit := tk.Price + fee
-			if o.OpenPrice > profit {
-				orders = append(orders, o)
-			}
-		}
-	}
 	return orders
 }
 
