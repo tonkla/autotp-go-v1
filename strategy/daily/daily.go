@@ -14,6 +14,14 @@ type OnTickParams struct {
 	HPrices   []t.HistoricalPrice
 }
 
+const (
+	slStop    = 100
+	slOpen    = 200
+	tpStop    = 200
+	tpOpen    = 300
+	limitOpen = 400
+)
+
 func OnTick(params OnTickParams) *t.TradeOrders {
 	var openOrders, closeOrders []t.Order
 
@@ -65,8 +73,8 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 					Type:        t.OrderTypeSL,
 					Status:      t.OrderStatusNew,
 					Qty:         o.Qty,
-					StopPrice:   h.CalcSLStop(t.OrderSideBuy, ticker.Price, 100, p.PriceDigits),
-					OpenPrice:   h.CalcSLStop(t.OrderSideBuy, ticker.Price, 200, p.PriceDigits),
+					StopPrice:   h.CalcSLStop(t.OrderSideBuy, ticker.Price, slStop, p.PriceDigits),
+					OpenPrice:   h.CalcSLStop(t.OrderSideBuy, ticker.Price, slOpen, p.PriceDigits),
 					OpenOrderID: o.ID,
 				}
 				closeOrders = append(closeOrders, slo)
@@ -87,8 +95,8 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 						Type:        t.OrderTypeTP,
 						Status:      t.OrderStatusNew,
 						Qty:         o.Qty,
-						StopPrice:   h.CalcTPStop(t.OrderSideSell, ticker.Price, 200, p.PriceDigits),
-						OpenPrice:   h.CalcTPStop(t.OrderSideSell, ticker.Price, 300, p.PriceDigits),
+						StopPrice:   h.CalcTPStop(t.OrderSideSell, ticker.Price, tpStop, p.PriceDigits),
+						OpenPrice:   h.CalcTPStop(t.OrderSideSell, ticker.Price, tpOpen, p.PriceDigits),
 						OpenOrderID: o.ID,
 					}
 					closeOrders = append(closeOrders, tpo)
@@ -112,7 +120,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 					Type:      t.OrderTypeLimit,
 					Status:    t.OrderStatusNew,
 					Qty:       qo.Qty,
-					OpenPrice: h.CalcLimitStop(t.OrderSideBuy, ticker.Price, 200, p.PriceDigits),
+					OpenPrice: h.CalcLimitStop(t.OrderSideBuy, ticker.Price, limitOpen, p.PriceDigits),
 				}
 				openOrders = append(openOrders, o)
 			}
@@ -137,8 +145,8 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 					Type:        t.OrderTypeSL,
 					Status:      t.OrderStatusNew,
 					Qty:         o.Qty,
-					StopPrice:   h.CalcSLStop(t.OrderSideSell, ticker.Price, 100, p.PriceDigits),
-					OpenPrice:   h.CalcSLStop(t.OrderSideSell, ticker.Price, 200, p.PriceDigits),
+					StopPrice:   h.CalcSLStop(t.OrderSideSell, ticker.Price, slStop, p.PriceDigits),
+					OpenPrice:   h.CalcSLStop(t.OrderSideSell, ticker.Price, slOpen, p.PriceDigits),
 					OpenOrderID: o.ID,
 				}
 				closeOrders = append(closeOrders, slo)
@@ -159,8 +167,8 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 						Type:        t.OrderTypeTP,
 						Status:      t.OrderStatusNew,
 						Qty:         o.Qty,
-						StopPrice:   h.CalcTPStop(t.OrderSideBuy, ticker.Price, 200, p.PriceDigits),
-						OpenPrice:   h.CalcTPStop(t.OrderSideBuy, ticker.Price, 300, p.PriceDigits),
+						StopPrice:   h.CalcTPStop(t.OrderSideBuy, ticker.Price, tpStop, p.PriceDigits),
+						OpenPrice:   h.CalcTPStop(t.OrderSideBuy, ticker.Price, tpOpen, p.PriceDigits),
 						OpenOrderID: o.ID,
 					}
 					closeOrders = append(closeOrders, tpo)
@@ -184,7 +192,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 					Type:      t.OrderTypeLimit,
 					Status:    t.OrderStatusNew,
 					Qty:       qo.Qty,
-					OpenPrice: h.CalcLimitStop(t.OrderSideSell, ticker.Price, 200, p.PriceDigits),
+					OpenPrice: h.CalcLimitStop(t.OrderSideSell, ticker.Price, limitOpen, p.PriceDigits),
 				}
 				openOrders = append(openOrders, o)
 			}
