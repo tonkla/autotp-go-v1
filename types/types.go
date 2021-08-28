@@ -142,4 +142,13 @@ type BotParams struct {
 	AtrSL       float64
 	AtrTP       float64
 	MinGap      float64
+	StopLimit   StopLimit
+}
+
+type StopLimit struct {
+	SLStop    int64
+	SLLimit   int64
+	TPStop    int64
+	TPLimit   int64
+	OpenLimit int64
 }

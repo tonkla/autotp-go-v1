@@ -17,14 +17,6 @@ type OnTickParams struct {
 	HPrices   []t.HistoricalPrice
 }
 
-const (
-	slStop    = 100
-	slOpen    = 200
-	tpStop    = 200
-	tpOpen    = 300
-	limitOpen = 400
-)
-
 func OnTick(params OnTickParams) *t.TradeOrders {
 	var openOrders, closeOrders []t.Order
 
@@ -32,6 +24,12 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 	ticker := params.Ticker
 	p := params.BotParams
 	prices := params.HPrices
+
+	slStop := float64(p.StopLimit.SLStop)
+	slLimit := float64(p.StopLimit.SLLimit)
+	tpStop := float64(p.StopLimit.TPStop)
+	tpLimit := float64(p.StopLimit.TPLimit)
+	openLimit := float64(p.StopLimit.OpenLimit)
 
 	p_0 := prices[len(prices)-1]
 	if p_0.Open == 0 || p_0.High == 0 || p_0.Low == 0 || p_0.Close == 0 {
@@ -79,7 +77,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 					Status:      t.OrderStatusNew,
 					Qty:         o.Qty,
 					StopPrice:   h.CalcSLStop(t.OrderSideBuy, ticker.Price, slStop, p.PriceDigits),
-					OpenPrice:   h.CalcSLStop(t.OrderSideBuy, ticker.Price, slOpen, p.PriceDigits),
+					OpenPrice:   h.CalcSLStop(t.OrderSideBuy, ticker.Price, slLimit, p.PriceDigits),
 					OpenOrderID: o.ID,
 				}
 				closeOrders = append(closeOrders, slo)
@@ -101,7 +99,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 						Status:      t.OrderStatusNew,
 						Qty:         o.Qty,
 						StopPrice:   h.CalcTPStop(t.OrderSideSell, ticker.Price, tpStop, p.PriceDigits),
-						OpenPrice:   h.CalcTPStop(t.OrderSideSell, ticker.Price, tpOpen, p.PriceDigits),
+						OpenPrice:   h.CalcTPStop(t.OrderSideSell, ticker.Price, tpLimit, p.PriceDigits),
 						OpenOrderID: o.ID,
 					}
 					closeOrders = append(closeOrders, tpo)
@@ -111,7 +109,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 
 		// Open a new limit order with safe minimum price gap
 		if p.View == t.ViewLong || p.View == t.ViewNeutral {
-			_openPrice := h.CalcLimitStop(t.OrderSideBuy, ticker.Price, limitOpen, p.PriceDigits)
+			_openPrice := h.CalcLimitStop(t.OrderSideBuy, ticker.Price, openLimit, p.PriceDigits)
 			qo.Side = t.OrderSideBuy
 			qo.OpenPrice = _openPrice
 			norder := db.GetNearestOrder(qo)
@@ -151,7 +149,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 					Status:      t.OrderStatusNew,
 					Qty:         o.Qty,
 					StopPrice:   h.CalcSLStop(t.OrderSideSell, ticker.Price, slStop, p.PriceDigits),
-					OpenPrice:   h.CalcSLStop(t.OrderSideSell, ticker.Price, slOpen, p.PriceDigits),
+					OpenPrice:   h.CalcSLStop(t.OrderSideSell, ticker.Price, slLimit, p.PriceDigits),
 					OpenOrderID: o.ID,
 				}
 				closeOrders = append(closeOrders, slo)
@@ -173,7 +171,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 						Status:      t.OrderStatusNew,
 						Qty:         o.Qty,
 						StopPrice:   h.CalcTPStop(t.OrderSideBuy, ticker.Price, tpStop, p.PriceDigits),
-						OpenPrice:   h.CalcTPStop(t.OrderSideBuy, ticker.Price, tpOpen, p.PriceDigits),
+						OpenPrice:   h.CalcTPStop(t.OrderSideBuy, ticker.Price, tpLimit, p.PriceDigits),
 						OpenOrderID: o.ID,
 					}
 					closeOrders = append(closeOrders, tpo)
@@ -183,7 +181,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 
 		// Open a new limit order with safe minimum price gap
 		if p.View == t.ViewShort || p.View == t.ViewNeutral {
-			_openPrice := h.CalcLimitStop(t.OrderSideSell, ticker.Price, limitOpen, p.PriceDigits)
+			_openPrice := h.CalcLimitStop(t.OrderSideSell, ticker.Price, openLimit, p.PriceDigits)
 			qo.Side = t.OrderSideSell
 			qo.OpenPrice = _openPrice
 			norder := db.GetNearestOrder(qo)

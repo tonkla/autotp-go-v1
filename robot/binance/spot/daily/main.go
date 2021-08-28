@@ -82,6 +82,10 @@ func main() {
 	atrTP := viper.GetFloat64("atrTP")
 	orderType := viper.GetString("orderType")
 
+	tpStop := viper.GetInt64("tpStop")
+	tpLimit := viper.GetInt64("tpLimit")
+	openLimit := viper.GetInt64("openLimit")
+
 	db := rds.Connect(dbName)
 
 	exchange := binance.NewSpotClient(apiKey, secretKey)
@@ -98,6 +102,13 @@ func main() {
 		AtrTP:       atrTP,
 		MoS:         mos,
 		View:        "LONG",
+	}
+	if orderType == t.OrderTypeLimit {
+		bp.StopLimit = t.StopLimit{
+			TPStop:    tpStop,
+			TPLimit:   tpLimit,
+			OpenLimit: openLimit,
+		}
 	}
 
 	queryOrder := t.Order{

@@ -80,3 +80,10 @@ atrTP: 0.5
 
 # The minimum price gap between two orders
 minGap: 10
+
+# The Stop/Limit ranges from the market ticker price (integer)
+slStop: 100
+slLimit: 200
+tpStop: 100
+tpLimit: 200
+openLimit: 200
