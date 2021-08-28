@@ -141,4 +141,5 @@ type BotParams struct {
 	MoS         float64
 	AtrSL       float64
 	AtrTP       float64
+	MinGap      float64
 }

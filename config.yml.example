@@ -77,3 +77,6 @@ atrSL: 0.5
 
 # The multiplier of the "maTimeframe"'s ATR that use to calculate a Volatility Stop (TP)
 atrTP: 0.5
+
+# The minimum price gap between two orders
+minGap: 10

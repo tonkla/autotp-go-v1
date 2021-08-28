@@ -2,6 +2,7 @@ package db
 
 import (
 	"log"
+	"math"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -271,6 +272,24 @@ func (d DB) GetNewTPOrders(o t.Order) []t.Order {
 	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND status = ?",
 		o.BotID, o.Exchange, o.Symbol, t.OrderTypeTP, t.OrderStatusNew).Order("open_price desc").Find(&orders)
 	return orders
+}
+
+// GetNearestOrder returns the nearest order of the specified order
+func (d DB) GetNearestOrder(o t.Order) *t.Order {
+	var orders []t.Order
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND status <> ? AND close_order_id = ''",
+		o.BotID, o.Exchange, o.Symbol, o.Side, t.OrderStatusCanceled).Find(&orders)
+	if len(orders) == 0 {
+		return nil
+	}
+
+	var norder t.Order
+	for _, order := range orders {
+		if norder.OpenPrice == 0 || math.Abs(order.OpenPrice-o.OpenPrice) < math.Abs(norder.OpenPrice-o.OpenPrice) {
+			norder = order
+		}
+	}
+	return &norder
 }
 
 // CreateOrder performs SQL insert on the table orders
