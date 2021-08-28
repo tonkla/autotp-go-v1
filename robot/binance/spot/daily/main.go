@@ -77,7 +77,6 @@ func main() {
 	intervalSec := viper.GetInt64("intervalSec")
 	maTimeframe := viper.GetString("maTimeframe")
 	maPeriod := viper.GetInt64("maPeriod")
-	autoSL := viper.GetBool("autoSL")
 	autoTP := viper.GetBool("autoTP")
 	mos := viper.GetFloat64("mos")
 	atrTP := viper.GetFloat64("atrTP")
@@ -95,7 +94,6 @@ func main() {
 		QuoteQty:    quoteQty,
 		MATimeframe: maTimeframe,
 		MAPeriod:    maPeriod,
-		AutoSL:      autoSL,
 		AutoTP:      autoTP,
 		AtrTP:       atrTP,
 		MoS:         mos,
