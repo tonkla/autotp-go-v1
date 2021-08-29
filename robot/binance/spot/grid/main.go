@@ -105,7 +105,9 @@ func main() {
 		GridTP:      gridTP,
 		OpenZones:   openZones,
 		PriceDigits: priceDigits,
+		QtyDigits:   qtyDigits,
 		BaseQty:     baseQty,
+		QuoteQty:    quoteQty,
 		AutoTP:      autoTP,
 		View:        "LONG",
 	}
@@ -170,12 +172,6 @@ func placeAsMaker(p *params) {
 
 func openNewOrders(p *params) {
 	for _, o := range p.tradeOrders.OpenOrders {
-		o.ID = h.GenID()
-		_qty := h.NormalizeDouble(p.quoteQty/o.OpenPrice, p.qtyDigits)
-		if _qty > o.Qty {
-			o.Qty = _qty
-		}
-
 		exo, err := p.exchange.PlaceLimitOrder(o)
 		if err != nil || exo == nil {
 			h.Log("OpenOrder")
@@ -416,7 +412,6 @@ func placeAsTaker(p *params) {
 			continue
 		}
 
-		o.ID = h.GenID()
 		_qty := h.NormalizeDouble(p.quoteQty/buyPrice, p.qtyDigits)
 		if _qty > o.Qty {
 			o.Qty = _qty

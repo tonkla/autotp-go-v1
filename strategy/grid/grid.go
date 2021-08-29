@@ -42,15 +42,20 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		var count int64 = 0
 		zones, _ := strategy.GetGridZones(ticker.Price, p.LowerPrice, p.UpperPrice, p.GridSize)
 		for _, zone := range zones {
-			_order := order
-			_order.Side = t.OrderSideBuy
-			_order.OpenPrice = h.NormalizeDouble(buyPrice, p.PriceDigits)
-			_order.ZonePrice = h.NormalizeDouble(zone, p.PriceDigits)
-			if db.IsEmptyZone(_order) {
-				if p.GridTP > 0 {
-					_order.TPPrice = h.NormalizeDouble(zone+gridWidth*p.GridTP, p.PriceDigits)
+			o := order
+			o.Side = t.OrderSideBuy
+			o.OpenPrice = h.NormalizeDouble(buyPrice, p.PriceDigits)
+			o.ZonePrice = h.NormalizeDouble(zone, p.PriceDigits)
+			if db.IsEmptyZone(o) {
+				o.ID = h.GenID()
+				_qty := h.NormalizeDouble(p.QuoteQty/o.OpenPrice, p.QtyDigits)
+				if _qty > o.Qty {
+					o.Qty = _qty
 				}
-				orders = append(orders, _order)
+				if p.GridTP > 0 {
+					o.TPPrice = h.NormalizeDouble(zone+gridWidth*p.GridTP, p.PriceDigits)
+				}
+				orders = append(orders, o)
 			}
 			if count++; count == p.OpenZones {
 				break
@@ -66,15 +71,20 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 			return zones[i] > zones[j]
 		})
 		for _, zone := range zones {
-			_order := order
-			_order.Side = t.OrderSideSell
-			_order.OpenPrice = h.NormalizeDouble(sellPrice, p.PriceDigits)
-			_order.ZonePrice = h.NormalizeDouble(zone, p.PriceDigits)
-			if db.IsEmptyZone(_order) {
-				if p.GridTP > 0 {
-					_order.TPPrice = h.NormalizeDouble(zone-gridWidth*p.GridTP, p.PriceDigits)
+			o := order
+			o.Side = t.OrderSideSell
+			o.OpenPrice = h.NormalizeDouble(sellPrice, p.PriceDigits)
+			o.ZonePrice = h.NormalizeDouble(zone, p.PriceDigits)
+			if db.IsEmptyZone(o) {
+				o.ID = h.GenID()
+				_qty := h.NormalizeDouble(p.QuoteQty/o.OpenPrice, p.QtyDigits)
+				if _qty > o.Qty {
+					o.Qty = _qty
 				}
-				orders = append(orders, _order)
+				if p.GridTP > 0 {
+					o.TPPrice = h.NormalizeDouble(zone-gridWidth*p.GridTP, p.PriceDigits)
+				}
+				orders = append(orders, o)
 			}
 			if count++; count == p.OpenZones {
 				break
