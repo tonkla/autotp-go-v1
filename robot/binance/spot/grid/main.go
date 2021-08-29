@@ -37,6 +37,8 @@ type params struct {
 	priceDigits int64
 	qtyDigits   int64
 	quoteQty    float64
+	tpStop      int64
+	tpLimit     int64
 }
 
 func init() {
@@ -82,6 +84,9 @@ func main() {
 	autoTP := viper.GetBool("autoTP")
 	orderType := viper.GetString("orderType")
 
+	tpStop := viper.GetInt64("tpStop")
+	tpLimit := viper.GetInt64("tpLimit")
+
 	if upperPrice <= lowerPrice {
 		fmt.Fprintln(os.Stderr, "The upper price must be greater than the lower price")
 		os.Exit(0)
@@ -126,6 +131,8 @@ func main() {
 		priceDigits: priceDigits,
 		qtyDigits:   qtyDigits,
 		quoteQty:    quoteQty,
+		tpStop:      tpStop,
+		tpLimit:     tpLimit,
 	}
 
 	if intervalSec == 0 {
@@ -248,43 +255,39 @@ func syncLowestFilledOrder(p *params) {
 	// Place a new Take Profit order
 	o := p.db.GetLowestFilledBuyOrder(*p.queryOrder)
 	if o != nil && o.TPPrice > 0 && p.db.GetTPOrder(o.ID) == nil {
-		// Cancel the highest price TP order, because of 'MAX_NUM_ALGO_ORDERS=5'
-		const maxNumAlgoOrders = 5
+		// Keep only one TP order, because Binance has a 'MAX_NUM_ALGO_ORDERS=5'
 		tpOrders := p.db.GetNewTPOrders(*p.queryOrder)
-		// Keep only 2 TP orders at the time
-		if len(tpOrders)+3 >= maxNumAlgoOrders {
-			_tpo := tpOrders[0]
+		if len(tpOrders) > 0 {
+			tpo := tpOrders[0]
 			// Ignore when the order TP price is so far, keep calm and waiting
-			if _tpo.OpenPrice < o.TPPrice {
+			if tpo.OpenPrice < o.TPPrice {
 				return
 			}
-			exo, err := p.exchange.CancelOrder(_tpo)
+			exo, err := p.exchange.CancelOrder(tpo)
 			if err != nil || exo == nil {
 				h.Log("CancelOrder")
 				os.Exit(1)
 			}
 
-			_tpo.Status = exo.Status
-			_tpo.UpdateTime = exo.UpdateTime
-			err = p.db.UpdateOrder(_tpo)
+			tpo.Status = exo.Status
+			tpo.UpdateTime = exo.UpdateTime
+			err = p.db.UpdateOrder(tpo)
 			if err != nil {
 				h.Log(err)
 				return
 			}
 			log := t.LogTPOrder{
 				Action: "CANCELED_TP",
-				Qty:    _tpo.Qty,
-				Open:   _tpo.OpenPrice,
+				Qty:    tpo.Qty,
+				Open:   tpo.OpenPrice,
 			}
 			h.Log(log)
 		}
 
-		var stopGap float64 = 500
-		if p.ticker.Price < h.CalcTPStop(o.Side, o.TPPrice, stopGap, p.priceDigits) {
+		if p.ticker.Price < h.CalcTPStop(o.Side, o.TPPrice, float64(p.tpStop), p.priceDigits) {
 			return
 		}
-		stopGap = 300
-		stopPrice := h.CalcTPStop(o.Side, o.TPPrice, stopGap, p.priceDigits)
+		stopPrice := h.CalcTPStop(o.Side, o.TPPrice, float64(p.tpLimit), p.priceDigits)
 
 		// The price moves so fast
 		if p.ticker.Price > stopPrice && o.CloseOrderID == "" {
