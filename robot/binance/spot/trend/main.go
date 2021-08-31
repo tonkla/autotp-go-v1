@@ -268,7 +268,7 @@ func syncTPOrder(p *params) {
 	}
 
 	if p.ticker.Price > tpo.OpenPrice && tpo.CloseTime == 0 {
-		o := tpo.OpenOrder
+		o := p.db.GetOrderByID(tpo.OpenOrderID)
 		if o == nil {
 			return
 		}

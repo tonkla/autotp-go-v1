@@ -79,7 +79,7 @@ type Order struct {
 	OpenTime   int64
 	UpdateTime int64
 
-	OpenOrder *Order `gorm:"foreignKey:OpenOrderID"`
+	// OpenOrder *Order `gorm:"references:OpenOrderID"`
 	// CloseOrder  *Order  `gorm:"foreignKey:CloseOrderID"`
 	// CloseOrders []Order `gorm:"foreignKey:OpenOrderID"`
 }
