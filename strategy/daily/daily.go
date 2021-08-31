@@ -118,7 +118,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 					Type:      t.OrderTypeLimit,
 					Status:    t.OrderStatusNew,
 					Qty:       qo.Qty,
-					OpenPrice: h.CalcLimitStop(t.OrderSideBuy, ticker.Price, openLimit, p.PriceDigits),
+					OpenPrice: h.CalcAfterLimitStop(t.OrderSideBuy, ticker.Price, openLimit, p.PriceDigits),
 				}
 				openOrders = append(openOrders, o)
 			}
@@ -190,7 +190,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 					Type:      t.OrderTypeLimit,
 					Status:    t.OrderStatusNew,
 					Qty:       qo.Qty,
-					OpenPrice: h.CalcLimitStop(t.OrderSideSell, ticker.Price, openLimit, p.PriceDigits),
+					OpenPrice: h.CalcAfterLimitStop(t.OrderSideSell, ticker.Price, openLimit, p.PriceDigits),
 				}
 				openOrders = append(openOrders, o)
 			}

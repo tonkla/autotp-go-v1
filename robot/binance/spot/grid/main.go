@@ -39,6 +39,7 @@ type params struct {
 	quoteQty    float64
 	tpStop      int64
 	tpLimit     int64
+	openLimit   int64
 }
 
 func init() {
@@ -86,6 +87,7 @@ func main() {
 
 	tpStop := viper.GetInt64("tpStop")
 	tpLimit := viper.GetInt64("tpLimit")
+	openLimit := viper.GetInt64("openLimit")
 
 	if upperPrice <= lowerPrice {
 		fmt.Fprintln(os.Stderr, "The upper price must be greater than the lower price")
@@ -133,6 +135,7 @@ func main() {
 		quoteQty:    quoteQty,
 		tpStop:      tpStop,
 		tpLimit:     tpLimit,
+		openLimit:   openLimit,
 	}
 
 	if intervalSec == 0 {
@@ -179,6 +182,10 @@ func placeAsMaker(p *params) {
 
 func openNewOrders(p *params) {
 	for _, o := range p.tradeOrders.OpenOrders {
+		if p.ticker.Price > h.CalcBeforeLimitStop(o.Side, o.OpenPrice, float64(p.openLimit), p.priceDigits) {
+			return
+		}
+
 		exo, err := p.exchange.PlaceLimitOrder(o)
 		if err != nil || exo == nil {
 			h.Log("OpenOrder")

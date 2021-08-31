@@ -109,7 +109,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 
 		// Open a new limit order with safe minimum price gap
 		if p.View == t.ViewLong || p.View == t.ViewNeutral {
-			_openPrice := h.CalcLimitStop(t.OrderSideBuy, ticker.Price, openLimit, p.PriceDigits)
+			_openPrice := h.CalcAfterLimitStop(t.OrderSideBuy, ticker.Price, openLimit, p.PriceDigits)
 			qo.Side = t.OrderSideBuy
 			qo.OpenPrice = _openPrice
 			norder := db.GetNearestOrder(qo)
@@ -181,7 +181,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 
 		// Open a new limit order with safe minimum price gap
 		if p.View == t.ViewShort || p.View == t.ViewNeutral {
-			_openPrice := h.CalcLimitStop(t.OrderSideSell, ticker.Price, openLimit, p.PriceDigits)
+			_openPrice := h.CalcAfterLimitStop(t.OrderSideSell, ticker.Price, openLimit, p.PriceDigits)
 			qo.Side = t.OrderSideSell
 			qo.OpenPrice = _openPrice
 			norder := db.GetNearestOrder(qo)
