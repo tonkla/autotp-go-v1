@@ -1,12 +1,8 @@
 package binance
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/tidwall/gjson"
@@ -30,43 +26,22 @@ func NewSpotClient(apiKey string, secretKey string) Client {
 	}
 }
 
-// NewTestSpotClient returns Binance Test Network Spot client
-func NewTestSpotClient(apiKey string, secretKey string) Client {
-	return Client{
-		baseURL:   "https://testnet.binance.vision/api/v3",
-		apiKey:    apiKey,
-		secretKey: secretKey,
-	}
-}
-
-// NewFuturesClient returns Binance USDⓈ-M Futures client
-func NewFuturesClient(apiKey string, secretKey string) Client {
-	return Client{
-		baseURL:   "https://fapi.binance.com/fapi/v1",
-		apiKey:    apiKey,
-		secretKey: secretKey,
-	}
-}
-
-// Sign signs a payload with a Binance API secret key
-func Sign(payload string, secretKey string) string {
-	mac := hmac.New(sha256.New, []byte(secretKey))
-	mac.Write([]byte(payload))
-	return hex.EncodeToString(mac.Sum(nil))
-}
-
-func newHeader(apiKey string) http.Header {
-	var header http.Header = make(map[string][]string)
-	header.Set("X-MBX-APIKEY", apiKey)
-	return header
-}
-
-// Build a base query string
-func buildBaseQS(payload *strings.Builder, symbol string) {
-	fmt.Fprintf(payload, "timestamp=%d&recvWindow=50000&symbol=%s", h.Now13(), symbol)
-}
-
 // Public APIs -----------------------------------------------------------------
+
+// GetTicker returns the latest ticker
+func (c Client) GetTicker(symbol string) *t.Ticker {
+	return GetTicker(c.baseURL, symbol)
+}
+
+// GetOrderBook returns an order book (market depth
+func (c Client) GetOrderBook(symbol string, limit int) *t.OrderBook {
+	return GetOrderBook(c.baseURL, symbol, limit)
+}
+
+// GetHistoricalPrices returns historical prices in a format of k-lines/candlesticks
+func (c Client) GetHistoricalPrices(symbol string, timeframe string, limit int) []t.HistoricalPrice {
+	return GetHistoricalPrices(c.baseURL, symbol, timeframe, limit)
+}
 
 // GetExchangeInfo returns the exchange information of the specified symbol
 func (c Client) GetExchangeInfo(symbol string) error {
@@ -82,83 +57,6 @@ func (c Client) GetExchangeInfo(symbol string) error {
 		return errors.New("")
 	}
 	return nil
-}
-
-// GetTicker returns the latest ticker
-func (c Client) GetTicker(symbol string) *t.Ticker {
-	var url strings.Builder
-
-	fmt.Fprintf(&url, "%s/ticker/price?symbol=%s", c.baseURL, symbol)
-	data, err := h.Get(url.String())
-	if err != nil {
-		return nil
-	}
-	r := gjson.ParseBytes(data)
-	return &t.Ticker{
-		Exchange: t.ExcBinance,
-		Symbol:   r.Get("symbol").String(),
-		Price:    r.Get("price").Float(),
-		Time:     r.Get("time").Int(),
-	}
-}
-
-// GetOrderBook returns an order book (market depth)
-func (c Client) GetOrderBook(symbol string, limit int) *t.OrderBook {
-	var url strings.Builder
-
-	fmt.Fprintf(&url, "%s/depth?symbol=%s&limit=%d", c.baseURL, symbol, limit)
-	data, err := h.Get(url.String())
-	if err != nil {
-		return nil
-	}
-
-	var bids, asks []t.ExOrder
-	result := gjson.ParseBytes(data)
-	for _, bid := range result.Get("bids").Array() {
-		b := bid.Array()
-		bids = append(bids, t.ExOrder{
-			Price: b[0].Float(),
-			Qty:   b[1].Float(),
-		})
-	}
-	for _, ask := range result.Get("asks").Array() {
-		a := ask.Array()
-		asks = append(asks, t.ExOrder{
-			Price: a[0].Float(),
-			Qty:   a[1].Float(),
-		})
-	}
-	return &t.OrderBook{
-		Symbol: symbol,
-		Bids:   bids,
-		Asks:   asks,
-	}
-}
-
-// GetHistoricalPrices returns historical prices in a format of k-lines/candlesticks
-func (c Client) GetHistoricalPrices(symbol string, timeframe string, limit int) []t.HistoricalPrice {
-	var url strings.Builder
-
-	fmt.Fprintf(&url, "%s/klines?symbol=%s&interval=%s&limit=%d", c.baseURL, symbol, timeframe, limit)
-	data, err := h.Get(url.String())
-	if err != nil {
-		return nil
-	}
-
-	var hPrices []t.HistoricalPrice
-	for _, data := range gjson.ParseBytes(data).Array() {
-		d := data.Array()
-		p := t.HistoricalPrice{
-			Symbol: symbol,
-			Time:   d[0].Int(),
-			Open:   d[1].Float(),
-			High:   d[2].Float(),
-			Low:    d[3].Float(),
-			Close:  d[4].Float(),
-		}
-		hPrices = append(hPrices, p)
-	}
-	return hPrices
 }
 
 // Get1wHistoricalPrices returns '1w' historical prices in a format of k-lines/candlesticks
@@ -188,70 +86,16 @@ func (c Client) Get5mHistoricalPrices(symbol string, limit int) []t.HistoricalPr
 
 // Private APIs ----------------------------------------------------------------
 
-// GetOrderByIDs returns the order by its IDs
-func (c Client) GetOrderByIDs(symbol string, ID string, refID string) (*t.Order, error) {
-	if symbol == "" || (ID == "" && refID == "") {
-		return nil, nil
-	}
-
-	var payload, url strings.Builder
-
-	buildBaseQS(&payload, symbol)
-	if refID != "" {
-		fmt.Fprintf(&payload, "&orderId=%s", refID)
-	}
-	if ID != "" {
-		fmt.Fprintf(&payload, "&origClientOrderId=%s", ID)
-	}
-
-	signature := Sign(payload.String(), c.secretKey)
-
-	fmt.Fprintf(&url, "%s/order?%s&signature=%s", c.baseURL, payload.String(), signature)
-	data, err := h.GetH(url.String(), newHeader(c.apiKey))
-	if err != nil {
-		return nil, err
-	}
-
-	r := gjson.ParseBytes(data)
-
-	if r.Get("code").Int() < 0 {
-		h.Log("GetOrderByIDs", r)
-		return nil, errors.New(r.Get("msg").String())
-	}
-
-	return &t.Order{
-		ID:         ID,
-		RefID:      refID,
-		Symbol:     symbol,
-		Status:     r.Get("status").String(),
-		UpdateTime: r.Get("updateTime").Int(),
-	}, nil
-}
-
-// GetOrder returns the order by its IDs
-func (c Client) GetOrder(o t.Order) (*t.Order, error) {
-	exo, err := c.GetOrderByIDs(o.Symbol, o.ID, o.RefID)
-	if err != nil {
-		return nil, err
-	}
-	if exo == nil {
-		return nil, nil
-	}
-	o.Status = exo.Status
-	o.UpdateTime = exo.UpdateTime
-	return &o, nil
-}
-
 // GetOpenOrders returns open orders
 func (c Client) GetOpenOrders(symbol string) []t.Order {
 	var payload, url strings.Builder
 
-	buildBaseQS(&payload, symbol)
+	BuildBaseQS(&payload, symbol)
 
 	signature := Sign(payload.String(), c.secretKey)
 
 	fmt.Fprintf(&url, "%s/openOrders?%s&signature=%s", c.baseURL, payload.String(), signature)
-	data, err := h.GetH(url.String(), newHeader(c.apiKey))
+	data, err := h.GetH(url.String(), NewHeader(c.apiKey))
 	if err != nil {
 		return nil
 	}
@@ -286,7 +130,7 @@ func (c Client) GetOpenOrders(symbol string) []t.Order {
 func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime int) []t.Order {
 	var payload, url strings.Builder
 
-	buildBaseQS(&payload, symbol)
+	BuildBaseQS(&payload, symbol)
 
 	if limit > 0 {
 		fmt.Fprintf(&payload, "&limit=%d", limit)
@@ -301,7 +145,7 @@ func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime in
 	signature := Sign(payload.String(), c.secretKey)
 
 	fmt.Fprintf(&url, "%s/allOrders?%s&signature=%s", c.baseURL, payload.String(), signature)
-	data, err := h.GetH(url.String(), newHeader(c.apiKey))
+	data, err := h.GetH(url.String(), NewHeader(c.apiKey))
 	if err != nil {
 		return nil
 	}
@@ -332,7 +176,7 @@ func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime in
 	return orders
 }
 
-// PlaceLimitOrder places a limit order on the exchange
+// PlaceLimitOrder places a limit order on the Binance Spot
 func (c Client) PlaceLimitOrder(o t.Order) (*t.Order, error) {
 	if o.Type != t.OrderTypeLimit {
 		return nil, nil
@@ -340,14 +184,14 @@ func (c Client) PlaceLimitOrder(o t.Order) (*t.Order, error) {
 
 	var payload, url strings.Builder
 
-	buildBaseQS(&payload, o.Symbol)
+	BuildBaseQS(&payload, o.Symbol)
 	fmt.Fprintf(&payload, "&newClientOrderId=%s&side=%s&type=%s&quantity=%f&price=%f&timeInForce=GTC",
 		o.ID, o.Side, o.Type, o.Qty, o.OpenPrice)
 
 	signature := Sign(payload.String(), c.secretKey)
 
 	fmt.Fprintf(&url, "%s/order?%s&signature=%s", c.baseURL, payload.String(), signature)
-	data, err := h.Post(url.String(), newHeader(c.apiKey))
+	data, err := h.Post(url.String(), NewHeader(c.apiKey))
 	if err != nil {
 		return nil, err
 	}
@@ -373,7 +217,7 @@ func (c Client) PlaceLimitOrder(o t.Order) (*t.Order, error) {
 	return &o, nil
 }
 
-// PlaceStopOrder places a stop order on the exchange
+// PlaceStopOrder places a stop order on the Binance Spot
 func (c Client) PlaceStopOrder(o t.Order) (*t.Order, error) {
 	if o.Type != t.OrderTypeSL && o.Type != t.OrderTypeTP {
 		return nil, nil
@@ -381,14 +225,14 @@ func (c Client) PlaceStopOrder(o t.Order) (*t.Order, error) {
 
 	var payload, url strings.Builder
 
-	buildBaseQS(&payload, o.Symbol)
+	BuildBaseQS(&payload, o.Symbol)
 	fmt.Fprintf(&payload, "&newClientOrderId=%s&side=%s&type=%s&quantity=%f&price=%f&stopPrice=%f&timeInForce=GTC",
 		o.ID, o.Side, o.Type, o.Qty, o.OpenPrice, o.StopPrice)
 
 	signature := Sign(payload.String(), c.secretKey)
 
 	fmt.Fprintf(&url, "%s/order?%s&signature=%s", c.baseURL, payload.String(), signature)
-	data, err := h.Post(url.String(), newHeader(c.apiKey))
+	data, err := h.Post(url.String(), NewHeader(c.apiKey))
 	if err != nil {
 		return nil, err
 	}
@@ -405,7 +249,7 @@ func (c Client) PlaceStopOrder(o t.Order) (*t.Order, error) {
 	return &o, nil
 }
 
-// PlaceMarketOrder places a market order on the exchange
+// PlaceMarketOrder places a market order on the Binance Spot
 func (c Client) PlaceMarketOrder(o t.Order) (*t.Order, error) {
 	if o.Type != t.OrderTypeMarket {
 		return nil, nil
@@ -413,14 +257,14 @@ func (c Client) PlaceMarketOrder(o t.Order) (*t.Order, error) {
 
 	var payload, url strings.Builder
 
-	buildBaseQS(&payload, o.Symbol)
+	BuildBaseQS(&payload, o.Symbol)
 	fmt.Fprintf(&payload, "&newClientOrderId=%s&side=%s&type=%s&quantity=%f",
 		o.ID, o.Side, o.Type, o.Qty)
 
 	signature := Sign(payload.String(), c.secretKey)
 
 	fmt.Fprintf(&url, "%s/order?%s&signature=%s", c.baseURL, payload.String(), signature)
-	data, err := h.Post(url.String(), newHeader(c.apiKey))
+	data, err := h.Post(url.String(), NewHeader(c.apiKey))
 	if err != nil {
 		return nil, err
 	}
@@ -446,17 +290,17 @@ func (c Client) PlaceMarketOrder(o t.Order) (*t.Order, error) {
 	return &o, nil
 }
 
-// CancelOrder cancels an order on the exchange
+// CancelOrder cancels an order on the Binance Spot & Futures
 func (c Client) CancelOrder(o t.Order) (*t.Order, error) {
 	var payload, url strings.Builder
 
-	buildBaseQS(&payload, o.Symbol)
+	BuildBaseQS(&payload, o.Symbol)
 	fmt.Fprintf(&payload, "&orderId=%s&origClientOrderId=%s", o.RefID, o.ID)
 
 	signature := Sign(payload.String(), c.secretKey)
 
 	fmt.Fprintf(&url, "%s/order?%s&signature=%s", c.baseURL, payload.String(), signature)
-	data, err := h.Delete(url.String(), newHeader(c.apiKey))
+	data, err := h.Delete(url.String(), NewHeader(c.apiKey))
 	if err != nil {
 		return nil, err
 	}
@@ -475,4 +319,14 @@ func (c Client) CancelOrder(o t.Order) (*t.Order, error) {
 	o.Status = status
 	o.UpdateTime = h.Now13()
 	return &o, nil
+}
+
+// GetOrder returns the order by its IDs
+func (c Client) GetOrder(o t.Order) (*t.Order, error) {
+	cc := CClient{
+		BaseURL:   c.baseURL,
+		ApiKey:    c.apiKey,
+		SecretKey: c.secretKey,
+	}
+	return GetOrder(cc, o)
 }

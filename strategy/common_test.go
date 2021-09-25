@@ -15,7 +15,7 @@ const (
 )
 
 func TestGetTrend(t *testing.T) {
-	client := binance.NewTestSpotClient("", "")
+	client := binance.NewSpotClient("", "")
 	bars := client.GetHistoricalPrices(symbol, timeframe, 20)
 	trend := GetTrend(bars, period)
 	fmt.Println(trend)

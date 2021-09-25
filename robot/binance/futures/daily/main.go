@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/viper"
 
 	rds "github.com/tonkla/autotp/db"
-	"github.com/tonkla/autotp/exchange/binance"
+	binance "github.com/tonkla/autotp/exchange/binance/futures"
 	h "github.com/tonkla/autotp/helper"
 	"github.com/tonkla/autotp/strategy/daily"
 	t "github.com/tonkla/autotp/types"
@@ -91,7 +91,7 @@ func main() {
 
 	db := rds.Connect(dbName)
 
-	exchange := binance.NewSpotClient(apiKey, secretKey)
+	exchange := binance.NewFuturesClient(apiKey, secretKey)
 
 	bp := t.BotParams{
 		BotID:       botID,

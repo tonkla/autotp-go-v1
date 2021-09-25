@@ -13,10 +13,15 @@ const (
 	OrderSideBuy  = "BUY"
 	OrderSideSell = "SELL"
 
+	OrderPosSideLong  = "LONG"
+	OrderPosSideShort = "SHORT"
+
 	OrderTypeLimit  = "LIMIT"
 	OrderTypeMarket = "MARKET"
 	OrderTypeSL     = "STOP_LOSS_LIMIT"
 	OrderTypeTP     = "TAKE_PROFIT_LIMIT"
+	OrderTypeFSL    = "STOP"
+	OrderTypeFTP    = "TAKE_PROFIT"
 
 	TrendNo    = 0
 	TrendUp1   = 1
@@ -59,6 +64,7 @@ type Order struct {
 	Exchange string `gorm:"index"`
 	Symbol   string `gorm:"index"`
 	Side     string `gorm:"index"`
+	PosSide  string `gorm:"index"`
 	Type     string `gorm:"index"`
 	Status   string `gorm:"index"`
 
