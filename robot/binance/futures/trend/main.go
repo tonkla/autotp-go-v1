@@ -164,6 +164,7 @@ func main() {
 			Ticker:    *ticker,
 			BotParams: bp,
 			HPrices:   hprices,
+			IsFutures: true,
 		})
 		if tradeOrders == nil {
 			continue
