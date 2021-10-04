@@ -184,6 +184,7 @@ func placeAsMaker(p *params) {
 	for _, o := range p.tradeOrders.CloseOrders {
 		exo, err := p.exchange.PlaceStopOrder(o)
 		if err != nil || exo == nil {
+			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 
@@ -207,6 +208,7 @@ func placeAsMaker(p *params) {
 	for _, o := range p.tradeOrders.OpenOrders {
 		exo, err := p.exchange.PlaceLimitOrder(o)
 		if err != nil || exo == nil {
+			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 
@@ -239,6 +241,7 @@ func syncTPOrder(p *params) {
 	}
 	exo, err := p.exchange.GetOrder(*tpo)
 	if err != nil || exo == nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	if exo.Status == t.OrderStatusNew {
@@ -314,6 +317,7 @@ func syncLimitOrder(p *params) {
 	}
 	exo, err := p.exchange.GetOrder(*o)
 	if err != nil || exo == nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	if exo.Status == t.OrderStatusNew {
