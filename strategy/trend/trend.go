@@ -91,7 +91,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 					Status:      t.OrderStatusNew,
 					Qty:         h.NormalizeDouble(o.Qty, p.QtyDigits),
 					StopPrice:   stopPrice,
-					OpenPrice:   slPrice,
+					OpenPrice:   h.NormalizeDouble(slPrice, p.PriceDigits),
 					OpenOrderID: o.ID,
 				}
 				if isFutures {
@@ -133,7 +133,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 					Status:      t.OrderStatusNew,
 					Qty:         h.NormalizeDouble(o.Qty, p.QtyDigits),
 					StopPrice:   stopPrice,
-					OpenPrice:   slPrice,
+					OpenPrice:   h.NormalizeDouble(slPrice, p.PriceDigits),
 					OpenOrderID: o.ID,
 				}
 				if isFutures {
@@ -179,7 +179,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 					Status:      t.OrderStatusNew,
 					Qty:         h.NormalizeDouble(o.Qty, p.QtyDigits),
 					StopPrice:   stopPrice,
-					OpenPrice:   tpPrice,
+					OpenPrice:   h.NormalizeDouble(tpPrice, p.PriceDigits),
 					OpenOrderID: o.ID,
 				}
 				if isFutures {
@@ -221,7 +221,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 					Status:      t.OrderStatusNew,
 					Qty:         h.NormalizeDouble(o.Qty, p.QtyDigits),
 					StopPrice:   stopPrice,
-					OpenPrice:   tpPrice,
+					OpenPrice:   h.NormalizeDouble(tpPrice, p.PriceDigits),
 					OpenOrderID: o.ID,
 				}
 				if isFutures {
