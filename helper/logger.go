@@ -43,9 +43,9 @@ func LogClosed(open *types.Order, close *types.Order) {
 		Action: "CLOSED",
 		Type:   close.Type,
 		Qty:    close.Qty,
-		Close:  open.ClosePrice,
 		Zone:   open.ZonePrice,
 		Open:   open.OpenPrice,
+		Close:  open.ClosePrice,
 		Profit: open.PL,
 	}
 	Log(log)
@@ -57,8 +57,8 @@ func LogClosedF(open *types.Order, close *types.Order) {
 		Type:    close.Type,
 		PosSide: close.PosSide,
 		Qty:     close.Qty,
-		Close:   open.ClosePrice,
 		Open:    open.OpenPrice,
+		Close:   open.ClosePrice,
 		Profit:  open.PL,
 	}
 	Log(log)

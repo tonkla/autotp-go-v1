@@ -111,9 +111,9 @@ type LogCloseOrder struct {
 	Action string
 	Type   string
 	Qty    float64
-	Close  float64
 	Open   float64
 	Zone   float64
+	Close  float64
 	Profit float64
 }
 
@@ -122,8 +122,8 @@ type LogCloseFOrder struct {
 	Type    string
 	PosSide string
 	Qty     float64
-	Close   float64
 	Open    float64
+	Close   float64
 	Profit  float64
 }
 
