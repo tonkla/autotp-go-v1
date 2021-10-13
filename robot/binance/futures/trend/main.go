@@ -270,6 +270,11 @@ func syncSLLongOrders(p *params) {
 	if p.ticker.Price < slo.OpenPrice && slo.CloseTime == 0 {
 		o := p.db.GetOrderByID(slo.OpenOrderID)
 		if o == nil {
+			slo.CloseTime = h.Now13()
+			err = p.db.UpdateOrder(*slo)
+			if err != nil {
+				h.Log(err)
+			}
 			return
 		}
 
@@ -329,6 +334,11 @@ func syncSLShortOrders(p *params) {
 	if p.ticker.Price > slo.OpenPrice && slo.CloseTime == 0 {
 		o := p.db.GetOrderByID(slo.OpenOrderID)
 		if o == nil {
+			slo.CloseTime = h.Now13()
+			err = p.db.UpdateOrder(*slo)
+			if err != nil {
+				h.Log(err)
+			}
 			return
 		}
 
@@ -388,6 +398,11 @@ func syncTPLongOrders(p *params) {
 	if p.ticker.Price > tpo.OpenPrice && tpo.CloseTime == 0 {
 		o := p.db.GetOrderByID(tpo.OpenOrderID)
 		if o == nil {
+			tpo.CloseTime = h.Now13()
+			err = p.db.UpdateOrder(*tpo)
+			if err != nil {
+				h.Log(err)
+			}
 			return
 		}
 
@@ -447,6 +462,11 @@ func syncTPShortOrders(p *params) {
 	if p.ticker.Price < tpo.OpenPrice && tpo.CloseTime == 0 {
 		o := p.db.GetOrderByID(tpo.OpenOrderID)
 		if o == nil {
+			tpo.CloseTime = h.Now13()
+			err = p.db.UpdateOrder(*tpo)
+			if err != nil {
+				h.Log(err)
+			}
 			return
 		}
 
