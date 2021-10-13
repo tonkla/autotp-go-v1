@@ -98,6 +98,13 @@ type LogOpenOrder struct {
 	TP     float64
 }
 
+type LogOpenFOrder struct {
+	Action  string
+	PosSide string
+	Qty     float64
+	Open    float64
+}
+
 type LogTPOrder struct {
 	Action string
 	Qty    float64
@@ -142,9 +149,11 @@ type BotParams struct {
 	Slippage    float64
 	MATimeframe string
 	MAPeriod    int64
+	MoS         float64
 	AutoSL      bool
 	AutoTP      bool
-	MoS         float64
+	QuoteSL     float64
+	QuoteTP     float64
 	AtrSL       float64
 	AtrTP       float64
 	MinGap      float64

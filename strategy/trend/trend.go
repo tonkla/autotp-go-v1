@@ -28,9 +28,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 	isFutures := params.IsFutures
 
 	slStop := float64(p.StopLimit.SLStop)
-	slLimit := float64(p.StopLimit.SLLimit)
 	tpStop := float64(p.StopLimit.TPStop)
-	tpLimit := float64(p.StopLimit.TPLimit)
 	openLimit := float64(p.StopLimit.OpenLimit)
 
 	p_0 := prices[len(prices)-1]
@@ -60,15 +58,71 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		qo.Qty = _qty
 	}
 
-	// Uptrend -------------------------------------------------------------------
-	if cma_1 < cma_0 {
-		// Stop Loss, for SELL orders
-		if p.AutoSL {
-			qo.Side = t.OrderSideSell
-			for _, o := range db.GetFilledLimitOrdersBySide(qo) {
-				if db.GetSLOrder(o.ID) != nil {
-					continue
+	// Stop Loss -----------------------------------------------------------------
+	if p.AutoSL {
+		// SL Long ----------------------------
+		for _, o := range db.GetFilledLimitLongOrders(qo) {
+			if db.GetSLOrder(o.ID) != nil {
+				continue
+			}
+
+			slPrice := 0.0
+			if p.QuoteSL > 0 {
+				// SL by a value of the quote currency
+				slPrice = o.OpenPrice - p.QuoteSL/o.Qty
+			} else if p.AtrSL > 0 {
+				// SL by a volatility
+				slPrice = o.OpenPrice - p.AtrSL*atr
+			}
+
+			if slPrice <= 0 {
+				continue
+			}
+
+			stopPrice := h.CalcSLStop(t.OrderSideBuy, slPrice, slStop, p.PriceDigits)
+			if ticker.Price-(stopPrice-slPrice) < stopPrice {
+				slo := t.Order{
+					ID:          h.GenID(),
+					BotID:       p.BotID,
+					Exchange:    qo.Exchange,
+					Symbol:      qo.Symbol,
+					Side:        t.OrderSideSell,
+					Type:        t.OrderTypeSL,
+					Status:      t.OrderStatusNew,
+					Qty:         h.NormalizeDouble(o.Qty, p.QtyDigits),
+					StopPrice:   stopPrice,
+					OpenPrice:   slPrice,
+					OpenOrderID: o.ID,
 				}
+				if isFutures {
+					slo.Type = t.OrderTypeFSL
+					slo.PosSide = o.PosSide
+				}
+				closeOrders = append(closeOrders, slo)
+			}
+		}
+
+		// SL Short ---------------------------
+		for _, o := range db.GetFilledLimitShortOrders(qo) {
+			if db.GetSLOrder(o.ID) != nil {
+				continue
+			}
+
+			slPrice := 0.0
+			if p.QuoteSL > 0 {
+				// SL by a value of the quote currency
+				slPrice = o.OpenPrice + p.QuoteSL/o.Qty
+			} else if p.AtrSL > 0 {
+				// SL by a volatility
+				slPrice = o.OpenPrice + p.AtrSL*atr
+			}
+
+			if slPrice <= 0 {
+				continue
+			}
+
+			stopPrice := h.CalcSLStop(t.OrderSideSell, slPrice, slStop, p.PriceDigits)
+			if ticker.Price+(slPrice-stopPrice) > stopPrice {
 				slo := t.Order{
 					ID:          h.GenID(),
 					BotID:       p.BotID,
@@ -78,49 +132,116 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 					Type:        t.OrderTypeSL,
 					Status:      t.OrderStatusNew,
 					Qty:         h.NormalizeDouble(o.Qty, p.QtyDigits),
-					StopPrice:   h.CalcSLStop(t.OrderSideBuy, ticker.Price, slStop, p.PriceDigits),
-					OpenPrice:   h.CalcSLStop(t.OrderSideBuy, ticker.Price, slLimit, p.PriceDigits),
+					StopPrice:   stopPrice,
+					OpenPrice:   slPrice,
 					OpenOrderID: o.ID,
 				}
 				if isFutures {
+					slo.Side = t.OrderSideSell
+					slo.Type = t.OrderTypeFSL
 					slo.PosSide = o.PosSide
 				}
 				closeOrders = append(closeOrders, slo)
 			}
 		}
+	}
 
-		// Take Profit, by the configured Volatility Stop (TP)
-		if p.AutoTP {
-			qo.Side = t.OrderSideBuy
-			for _, o := range db.GetFilledLimitOrdersBySide(qo) {
-				if ticker.Price > o.OpenPrice+atr*p.AtrTP && db.GetTPOrder(o.ID) == nil {
-					tpo := t.Order{
-						ID:          h.GenID(),
-						BotID:       p.BotID,
-						Exchange:    qo.Exchange,
-						Symbol:      qo.Symbol,
-						Side:        t.OrderSideSell,
-						Type:        t.OrderTypeTP,
-						Status:      t.OrderStatusNew,
-						Qty:         h.NormalizeDouble(o.Qty, p.QtyDigits),
-						StopPrice:   h.CalcTPStop(t.OrderSideSell, ticker.Price, tpStop, p.PriceDigits),
-						OpenPrice:   h.CalcTPStop(t.OrderSideSell, ticker.Price, tpLimit, p.PriceDigits),
-						OpenOrderID: o.ID,
-					}
-					if isFutures {
-						tpo.PosSide = o.PosSide
-					}
-					closeOrders = append(closeOrders, tpo)
+	// Take Profit ---------------------------------------------------------------
+	if p.AutoTP {
+		// TP Long ----------------------------
+		for _, o := range db.GetFilledLimitLongOrders(qo) {
+			if db.GetTPOrder(o.ID) != nil {
+				continue
+			}
+
+			tpPrice := 0.0
+			if p.QuoteTP > 0 {
+				// TP by a value of the quote currency
+				tpPrice = o.OpenPrice + p.QuoteTP/o.Qty
+			} else if p.AtrTP > 0 {
+				// TP by a volatility
+				tpPrice = o.OpenPrice + p.AtrTP*atr
+			}
+
+			if tpPrice <= 0 {
+				continue
+			}
+
+			stopPrice := h.CalcTPStop(t.OrderSideBuy, tpPrice, tpStop, p.PriceDigits)
+			if ticker.Price+(tpPrice-stopPrice) > stopPrice {
+				tpo := t.Order{
+					ID:          h.GenID(),
+					BotID:       p.BotID,
+					Exchange:    qo.Exchange,
+					Symbol:      qo.Symbol,
+					Side:        t.OrderSideSell,
+					Type:        t.OrderTypeTP,
+					Status:      t.OrderStatusNew,
+					Qty:         h.NormalizeDouble(o.Qty, p.QtyDigits),
+					StopPrice:   stopPrice,
+					OpenPrice:   tpPrice,
+					OpenOrderID: o.ID,
 				}
+				if isFutures {
+					tpo.Type = t.OrderTypeFTP
+					tpo.PosSide = o.PosSide
+				}
+				closeOrders = append(closeOrders, tpo)
 			}
 		}
 
-		// Open a new limit order with safe minimum price gap
-		if p.View == t.ViewLong || p.View == t.ViewNeutral {
-			_openPrice := h.CalcAfterLimitStop(t.OrderSideBuy, ticker.Price, openLimit, p.PriceDigits)
+		// TP Short ---------------------------
+		for _, o := range db.GetFilledLimitShortOrders(qo) {
+			if db.GetTPOrder(o.ID) != nil {
+				continue
+			}
+
+			tpPrice := 0.0
+			if p.QuoteTP > 0 {
+				// TP by a value of the quote currency
+				tpPrice = o.OpenPrice - p.QuoteTP/o.Qty
+			} else if p.AtrTP > 0 {
+				// TP by a volatility
+				tpPrice = o.OpenPrice - p.AtrTP*atr
+			}
+
+			if tpPrice <= 0 {
+				continue
+			}
+
+			stopPrice := h.CalcTPStop(t.OrderSideSell, tpPrice, tpStop, p.PriceDigits)
+			if ticker.Price-(stopPrice-tpPrice) < stopPrice {
+				tpo := t.Order{
+					ID:          h.GenID(),
+					BotID:       p.BotID,
+					Exchange:    qo.Exchange,
+					Symbol:      qo.Symbol,
+					Side:        t.OrderSideBuy,
+					Type:        t.OrderTypeTP,
+					Status:      t.OrderStatusNew,
+					Qty:         h.NormalizeDouble(o.Qty, p.QtyDigits),
+					StopPrice:   stopPrice,
+					OpenPrice:   tpPrice,
+					OpenOrderID: o.ID,
+				}
+				if isFutures {
+					tpo.Side = t.OrderSideSell
+					tpo.Type = t.OrderTypeFTP
+					tpo.PosSide = o.PosSide
+				}
+				closeOrders = append(closeOrders, tpo)
+			}
+		}
+	}
+
+	// Uptrend: Open Long --------------------------------------------------------
+	if cma_1 < cma_0 {
+		if p.View == t.ViewNeutral || p.View == t.ViewLong {
+			_openPrice := h.CalcStopBehindTicker(t.OrderSideBuy, ticker.Price, openLimit, p.PriceDigits)
 			qo.Side = t.OrderSideBuy
 			qo.OpenPrice = _openPrice
 			norder := db.GetNearestOrder(qo)
+			// Open a new limit order with safe minimum price gap
 			if _openPrice < cma_0 && (norder == nil || math.Abs(norder.OpenPrice-_openPrice) >= p.MinGap) {
 				o := t.Order{
 					ID:        h.GenID(),
@@ -141,67 +262,14 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 		}
 	}
 
-	// Downtrend -----------------------------------------------------------------
+	// Downtrend: Open Short -----------------------------------------------------
 	if cma_1 > cma_0 {
-		// Stop Loss, for BUY orders
-		if p.AutoSL {
-			qo.Side = t.OrderSideBuy
-			for _, o := range db.GetFilledLimitOrdersBySide(qo) {
-				if db.GetSLOrder(o.ID) != nil {
-					continue
-				}
-				slo := t.Order{
-					ID:          h.GenID(),
-					BotID:       p.BotID,
-					Exchange:    qo.Exchange,
-					Symbol:      qo.Symbol,
-					Side:        t.OrderSideSell,
-					Type:        t.OrderTypeSL,
-					Status:      t.OrderStatusNew,
-					Qty:         h.NormalizeDouble(o.Qty, p.QtyDigits),
-					StopPrice:   h.CalcSLStop(t.OrderSideSell, ticker.Price, slStop, p.PriceDigits),
-					OpenPrice:   h.CalcSLStop(t.OrderSideSell, ticker.Price, slLimit, p.PriceDigits),
-					OpenOrderID: o.ID,
-				}
-				if isFutures {
-					slo.PosSide = o.PosSide
-				}
-				closeOrders = append(closeOrders, slo)
-			}
-		}
-
-		// Take Profit, by the configured Volatility Stop (TP)
-		if p.AutoTP {
-			qo.Side = t.OrderSideSell
-			for _, o := range db.GetFilledLimitOrdersBySide(qo) {
-				if ticker.Price < o.OpenPrice-atr*p.AtrTP && db.GetTPOrder(o.ID) == nil {
-					tpo := t.Order{
-						ID:          h.GenID(),
-						BotID:       p.BotID,
-						Exchange:    qo.Exchange,
-						Symbol:      qo.Symbol,
-						Side:        t.OrderSideBuy,
-						Type:        t.OrderTypeTP,
-						Status:      t.OrderStatusNew,
-						Qty:         h.NormalizeDouble(o.Qty, p.QtyDigits),
-						StopPrice:   h.CalcTPStop(t.OrderSideBuy, ticker.Price, tpStop, p.PriceDigits),
-						OpenPrice:   h.CalcTPStop(t.OrderSideBuy, ticker.Price, tpLimit, p.PriceDigits),
-						OpenOrderID: o.ID,
-					}
-					if isFutures {
-						tpo.PosSide = o.PosSide
-					}
-					closeOrders = append(closeOrders, tpo)
-				}
-			}
-		}
-
-		// Open a new limit order with safe minimum price gap
-		if p.View == t.ViewShort || p.View == t.ViewNeutral {
-			_openPrice := h.CalcAfterLimitStop(t.OrderSideSell, ticker.Price, openLimit, p.PriceDigits)
+		if p.View == t.ViewNeutral || p.View == t.ViewShort {
+			_openPrice := h.CalcStopBehindTicker(t.OrderSideSell, ticker.Price, openLimit, p.PriceDigits)
 			qo.Side = t.OrderSideSell
 			qo.OpenPrice = _openPrice
 			norder := db.GetNearestOrder(qo)
+			// Open a new limit order with safe minimum price gap
 			if _openPrice > cma_0 && (norder == nil || math.Abs(norder.OpenPrice-_openPrice) >= p.MinGap) {
 				o := t.Order{
 					ID:        h.GenID(),
@@ -215,6 +283,7 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 					OpenPrice: qo.OpenPrice,
 				}
 				if isFutures {
+					o.Side = t.OrderSideBuy
 					o.PosSide = t.OrderPosSideShort
 				}
 				openOrders = append(openOrders, o)

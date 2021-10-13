@@ -144,7 +144,7 @@ func (d DB) GetLimitOrders(o t.Order) []t.Order {
 	return orders
 }
 
-// GetLimitOrdersBySide returns the LIMIT orders that are not canceled for the specified side
+// GetLimitOrdersBySide returns the LIMIT orders that are not canceled
 func (d DB) GetLimitOrdersBySide(o t.Order) []t.Order {
 	var orders []t.Order
 	q := d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND type = ? AND status <> ? AND close_order_id = ''",
@@ -165,11 +165,30 @@ func (d DB) GetLimitOrdersBySide(o t.Order) []t.Order {
 	return orders
 }
 
-// GetFilledLimitOrdersBySide returns the LIMIT orders that their status is FILLED for the specified side
-func (d DB) GetFilledLimitOrdersBySide(o t.Order) []t.Order {
+// GetFilledLimitBuyOrders returns the LIMIT BUY orders that their status is FILLED
+func (d DB) GetFilledLimitBuyOrders(o t.Order) []t.Order {
 	var orders []t.Order
-	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND type = ? AND status = ? AND close_order_id = ''",
-		o.BotID, o.Exchange, o.Symbol, o.Side, t.OrderTypeLimit, t.OrderStatusFilled).Find(&orders)
+	d.db.Where(
+		`bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND side = ? AND status = ? AND close_order_id = ''`,
+		o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderSideBuy, t.OrderStatusFilled).Find(&orders)
+	return orders
+}
+
+// GetFilledLimitOrders returns the LIMIT LONG orders that their status is FILLED
+func (d DB) GetFilledLimitLongOrders(o t.Order) []t.Order {
+	var orders []t.Order
+	d.db.Where(
+		`bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND pos_side = ? AND status = ? AND close_order_id = ''`,
+		o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderPosSideLong, t.OrderStatusFilled).Find(&orders)
+	return orders
+}
+
+// GetFilledLimitOrders returns the LIMIT SHORT orders that their status is FILLED
+func (d DB) GetFilledLimitShortOrders(o t.Order) []t.Order {
+	var orders []t.Order
+	d.db.Where(
+		`bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND pos_side = ? AND status = ? AND close_order_id = ''`,
+		o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderPosSideShort, t.OrderStatusFilled).Find(&orders)
 	return orders
 }
 
@@ -181,20 +200,38 @@ func (d DB) GetNewOrders(o t.Order) []t.Order {
 	return orders
 }
 
-// GetNewOrdersBySide returns the orders that their status is NEW for the specified side
-func (d DB) GetNewOrdersBySide(o t.Order) []t.Order {
+// GetNewBuyOrders returns the BUY orders that their status is NEW
+func (d DB) GetNewBuyOrders(o t.Order) []t.Order {
 	var orders []t.Order
 	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND status = ? AND side = ?",
-		o.BotID, o.Exchange, o.Symbol, t.OrderStatusNew, o.Side).Find(&orders)
+		o.BotID, o.Exchange, o.Symbol, t.OrderStatusNew, t.OrderSideBuy).Find(&orders)
 	return orders
 }
 
-// GetFilledOrders returns the orders that their status is FILLED
-func (d DB) GetFilledOrders(o t.Order) []t.Order {
+// GetHighestNewLongOrder returns the highest price NEW LONG order
+func (d DB) GetHighestNewLongOrder(o t.Order) *t.Order {
 	var orders []t.Order
-	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND status = ? AND close_order_id = ''",
-		o.BotID, o.Exchange, o.Symbol, t.OrderStatusFilled).Find(&orders)
-	return orders
+	d.db.Where(
+		`bot_id = ? AND exchange = ? AND symbol = ? AND pos_side = ? AND type = ? AND status = ?`,
+		o.BotID, o.Exchange, o.Symbol, t.OrderPosSideLong, t.OrderTypeLimit, t.OrderStatusNew).
+		Order("open_price desc").Limit(1).Find(&orders)
+	if len(orders) == 0 {
+		return nil
+	}
+	return &orders[0]
+}
+
+// GetLowestNewShortOrder returns the lowest price NEW SHORT order
+func (d DB) GetLowestNewShortOrder(o t.Order) *t.Order {
+	var orders []t.Order
+	d.db.Where(
+		`bot_id = ? AND exchange = ? AND symbol = ? AND pos_side = ? AND type = ? AND status = ?`,
+		o.BotID, o.Exchange, o.Symbol, t.OrderPosSideShort, t.OrderTypeLimit, t.OrderStatusNew).
+		Order("open_price asc").Limit(1).Find(&orders)
+	if len(orders) == 0 {
+		return nil
+	}
+	return &orders[0]
 }
 
 // GetOppositeOrder returns the opposite order that will close this order
@@ -246,12 +283,78 @@ func (d DB) GetTPOrders(o t.Order) []t.Order {
 	return orders
 }
 
-// GetLowestTPBuyOrder returns the lowest price TP order of the BUY order that is not CANCELED
-func (d DB) GetLowestTPBuyOrder(o t.Order) *t.Order {
+// GetHighestSLOrder returns the highest price SL order that is active
+func (d DB) GetHighestSLOrder(o t.Order) *t.Order {
 	var orders []t.Order
-	d.db.Where(`bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND type = ?
-	AND status <> ? AND close_time = 0`, o.BotID, o.Exchange, o.Symbol, t.OrderSideSell, t.OrderTypeTP,
-		t.OrderStatusCanceled).Order("open_price asc").Limit(1).Find(&orders)
+	d.db.Where(
+		`bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND status <> ? AND close_time = 0`,
+		o.BotID, o.Exchange, o.Symbol, t.OrderTypeSL, t.OrderStatusCanceled).
+		Order("open_price desc").Limit(1).Find(&orders)
+	if len(orders) == 0 {
+		return nil
+	}
+	return &orders[0]
+}
+
+// GetLowestTPOrder returns the lowest price TP order that is active
+func (d DB) GetLowestTPOrder(o t.Order) *t.Order {
+	var orders []t.Order
+	d.db.Where(
+		`bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND status <> ? AND close_time = 0`,
+		o.BotID, o.Exchange, o.Symbol, t.OrderTypeTP, t.OrderStatusCanceled).
+		Order("open_price asc").Limit(1).Find(&orders)
+	if len(orders) == 0 {
+		return nil
+	}
+	return &orders[0]
+}
+
+// GetHighestSLLongOrder returns the highest price SL LONG order that is active
+func (d DB) GetHighestSLLongOrder(o t.Order) *t.Order {
+	var orders []t.Order
+	d.db.Where(
+		`bot_id = ? AND exchange = ? AND symbol = ? AND pos_side = ? AND type = ? AND status <> ? AND close_time = 0`,
+		o.BotID, o.Exchange, o.Symbol, t.OrderPosSideLong, t.OrderTypeFSL, t.OrderStatusCanceled).
+		Order("open_price desc").Limit(1).Find(&orders)
+	if len(orders) == 0 {
+		return nil
+	}
+	return &orders[0]
+}
+
+// GetLowestSLShortOrder returns the lowest price SL SHORT order that is active
+func (d DB) GetLowestSLShortOrder(o t.Order) *t.Order {
+	var orders []t.Order
+	d.db.Where(
+		`bot_id = ? AND exchange = ? AND symbol = ? AND pos_side = ? AND type = ? AND status <> ? AND close_time = 0`,
+		o.BotID, o.Exchange, o.Symbol, t.OrderPosSideShort, t.OrderTypeFSL, t.OrderStatusCanceled).
+		Order("open_price asc").Limit(1).Find(&orders)
+	if len(orders) == 0 {
+		return nil
+	}
+	return &orders[0]
+}
+
+// GetLowestTPLongOrder returns the lowest price TP LONG order that is active
+func (d DB) GetLowestTPLongOrder(o t.Order) *t.Order {
+	var orders []t.Order
+	d.db.Where(
+		`bot_id = ? AND exchange = ? AND symbol = ? AND pos_side = ? AND type = ? AND status <> ? AND close_time = 0`,
+		o.BotID, o.Exchange, o.Symbol, t.OrderPosSideLong, t.OrderTypeFTP, t.OrderStatusCanceled).
+		Order("open_price asc").Limit(1).Find(&orders)
+	if len(orders) == 0 {
+		return nil
+	}
+	return &orders[0]
+}
+
+// GetHighestTPShortOrder returns the highest price TP SHORT order that is active
+func (d DB) GetHighestTPShortOrder(o t.Order) *t.Order {
+	var orders []t.Order
+	d.db.Where(
+		`bot_id = ? AND exchange = ? AND symbol = ? AND pos_side = ? AND type = ? AND status <> ? AND close_time = 0`,
+		o.BotID, o.Exchange, o.Symbol, t.OrderPosSideShort, t.OrderTypeFTP, t.OrderStatusCanceled).
+		Order("open_price desc").Limit(1).Find(&orders)
 	if len(orders) == 0 {
 		return nil
 	}

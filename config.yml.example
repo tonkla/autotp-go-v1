@@ -62,20 +62,28 @@ maTimeframe: 1h
 # The period that use to calculate a Moving Average
 maPeriod: 20
 
+# The Margin-of-Safety multiplier from the high/low of the previous bar
+mos: 0.5
+
 # Will Stop Loss automatically?
 autoSL: false
 
 # Will Take Profit automatically?
 autoTP: true
 
-# The Margin-of-Safety multiplier from the previous bar
-mos: 0.5
+# Stop Loss by quote currency value (-BUSD when BNBBUSD) (the first priority SL)
+quoteSL: 10
+
+# Take Profit by quote currency value (+BUSD when BNBBUSD) (the first priority TP)
+quoteTP: 10
 
 # The multiplier of the "maTimeframe"'s ATR that use to calculate a Volatility Stop (SL)
 # Read more, https://tradeciety.com/stop-loss-tips/
+# (the second priority SL, used when quoteSL=0)
 atrSL: 0.5
 
 # The multiplier of the "maTimeframe"'s ATR that use to calculate a Volatility Stop (TP)
+# (the second priority TP, used when quoteTP=0)
 atrTP: 0.5
 
 # The minimum price gap between two orders
