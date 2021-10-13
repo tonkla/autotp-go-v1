@@ -137,7 +137,6 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 					OpenOrderID: o.ID,
 				}
 				if isFutures {
-					slo.Side = t.OrderSideSell
 					slo.Type = t.OrderTypeFSL
 					slo.PosSide = o.PosSide
 				}
@@ -225,7 +224,6 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 					OpenOrderID: o.ID,
 				}
 				if isFutures {
-					tpo.Side = t.OrderSideSell
 					tpo.Type = t.OrderTypeFTP
 					tpo.PosSide = o.PosSide
 				}
@@ -283,7 +281,6 @@ func OnTick(params OnTickParams) *t.TradeOrders {
 					OpenPrice: qo.OpenPrice,
 				}
 				if isFutures {
-					o.Side = t.OrderSideBuy
 					o.PosSide = t.OrderPosSideShort
 				}
 				openOrders = append(openOrders, o)
