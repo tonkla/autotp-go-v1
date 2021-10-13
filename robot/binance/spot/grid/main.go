@@ -182,7 +182,7 @@ func placeAsMaker(p *params) {
 
 func openNewOrders(p *params) {
 	for _, o := range p.tradeOrders.OpenOrders {
-		if p.ticker.Price > h.CalcBeforeLimitStop(o.Side, o.OpenPrice, float64(p.openLimit), p.priceDigits) {
+		if o.OpenPrice < h.CalcStopBehindTicker(t.OrderSideBuy, p.ticker.Price, float64(p.openLimit), p.priceDigits) {
 			return
 		}
 
@@ -346,7 +346,7 @@ func syncLowestFilledOrder(p *params) {
 }
 
 func syncLowestTPOrder(p *params) {
-	tpo := p.db.GetLowestTPBuyOrder(*p.queryOrder)
+	tpo := p.db.GetLowestTPOrder(*p.queryOrder)
 	if tpo == nil {
 		return
 	}

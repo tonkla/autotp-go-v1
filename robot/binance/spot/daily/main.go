@@ -222,7 +222,7 @@ func placeAsMaker(p *params) {
 }
 
 func syncTPOrder(p *params) {
-	tpo := p.db.GetLowestTPBuyOrder(*p.queryOrder)
+	tpo := p.db.GetLowestTPOrder(*p.queryOrder)
 	if tpo == nil {
 		return
 	}
