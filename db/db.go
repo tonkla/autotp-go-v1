@@ -248,8 +248,8 @@ func (d DB) GetOppositeOrder(id string) *t.Order {
 // GetSLOrder returns the Stop Loss order of the order
 func (d DB) GetSLOrder(openOrderID string) *t.Order {
 	var order t.Order
-	d.db.Where("open_order_id = ? AND type = ? AND status <> ?",
-		openOrderID, t.OrderTypeSL, t.OrderStatusCanceled).First(&order)
+	d.db.Where("open_order_id = ? AND (type = ? OR type = ?) AND status <> ?",
+		openOrderID, t.OrderTypeSL, t.OrderTypeFSL, t.OrderStatusCanceled).First(&order)
 	if order.ID == "" {
 		return nil
 	}
@@ -259,8 +259,8 @@ func (d DB) GetSLOrder(openOrderID string) *t.Order {
 // GetTPOrder returns the Take Profit order of the order
 func (d DB) GetTPOrder(openOrderID string) *t.Order {
 	var order t.Order
-	d.db.Where("open_order_id = ? AND type = ? AND status <> ?",
-		openOrderID, t.OrderTypeTP, t.OrderStatusCanceled).First(&order)
+	d.db.Where("open_order_id = ? AND (type = ? OR type =?) AND status <> ?",
+		openOrderID, t.OrderTypeTP, t.OrderTypeFTP, t.OrderStatusCanceled).First(&order)
 	if order.ID == "" {
 		return nil
 	}
