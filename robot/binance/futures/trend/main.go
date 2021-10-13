@@ -281,7 +281,7 @@ func syncSLLongOrders(p *params) {
 		o.CloseOrderID = slo.ID
 		o.ClosePrice = slo.OpenPrice
 		o.CloseTime = h.Now13()
-		o.PL = h.NormalizeDouble(((o.OpenPrice-o.ClosePrice)*slo.Qty)-o.Commission-slo.Commission, p.priceDigits)
+		o.PL = h.NormalizeDouble(((o.ClosePrice-o.OpenPrice)*slo.Qty)-o.Commission-slo.Commission, p.priceDigits)
 		err := p.db.UpdateOrder(*o)
 		if err != nil {
 			h.Log(err)
@@ -345,7 +345,7 @@ func syncSLShortOrders(p *params) {
 		o.CloseOrderID = slo.ID
 		o.ClosePrice = slo.OpenPrice
 		o.CloseTime = h.Now13()
-		o.PL = h.NormalizeDouble(((o.ClosePrice-o.OpenPrice)*slo.Qty)-o.Commission-slo.Commission, p.priceDigits)
+		o.PL = h.NormalizeDouble(((o.OpenPrice-o.ClosePrice)*slo.Qty)-o.Commission-slo.Commission, p.priceDigits)
 		err := p.db.UpdateOrder(*o)
 		if err != nil {
 			h.Log(err)
