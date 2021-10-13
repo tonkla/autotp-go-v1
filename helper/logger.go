@@ -15,13 +15,12 @@ func Logf(format string, v ...interface{}) {
 }
 
 func LogNewF(o *types.Order) {
-	log := types.LogCloseFOrder{
+	log := types.LogOpenFOrder{
 		Action:  "NEW",
 		Type:    o.Type,
 		PosSide: o.PosSide,
 		Qty:     o.Qty,
-		Stop:    o.StopPrice,
-		Close:   o.OpenPrice,
+		Open:    o.OpenPrice,
 	}
 	Log(log)
 }
