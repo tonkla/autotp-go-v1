@@ -15,36 +15,15 @@ func Logf(format string, v ...interface{}) {
 }
 
 func LogNewF(o *types.Order) {
-	log := types.LogOpenFOrder{
-		Action:  "NEW",
-		Type:    o.Type,
-		PosSide: o.PosSide,
-		Qty:     o.Qty,
-		Open:    o.OpenPrice,
-	}
-	Log(log)
+	logOpen("NEW", o)
 }
 
 func LogFilledF(o *types.Order) {
-	log := types.LogCloseFOrder{
-		Action:  "FILLED",
-		Type:    o.Type,
-		PosSide: o.PosSide,
-		Qty:     o.Qty,
-		Open:    o.OpenPrice,
-	}
-	Log(log)
+	logOpen("FILLED", o)
 }
 
 func LogCanceledF(o *types.Order) {
-	log := types.LogCloseFOrder{
-		Action:  "CANCELED",
-		Type:    o.Type,
-		PosSide: o.PosSide,
-		Qty:     o.Qty,
-		Open:    o.OpenPrice,
-	}
-	Log(log)
+	logOpen("CANCELED", o)
 }
 
 func LogClosedF(open *types.Order, close *types.Order) {
@@ -56,6 +35,17 @@ func LogClosedF(open *types.Order, close *types.Order) {
 		Close:   open.ClosePrice,
 		Open:    open.OpenPrice,
 		Profit:  open.PL,
+	}
+	Log(log)
+}
+
+func logOpen(action string, o *types.Order) {
+	log := types.LogOpenFOrder{
+		Action:  action,
+		Type:    o.Type,
+		PosSide: o.PosSide,
+		Qty:     o.Qty,
+		Open:    o.OpenPrice,
 	}
 	Log(log)
 }
