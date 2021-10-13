@@ -192,7 +192,6 @@ func placeAsMaker(p *params) {
 		log := t.LogCloseOrder{
 			Action: "NEW_TP",
 			Qty:    o.Qty,
-			Stop:   o.StopPrice,
 			Close:  o.OpenPrice,
 		}
 		h.Log(log)

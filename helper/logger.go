@@ -41,8 +41,8 @@ func LogCanceledF(o *types.Order) {
 func LogClosed(open *types.Order, close *types.Order) {
 	log := types.LogCloseOrder{
 		Action: "CLOSED",
+		Type:   close.Type,
 		Qty:    close.Qty,
-		Stop:   open.StopPrice,
 		Close:  open.ClosePrice,
 		Zone:   open.ZonePrice,
 		Open:   open.OpenPrice,
@@ -67,6 +67,7 @@ func LogClosedF(open *types.Order, close *types.Order) {
 func logOpen(action string, o *types.Order) {
 	log := types.LogOpenOrder{
 		Action: action,
+		Type:   o.Type,
 		Qty:    o.Qty,
 		Open:   o.OpenPrice,
 		Zone:   o.ZonePrice,

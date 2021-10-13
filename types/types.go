@@ -92,6 +92,7 @@ type Order struct {
 
 type LogOpenOrder struct {
 	Action string
+	Type   string
 	Qty    float64
 	Open   float64
 	Zone   float64
@@ -108,8 +109,8 @@ type LogOpenFOrder struct {
 
 type LogCloseOrder struct {
 	Action string
+	Type   string
 	Qty    float64
-	Stop   float64
 	Close  float64
 	Open   float64
 	Zone   float64

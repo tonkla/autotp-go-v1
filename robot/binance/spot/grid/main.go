@@ -201,14 +201,7 @@ func openNewOrders(p *params) {
 			h.Log("CreateOrder", err)
 			continue
 		}
-		log := t.LogOpenOrder{
-			Action: "NEW",
-			Qty:    o.Qty,
-			Open:   o.OpenPrice,
-			Zone:   o.ZonePrice,
-			TP:     o.TPPrice,
-		}
-		h.Log(log)
+		h.LogNew(&o)
 	}
 }
 
@@ -237,23 +230,10 @@ func syncHighestNewOrder(p *params) {
 			return
 		}
 		if exo.Status == t.OrderStatusFilled {
-			log := t.LogOpenOrder{
-				Action: "FILLED",
-				Qty:    o.Qty,
-				Open:   o.OpenPrice,
-				Zone:   o.ZonePrice,
-				TP:     o.TPPrice,
-			}
-			h.Log(log)
+			h.LogFilled(o)
 		}
 		if exo.Status == t.OrderStatusCanceled {
-			log := t.LogOpenOrder{
-				Action: "CANCELED",
-				Qty:    o.Qty,
-				Open:   o.OpenPrice,
-				Zone:   o.ZonePrice,
-			}
-			h.Log(log)
+			h.LogCanceled(o)
 		}
 	}
 }
@@ -283,12 +263,7 @@ func syncLowestFilledOrder(p *params) {
 				h.Log(err)
 				return
 			}
-			log := t.LogCloseOrder{
-				Action: "CANCELED_TP",
-				Qty:    tpo.Qty,
-				Open:   tpo.OpenPrice,
-			}
-			h.Log(log)
+			h.LogCanceled(&tpo)
 		}
 
 		if p.ticker.Price < h.CalcTPStop(o.Side, o.TPPrice, float64(p.tpStop), p.priceDigits) {
@@ -335,13 +310,7 @@ func syncLowestFilledOrder(p *params) {
 			h.Log(err)
 			return
 		}
-		log := t.LogCloseOrder{
-			Action: "NEW_TP",
-			Qty:    tpo.Qty,
-			Close:  tpo.OpenPrice,
-			Zone:   o.ZonePrice,
-		}
-		h.Log(log)
+		h.LogNew(&tpo)
 	}
 }
 
@@ -368,12 +337,7 @@ func syncLowestTPOrder(p *params) {
 			return
 		}
 		if exo.Status == t.OrderStatusCanceled {
-			log := t.LogCloseOrder{
-				Action: "CANCELED_TP",
-				Qty:    tpo.Qty,
-				Open:   tpo.OpenPrice,
-			}
-			h.Log(log)
+			h.LogCanceled(tpo)
 			return
 		}
 	}
@@ -392,15 +356,7 @@ func syncLowestTPOrder(p *params) {
 			h.Log(err)
 			return
 		}
-		log := t.LogCloseOrder{
-			Action: "FILLED_TP",
-			Qty:    tpo.Qty,
-			Close:  oo.ClosePrice,
-			Open:   oo.OpenPrice,
-			Zone:   oo.ZonePrice,
-			Profit: oo.PL,
-		}
-		h.Log(log)
+		h.LogClosed(oo, tpo)
 
 		tpo.CloseTime = oo.CloseTime
 		err = p.db.UpdateOrder(*tpo)
@@ -444,14 +400,7 @@ func placeAsTaker(p *params) {
 			h.Log("CreateOrder", err)
 			continue
 		}
-		log := t.LogOpenOrder{
-			Action: "FILLED",
-			Qty:    o.Qty,
-			Open:   o.OpenPrice,
-			Zone:   o.ZonePrice,
-			TP:     o.TPPrice,
-		}
-		h.Log(log)
+		h.LogFilled(&o)
 	}
 
 	// Take Profit ---------------------------------------------------------------
@@ -506,14 +455,6 @@ func placeAsTaker(p *params) {
 			h.Log("UpdateOrder", err)
 			return
 		}
-		log := t.LogCloseOrder{
-			Action: "FILLED_TP",
-			Qty:    tpo.Qty,
-			Close:  o.ClosePrice,
-			Open:   o.OpenPrice,
-			Zone:   o.ZonePrice,
-			Profit: o.PL,
-		}
-		h.Log(log)
+		h.LogClosed(o, &tpo)
 	}
 }
