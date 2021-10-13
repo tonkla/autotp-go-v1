@@ -100,12 +100,13 @@ type LogOpenOrder struct {
 
 type LogOpenFOrder struct {
 	Action  string
+	Type    string
 	PosSide string
 	Qty     float64
 	Open    float64
 }
 
-type LogTPOrder struct {
+type LogCloseOrder struct {
 	Action string
 	Qty    float64
 	Stop   float64
@@ -113,6 +114,17 @@ type LogTPOrder struct {
 	Open   float64
 	Zone   float64
 	Profit float64
+}
+
+type LogCloseFOrder struct {
+	Action  string
+	Type    string
+	PosSide string
+	Qty     float64
+	Stop    float64
+	Close   float64
+	Open    float64
+	Profit  float64
 }
 
 type TradeOrders struct {

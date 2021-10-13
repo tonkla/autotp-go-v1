@@ -283,7 +283,7 @@ func syncLowestFilledOrder(p *params) {
 				h.Log(err)
 				return
 			}
-			log := t.LogTPOrder{
+			log := t.LogCloseOrder{
 				Action: "CANCELED_TP",
 				Qty:    tpo.Qty,
 				Open:   tpo.OpenPrice,
@@ -335,7 +335,7 @@ func syncLowestFilledOrder(p *params) {
 			h.Log(err)
 			return
 		}
-		log := t.LogTPOrder{
+		log := t.LogCloseOrder{
 			Action: "NEW_TP",
 			Qty:    tpo.Qty,
 			Close:  tpo.OpenPrice,
@@ -368,7 +368,7 @@ func syncLowestTPOrder(p *params) {
 			return
 		}
 		if exo.Status == t.OrderStatusCanceled {
-			log := t.LogTPOrder{
+			log := t.LogCloseOrder{
 				Action: "CANCELED_TP",
 				Qty:    tpo.Qty,
 				Open:   tpo.OpenPrice,
@@ -392,7 +392,7 @@ func syncLowestTPOrder(p *params) {
 			h.Log(err)
 			return
 		}
-		log := t.LogTPOrder{
+		log := t.LogCloseOrder{
 			Action: "FILLED_TP",
 			Qty:    tpo.Qty,
 			Close:  oo.ClosePrice,
@@ -506,7 +506,7 @@ func placeAsTaker(p *params) {
 			h.Log("UpdateOrder", err)
 			return
 		}
-		log := t.LogTPOrder{
+		log := t.LogCloseOrder{
 			Action: "FILLED_TP",
 			Qty:    tpo.Qty,
 			Close:  o.ClosePrice,

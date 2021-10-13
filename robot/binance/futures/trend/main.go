@@ -204,15 +204,13 @@ func placeAsMaker(p *params) {
 			return
 		}
 
-		_action := "NEW_TP"
-		if o.Type == t.OrderTypeFSL {
-			_action = "NEW_SL"
-		}
-		log := t.LogTPOrder{
-			Action: _action,
-			Qty:    o.Qty,
-			Stop:   o.StopPrice,
-			Close:  o.OpenPrice,
+		log := t.LogCloseFOrder{
+			Action:  "NEW",
+			Type:    o.Type,
+			PosSide: o.PosSide,
+			Qty:     o.Qty,
+			Stop:    o.StopPrice,
+			Close:   o.OpenPrice,
 		}
 		h.Log(log)
 	}
@@ -236,6 +234,7 @@ func placeAsMaker(p *params) {
 
 		log := t.LogOpenFOrder{
 			Action:  "NEW",
+			Type:    o.Type,
 			PosSide: o.PosSide,
 			Qty:     o.Qty,
 			Open:    o.OpenPrice,
@@ -275,19 +274,23 @@ func syncSLLongOrders(p *params) {
 		}
 
 		if exo.Status == t.OrderStatusFilled {
-			log := t.LogTPOrder{
-				Action: "FILLED_SL_LONG",
-				Qty:    slo.Qty,
-				Open:   slo.OpenPrice,
+			log := t.LogCloseFOrder{
+				Action:  "FILLED",
+				Type:    slo.Type,
+				PosSide: slo.PosSide,
+				Qty:     slo.Qty,
+				Open:    slo.OpenPrice,
 			}
 			h.Log(log)
 		}
 
 		if exo.Status == t.OrderStatusCanceled {
-			log := t.LogTPOrder{
-				Action: "CANCELED_SL_LONG",
-				Qty:    slo.Qty,
-				Open:   slo.OpenPrice,
+			log := t.LogCloseFOrder{
+				Action:  "CANCELED",
+				Type:    slo.Type,
+				PosSide: slo.PosSide,
+				Qty:     slo.Qty,
+				Open:    slo.OpenPrice,
 			}
 			h.Log(log)
 		}
@@ -316,12 +319,14 @@ func syncSLLongOrders(p *params) {
 			return
 		}
 
-		log := t.LogTPOrder{
-			Action: "CLOSED_SL_LONG",
-			Qty:    slo.Qty,
-			Close:  o.ClosePrice,
-			Open:   o.OpenPrice,
-			Profit: o.PL,
+		log := t.LogCloseFOrder{
+			Action:  "CLOSED",
+			Type:    slo.Type,
+			PosSide: slo.PosSide,
+			Qty:     slo.Qty,
+			Close:   o.ClosePrice,
+			Open:    o.OpenPrice,
+			Profit:  o.PL,
 		}
 		h.Log(log)
 	}
@@ -351,19 +356,23 @@ func syncSLShortOrders(p *params) {
 		}
 
 		if exo.Status == t.OrderStatusFilled {
-			log := t.LogTPOrder{
-				Action: "FILLED_SL_SHORT",
-				Qty:    slo.Qty,
-				Open:   slo.OpenPrice,
+			log := t.LogCloseFOrder{
+				Action:  "FILLED",
+				Type:    slo.Type,
+				PosSide: slo.PosSide,
+				Qty:     slo.Qty,
+				Open:    slo.OpenPrice,
 			}
 			h.Log(log)
 		}
 
 		if exo.Status == t.OrderStatusCanceled {
-			log := t.LogTPOrder{
-				Action: "CANCELED_SL_SHORT",
-				Qty:    slo.Qty,
-				Open:   slo.OpenPrice,
+			log := t.LogCloseFOrder{
+				Action:  "CANCELED",
+				Type:    slo.Type,
+				PosSide: slo.PosSide,
+				Qty:     slo.Qty,
+				Open:    slo.OpenPrice,
 			}
 			h.Log(log)
 		}
@@ -392,12 +401,14 @@ func syncSLShortOrders(p *params) {
 			return
 		}
 
-		log := t.LogTPOrder{
-			Action: "CLOSED_SL_SHORT",
-			Qty:    slo.Qty,
-			Close:  o.ClosePrice,
-			Open:   o.OpenPrice,
-			Profit: o.PL,
+		log := t.LogCloseFOrder{
+			Action:  "CLOSED",
+			Type:    slo.Type,
+			PosSide: slo.PosSide,
+			Qty:     slo.Qty,
+			Close:   o.ClosePrice,
+			Open:    o.OpenPrice,
+			Profit:  o.PL,
 		}
 		h.Log(log)
 	}
@@ -427,19 +438,23 @@ func syncTPLongOrders(p *params) {
 		}
 
 		if exo.Status == t.OrderStatusFilled {
-			log := t.LogTPOrder{
-				Action: "FILLED_TP_LONG",
-				Qty:    tpo.Qty,
-				Open:   tpo.OpenPrice,
+			log := t.LogCloseFOrder{
+				Action:  "FILLED",
+				Type:    tpo.Type,
+				PosSide: tpo.PosSide,
+				Qty:     tpo.Qty,
+				Open:    tpo.OpenPrice,
 			}
 			h.Log(log)
 		}
 
 		if exo.Status == t.OrderStatusCanceled {
-			log := t.LogTPOrder{
-				Action: "CANCELED_TP_LONG",
-				Qty:    tpo.Qty,
-				Open:   tpo.OpenPrice,
+			log := t.LogCloseFOrder{
+				Action:  "CANCELED",
+				Type:    tpo.Type,
+				PosSide: tpo.PosSide,
+				Qty:     tpo.Qty,
+				Open:    tpo.OpenPrice,
 			}
 			h.Log(log)
 		}
@@ -468,12 +483,14 @@ func syncTPLongOrders(p *params) {
 			return
 		}
 
-		log := t.LogTPOrder{
-			Action: "CLOSED_TP_LONG",
-			Qty:    tpo.Qty,
-			Close:  o.ClosePrice,
-			Open:   o.OpenPrice,
-			Profit: o.PL,
+		log := t.LogCloseFOrder{
+			Action:  "CLOSED",
+			Type:    tpo.Type,
+			PosSide: tpo.PosSide,
+			Qty:     tpo.Qty,
+			Close:   o.ClosePrice,
+			Open:    o.OpenPrice,
+			Profit:  o.PL,
 		}
 		h.Log(log)
 	}
@@ -503,19 +520,23 @@ func syncTPShortOrders(p *params) {
 		}
 
 		if exo.Status == t.OrderStatusFilled {
-			log := t.LogTPOrder{
-				Action: "FILLED_TP_SHORT",
-				Qty:    tpo.Qty,
-				Open:   tpo.OpenPrice,
+			log := t.LogCloseFOrder{
+				Action:  "FILLED",
+				Type:    tpo.Type,
+				PosSide: tpo.PosSide,
+				Qty:     tpo.Qty,
+				Open:    tpo.OpenPrice,
 			}
 			h.Log(log)
 		}
 
 		if exo.Status == t.OrderStatusCanceled {
-			log := t.LogTPOrder{
-				Action: "CANCELED_TP_SHORT",
-				Qty:    tpo.Qty,
-				Open:   tpo.OpenPrice,
+			log := t.LogCloseFOrder{
+				Action:  "CANCELED",
+				Type:    tpo.Type,
+				PosSide: tpo.PosSide,
+				Qty:     tpo.Qty,
+				Open:    tpo.OpenPrice,
 			}
 			h.Log(log)
 		}
@@ -544,12 +565,14 @@ func syncTPShortOrders(p *params) {
 			return
 		}
 
-		log := t.LogTPOrder{
-			Action: "CLOSED_TP_SHORT",
-			Qty:    tpo.Qty,
-			Close:  o.ClosePrice,
-			Open:   o.OpenPrice,
-			Profit: o.PL,
+		log := t.LogCloseFOrder{
+			Action:  "CLOSED",
+			Type:    tpo.Type,
+			PosSide: tpo.PosSide,
+			Qty:     tpo.Qty,
+			Close:   o.ClosePrice,
+			Open:    o.OpenPrice,
+			Profit:  o.PL,
 		}
 		h.Log(log)
 	}
@@ -578,18 +601,22 @@ func syncLimitLongOrders(p *params) {
 			return
 		}
 		if exo.Status == t.OrderStatusFilled {
-			log := t.LogOpenOrder{
-				Action: "FILLED_LONG",
-				Qty:    o.Qty,
-				Open:   o.OpenPrice,
+			log := t.LogOpenFOrder{
+				Action:  "FILLED",
+				Type:    o.Type,
+				PosSide: o.PosSide,
+				Qty:     o.Qty,
+				Open:    o.OpenPrice,
 			}
 			h.Log(log)
 		}
 		if exo.Status == t.OrderStatusCanceled {
-			log := t.LogOpenOrder{
-				Action: "CANCELED_LONG",
-				Qty:    o.Qty,
-				Open:   o.OpenPrice,
+			log := t.LogOpenFOrder{
+				Action:  "CANCELED",
+				Type:    o.Type,
+				PosSide: o.PosSide,
+				Qty:     o.Qty,
+				Open:    o.OpenPrice,
 			}
 			h.Log(log)
 		}
@@ -619,18 +646,22 @@ func syncLimitShortOrders(p *params) {
 			return
 		}
 		if exo.Status == t.OrderStatusFilled {
-			log := t.LogOpenOrder{
-				Action: "FILLED_SHORT",
-				Qty:    o.Qty,
-				Open:   o.OpenPrice,
+			log := t.LogOpenFOrder{
+				Action:  "FILLED",
+				Type:    o.Type,
+				PosSide: o.PosSide,
+				Qty:     o.Qty,
+				Open:    o.OpenPrice,
 			}
 			h.Log(log)
 		}
 		if exo.Status == t.OrderStatusCanceled {
-			log := t.LogOpenOrder{
-				Action: "CANCELED_SHORT",
-				Qty:    o.Qty,
-				Open:   o.OpenPrice,
+			log := t.LogOpenFOrder{
+				Action:  "CANCELED",
+				Type:    o.Type,
+				PosSide: o.PosSide,
+				Qty:     o.Qty,
+				Open:    o.OpenPrice,
 			}
 			h.Log(log)
 		}

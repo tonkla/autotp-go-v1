@@ -189,7 +189,7 @@ func placeAsMaker(p *params) {
 			return
 		}
 
-		log := t.LogTPOrder{
+		log := t.LogCloseOrder{
 			Action: "NEW_TP",
 			Qty:    o.Qty,
 			Stop:   o.StopPrice,
@@ -249,7 +249,7 @@ func syncTPOrder(p *params) {
 		}
 
 		if exo.Status == t.OrderStatusFilled {
-			log := t.LogTPOrder{
+			log := t.LogCloseOrder{
 				Action: "FILLED_TP",
 				Qty:    tpo.Qty,
 				Open:   tpo.OpenPrice,
@@ -258,7 +258,7 @@ func syncTPOrder(p *params) {
 		}
 
 		if exo.Status == t.OrderStatusCanceled {
-			log := t.LogTPOrder{
+			log := t.LogCloseOrder{
 				Action: "CANCELED_TP",
 				Qty:    tpo.Qty,
 				Open:   tpo.OpenPrice,
@@ -290,7 +290,7 @@ func syncTPOrder(p *params) {
 			return
 		}
 
-		log := t.LogTPOrder{
+		log := t.LogCloseOrder{
 			Action: "CLOSED_TP",
 			Qty:    tpo.Qty,
 			Close:  o.ClosePrice,
