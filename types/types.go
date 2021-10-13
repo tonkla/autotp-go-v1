@@ -81,7 +81,7 @@ type Order struct {
 	OpenOrderID  string `gorm:"index"`
 	CloseOrderID string `gorm:"index"`
 
-	CloseTime  int64
+	CloseTime  int64 `gorm:"index"`
 	OpenTime   int64
 	UpdateTime int64
 

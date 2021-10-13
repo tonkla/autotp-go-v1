@@ -32,7 +32,7 @@ func Connect(dbName string) *DB {
 func (d DB) IsEmptyZone(o t.Order) bool {
 	var order t.Order
 	d.db.Where(`bot_id = ? AND exchange = ? AND symbol = ? AND zone_price = ? AND side = ?
-	AND (type = ? OR type = ?) AND status <> ? AND close_order_id = ''`,
+	AND (type = ? OR type = ?) AND status <> ? AND close_time = 0`,
 		o.BotID, o.Exchange, o.Symbol, o.ZonePrice, o.Side, t.OrderTypeLimit, t.OrderTypeMarket,
 		t.OrderStatusCanceled).First(&order)
 	return order.OpenPrice == 0
@@ -52,7 +52,7 @@ func (d DB) GetOrderByID(id string) *t.Order {
 func (d DB) GetHighestNewBuyOrder(o t.Order) *t.Order {
 	var orders []t.Order
 	d.db.Where(`bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND type = ?
-	AND status = ? AND close_order_id = ''`, o.BotID, o.Exchange, o.Symbol, t.OrderSideBuy,
+	AND status = ? AND close_time = 0`, o.BotID, o.Exchange, o.Symbol, t.OrderSideBuy,
 		t.OrderTypeLimit, t.OrderStatusNew).Order("zone_price desc").Limit(1).Find(&orders)
 	if len(orders) == 0 {
 		return nil
@@ -64,7 +64,7 @@ func (d DB) GetHighestNewBuyOrder(o t.Order) *t.Order {
 func (d DB) GetLowestNewSellOrder(o t.Order) *t.Order {
 	var orders []t.Order
 	d.db.Where(`bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND type = ?
-	AND status = ? AND close_order_id = ''`, o.BotID, o.Exchange, o.Symbol, t.OrderSideSell,
+	AND status = ? AND close_time = 0`, o.BotID, o.Exchange, o.Symbol, t.OrderSideSell,
 		t.OrderTypeLimit, t.OrderStatusNew).Order("zone_price asc").Limit(1).Find(&orders)
 	if len(orders) == 0 {
 		return nil
@@ -76,7 +76,7 @@ func (d DB) GetLowestNewSellOrder(o t.Order) *t.Order {
 func (d DB) GetLowestFilledBuyOrder(o t.Order) *t.Order {
 	var orders []t.Order
 	d.db.Where(`bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND (type = ? OR type = ?)
-	AND status = ? AND close_order_id = ''`, o.BotID, o.Exchange, o.Symbol, t.OrderSideBuy, t.OrderTypeLimit,
+	AND status = ? AND close_time = 0`, o.BotID, o.Exchange, o.Symbol, t.OrderSideBuy, t.OrderTypeLimit,
 		t.OrderTypeMarket, t.OrderStatusFilled).Order("zone_price asc").Limit(1).Find(&orders)
 	if len(orders) == 0 {
 		return nil
@@ -88,7 +88,7 @@ func (d DB) GetLowestFilledBuyOrder(o t.Order) *t.Order {
 func (d DB) GetHighestFilledSellOrder(o t.Order) *t.Order {
 	var orders []t.Order
 	d.db.Where(`bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND (type = ? OR type = ?)
-	AND status = ? AND close_order_id = ''`, o.BotID, o.Exchange, o.Symbol, t.OrderSideSell, t.OrderTypeLimit,
+	AND status = ? AND close_time = 0`, o.BotID, o.Exchange, o.Symbol, t.OrderSideSell, t.OrderTypeLimit,
 		t.OrderTypeMarket, t.OrderStatusFilled).Order("zone_price desc").Limit(1).Find(&orders)
 	if len(orders) == 0 {
 		return nil
@@ -99,7 +99,7 @@ func (d DB) GetHighestFilledSellOrder(o t.Order) *t.Order {
 // GetActiveOrders returns all open orders that are not canceled
 func (d DB) GetActiveOrders(o t.Order) []t.Order {
 	var orders []t.Order
-	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND (type = ? OR type = ?) AND status <> ? AND close_order_id = ''",
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND (type = ? OR type = ?) AND status <> ? AND close_time = 0",
 		o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderTypeMarket, t.OrderStatusCanceled).Find(&orders)
 	return orders
 }
@@ -108,7 +108,7 @@ func (d DB) GetActiveOrders(o t.Order) []t.Order {
 func (d DB) GetActiveOrdersBySide(o t.Order) []t.Order {
 	var orders []t.Order
 	q := d.db.Where(`
-	bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND (type = ? OR type = ?) AND status <> ? AND close_order_id = ''`,
+	bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND (type = ? OR type = ?) AND status <> ? AND close_time = 0`,
 		o.BotID, o.Exchange, o.Symbol, o.Side, t.OrderTypeLimit, t.OrderTypeMarket, t.OrderStatusCanceled)
 	if o.Side == t.OrderSideBuy {
 		q.Order("zone_price asc").Find(&orders)
@@ -124,10 +124,10 @@ func (d DB) GetLimitOrder(o t.Order, slippage float64) *t.Order {
 	if slippage > 0 {
 		lowerPrice := o.OpenPrice - o.OpenPrice*slippage
 		upperPrice := o.OpenPrice + o.OpenPrice*slippage
-		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price BETWEEN ? AND ? AND side = ? AND type = ? AND status <> ? AND close_order_id = ''",
+		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price BETWEEN ? AND ? AND side = ? AND type = ? AND status <> ? AND close_time = 0",
 			o.BotID, o.Exchange, o.Symbol, lowerPrice, upperPrice, o.Side, t.OrderTypeLimit, t.OrderStatusCanceled).First(&order)
 	} else {
-		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price = ? AND side = ? AND type = ? AND status <> ? AND close_order_id = ''",
+		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND open_price = ? AND side = ? AND type = ? AND status <> ? AND close_time = 0",
 			o.BotID, o.Exchange, o.Symbol, o.OpenPrice, o.Side, t.OrderTypeLimit, t.OrderStatusCanceled).First(&order)
 	}
 	if order.OpenPrice == 0 {
@@ -139,7 +139,7 @@ func (d DB) GetLimitOrder(o t.Order, slippage float64) *t.Order {
 // GetLimitOrders returns the LIMIT orders that are not canceled
 func (d DB) GetLimitOrders(o t.Order) []t.Order {
 	var orders []t.Order
-	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND status <> ? AND close_order_id = ''",
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND status <> ? AND close_time = 0",
 		o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderStatusCanceled).Find(&orders)
 	return orders
 }
@@ -147,7 +147,7 @@ func (d DB) GetLimitOrders(o t.Order) []t.Order {
 // GetLimitOrdersBySide returns the LIMIT orders that are not canceled
 func (d DB) GetLimitOrdersBySide(o t.Order) []t.Order {
 	var orders []t.Order
-	q := d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND type = ? AND status <> ? AND close_order_id = ''",
+	q := d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND type = ? AND status <> ? AND close_time = 0",
 		o.BotID, o.Exchange, o.Symbol, o.Side, t.OrderTypeLimit, t.OrderStatusCanceled)
 	if o.Side == t.OrderSideBuy {
 		if o.OpenTime > 0 {
@@ -169,7 +169,7 @@ func (d DB) GetLimitOrdersBySide(o t.Order) []t.Order {
 func (d DB) GetFilledLimitBuyOrders(o t.Order) []t.Order {
 	var orders []t.Order
 	d.db.Where(
-		`bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND side = ? AND status = ? AND close_order_id = ''`,
+		`bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND side = ? AND status = ? AND close_time = 0`,
 		o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderSideBuy, t.OrderStatusFilled).Find(&orders)
 	return orders
 }
@@ -178,7 +178,7 @@ func (d DB) GetFilledLimitBuyOrders(o t.Order) []t.Order {
 func (d DB) GetFilledLimitLongOrders(o t.Order) []t.Order {
 	var orders []t.Order
 	d.db.Where(
-		`bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND pos_side = ? AND status = ? AND close_order_id = ''`,
+		`bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND pos_side = ? AND status = ? AND close_time = 0`,
 		o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderPosSideLong, t.OrderStatusFilled).Find(&orders)
 	return orders
 }
@@ -187,7 +187,7 @@ func (d DB) GetFilledLimitLongOrders(o t.Order) []t.Order {
 func (d DB) GetFilledLimitShortOrders(o t.Order) []t.Order {
 	var orders []t.Order
 	d.db.Where(
-		`bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND pos_side = ? AND status = ? AND close_order_id = ''`,
+		`bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND pos_side = ? AND status = ? AND close_time = 0`,
 		o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderPosSideShort, t.OrderStatusFilled).Find(&orders)
 	return orders
 }
@@ -380,7 +380,7 @@ func (d DB) GetNewTPOrders(o t.Order) []t.Order {
 // GetNearestOrder returns the nearest order of the specified order
 func (d DB) GetNearestOrder(o t.Order) *t.Order {
 	var orders []t.Order
-	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND status <> ? AND close_order_id = ''",
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND status <> ? AND close_time = 0",
 		o.BotID, o.Exchange, o.Symbol, o.Side, t.OrderStatusCanceled).Find(&orders)
 	if len(orders) == 0 {
 		return nil
