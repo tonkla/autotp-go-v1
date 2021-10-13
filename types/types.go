@@ -122,7 +122,6 @@ type LogCloseFOrder struct {
 	Type    string
 	PosSide string
 	Qty     float64
-	Stop    float64
 	Close   float64
 	Open    float64
 	Profit  float64

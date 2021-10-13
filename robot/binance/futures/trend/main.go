@@ -145,7 +145,7 @@ func main() {
 		intervalSec = 3
 	}
 
-	h.Logf("{Exchange:BiFu Symbol:%s BotID:%d Strategy:TF}\n", symbol, botID)
+	h.Logf("{Exchange:BinanceFutures Symbol:%s BotID:%d Strategy:TF}\n", symbol, botID)
 
 	for range time.Tick(time.Duration(intervalSec) * time.Second) {
 		ticker := exchange.GetTicker(symbol)
