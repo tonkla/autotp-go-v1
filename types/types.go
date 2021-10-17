@@ -90,6 +90,22 @@ type Order struct {
 	// CloseOrders []Order `gorm:"foreignKey:OpenOrderID"`
 }
 
+type QueryOrder struct {
+	ID        string
+	RefID     string
+	BotID     int64
+	Exchange  string
+	Symbol    string
+	Side      string
+	PosSide   string
+	Type      string
+	Status    string
+	ZonePrice float64
+	OpenPrice float64
+	OpenTime  int64
+	Qty       float64
+}
+
 type LogOpenOrder struct {
 	Action string
 	Type   string
@@ -127,7 +143,7 @@ type LogCloseFOrder struct {
 	Profit  float64
 }
 
-type TradeOrders struct {
+type TradeOrder struct {
 	OpenOrders  []Order
 	CloseOrders []Order
 }
@@ -169,7 +185,7 @@ type BotParams struct {
 	AtrSL       float64
 	AtrTP       float64
 	MinGap      float64
-	StopLimit   StopLimit
+	SLim        StopLimit
 }
 
 type StopLimit struct {
@@ -178,4 +194,10 @@ type StopLimit struct {
 	TPStop    int64
 	TPLimit   int64
 	OpenLimit int64
+}
+
+type Client struct {
+	BaseURL   string
+	APIKey    string
+	SecretKey string
 }

@@ -176,8 +176,8 @@ func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime in
 	return orders
 }
 
-// PlaceLimitOrder places a limit order on the Binance Spot
-func (c Client) PlaceLimitOrder(o t.Order) (*t.Order, error) {
+// OpenLimitOrder opens a limit order on the Binance Spot
+func (c Client) OpenLimitOrder(o t.Order) (*t.Order, error) {
 	if o.Type != t.OrderTypeLimit {
 		return nil, nil
 	}
@@ -217,8 +217,8 @@ func (c Client) PlaceLimitOrder(o t.Order) (*t.Order, error) {
 	return &o, nil
 }
 
-// PlaceStopOrder places a stop order on the Binance Spot
-func (c Client) PlaceStopOrder(o t.Order) (*t.Order, error) {
+// OpenStopOrder opens a stop order on the Binance Spot
+func (c Client) OpenStopOrder(o t.Order) (*t.Order, error) {
 	if o.Type != t.OrderTypeSL && o.Type != t.OrderTypeTP {
 		return nil, nil
 	}
@@ -249,8 +249,8 @@ func (c Client) PlaceStopOrder(o t.Order) (*t.Order, error) {
 	return &o, nil
 }
 
-// PlaceMarketOrder places a market order on the Binance Spot
-func (c Client) PlaceMarketOrder(o t.Order) (*t.Order, error) {
+// OpenMarketOrder opens a market order on the Binance Spot
+func (c Client) OpenMarketOrder(o t.Order) (*t.Order, error) {
 	if o.Type != t.OrderTypeMarket {
 		return nil, nil
 	}
@@ -329,4 +329,8 @@ func (c Client) GetOrder(o t.Order) (*t.Order, error) {
 		SecretKey: c.secretKey,
 	}
 	return GetOrder(cc, o)
+}
+
+func (c Client) CloseOrder(o t.Order) (*t.Order, error) {
+	return nil, nil
 }

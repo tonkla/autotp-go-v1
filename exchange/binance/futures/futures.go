@@ -41,8 +41,8 @@ func (c Client) GetHistoricalPrices(symbol string, timeframe string, limit int) 
 	return b.GetHistoricalPrices(c.baseURL, symbol, timeframe, limit)
 }
 
-// PlaceLimitOrder places a limit order
-func (c Client) PlaceLimitOrder(o t.Order) (*t.Order, error) {
+// OpenLimitOrder opens a limit order
+func (c Client) OpenLimitOrder(o t.Order) (*t.Order, error) {
 	if o.Type != t.OrderTypeLimit {
 		return nil, nil
 	}
@@ -82,8 +82,8 @@ func (c Client) PlaceLimitOrder(o t.Order) (*t.Order, error) {
 	return &o, nil
 }
 
-// PlaceStopOrder places a stop order
-func (c Client) PlaceStopOrder(o t.Order) (*t.Order, error) {
+// OpenStopOrder opens a stop order
+func (c Client) OpenStopOrder(o t.Order) (*t.Order, error) {
 	if o.Type != t.OrderTypeFSL && o.Type != t.OrderTypeFTP {
 		return nil, nil
 	}
@@ -161,4 +161,40 @@ func (c Client) GetOrder(o t.Order) (*t.Order, error) {
 		SecretKey: c.secretKey,
 	}
 	return b.GetOrder(cc, o)
+}
+
+// CloseOrder closes an order
+func (c Client) CloseOrder(o t.Order) (*t.Order, error) {
+	return nil, nil
+}
+
+// CancelOrder cancels an order on the Binance Spot & Futures
+func (c Client) CancelOrder(o t.Order) (*t.Order, error) {
+	var payload, url strings.Builder
+
+	b.BuildBaseQS(&payload, o.Symbol)
+	fmt.Fprintf(&payload, "&orderId=%s&origClientOrderId=%s", o.RefID, o.ID)
+
+	signature := b.Sign(payload.String(), c.secretKey)
+
+	fmt.Fprintf(&url, "%s/order?%s&signature=%s", c.baseURL, payload.String(), signature)
+	data, err := h.Delete(url.String(), b.NewHeader(c.apiKey))
+	if err != nil {
+		return nil, err
+	}
+
+	r := gjson.ParseBytes(data)
+
+	if r.Get("code").Int() < 0 {
+		h.Log("CancelOrder", r)
+		return nil, errors.New(r.Get("msg").String())
+	}
+
+	status := r.Get("status").String()
+	if status != t.OrderStatusCanceled {
+		return nil, nil
+	}
+	o.Status = status
+	o.UpdateTime = h.Now13()
+	return &o, nil
 }

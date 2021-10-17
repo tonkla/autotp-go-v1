@@ -12,6 +12,7 @@ import (
 	rds "github.com/tonkla/autotp/db"
 	"github.com/tonkla/autotp/exchange/binance"
 	h "github.com/tonkla/autotp/helper"
+	"github.com/tonkla/autotp/robot"
 	"github.com/tonkla/autotp/strategy/grid"
 	t "github.com/tonkla/autotp/types"
 )
@@ -26,21 +27,6 @@ var rootCmd = &cobra.Command{
 var (
 	configFile string
 )
-
-type params struct {
-	db          *rds.DB
-	ticker      *t.Ticker
-	tradeOrders *t.TradeOrders
-	exchange    *binance.Client
-	queryOrder  *t.Order
-	symbol      string
-	priceDigits int64
-	qtyDigits   int64
-	quoteQty    float64
-	tpStop      int64
-	tpLimit     int64
-	openLimit   int64
-}
 
 func init() {
 	rootCmd.Flags().StringVarP(&configFile, "configFile", "c", "", "Configuration File (required)")
@@ -104,6 +90,12 @@ func main() {
 
 	exchange := binance.NewSpotClient(apiKey, secretKey)
 
+	slim := t.StopLimit{
+		TPStop:    tpStop,
+		TPLimit:   tpLimit,
+		OpenLimit: openLimit,
+	}
+
 	bp := t.BotParams{
 		BotID:       botID,
 		UpperPrice:  upperPrice,
@@ -117,25 +109,20 @@ func main() {
 		QuoteQty:    quoteQty,
 		AutoTP:      autoTP,
 		View:        "LONG",
+		SLim:        slim,
 	}
 
-	queryOrder := t.Order{
+	qo := t.QueryOrder{
 		BotID:    botID,
 		Exchange: t.ExcBinance,
 		Symbol:   symbol,
 	}
 
-	_params := params{
-		db:          db,
-		exchange:    &exchange,
-		queryOrder:  &queryOrder,
-		symbol:      symbol,
-		priceDigits: priceDigits,
-		qtyDigits:   qtyDigits,
-		quoteQty:    quoteQty,
-		tpStop:      tpStop,
-		tpLimit:     tpLimit,
-		openLimit:   openLimit,
+	_params := robot.AppParams{
+		DB:   *db,
+		Repo: exchange,
+		QO:   qo,
+		BP:   bp,
 	}
 
 	if intervalSec == 0 {
@@ -150,7 +137,7 @@ func main() {
 			continue
 		}
 
-		if startPrice > 0 && ticker.Price > startPrice && len(db.GetActiveOrders(queryOrder)) == 0 {
+		if startPrice > 0 && ticker.Price > startPrice && len(db.GetActiveOrders(qo)) == 0 {
 			continue
 		}
 
@@ -163,8 +150,8 @@ func main() {
 			continue
 		}
 
-		_params.ticker = ticker
-		_params.tradeOrders = tradeOrders
+		_params.Ticker = *ticker
+		_params.TO = *tradeOrders
 		if orderType == t.OrderTypeLimit {
 			placeAsMaker(&_params)
 		} else if orderType == t.OrderTypeMarket {
@@ -173,20 +160,20 @@ func main() {
 	}
 }
 
-func placeAsMaker(p *params) {
+func placeAsMaker(p *robot.AppParams) {
 	openNewOrders(p)
 	syncHighestNewOrder(p)
 	syncLowestFilledOrder(p)
 	syncLowestTPOrder(p)
 }
 
-func openNewOrders(p *params) {
-	for _, o := range p.tradeOrders.OpenOrders {
-		if o.OpenPrice < h.CalcStopBehindTicker(t.OrderSideBuy, p.ticker.Price, float64(p.openLimit), p.priceDigits) {
+func openNewOrders(p *robot.AppParams) {
+	for _, o := range p.TO.OpenOrders {
+		if o.OpenPrice < h.CalcStopBehindTicker(t.OrderSideBuy, p.Ticker.Price, float64(p.BP.SLim.OpenLimit), p.BP.PriceDigits) {
 			return
 		}
 
-		exo, err := p.exchange.PlaceLimitOrder(o)
+		exo, err := p.Repo.OpenLimitOrder(o)
 		if err != nil || exo == nil {
 			h.Log("OpenOrder")
 			os.Exit(1)
@@ -196,7 +183,7 @@ func openNewOrders(p *params) {
 		o.Status = exo.Status
 		o.OpenPrice = exo.OpenPrice
 		o.OpenTime = exo.OpenTime
-		err = p.db.CreateOrder(o)
+		err = p.DB.CreateOrder(o)
 		if err != nil {
 			h.Log("CreateOrder", err)
 			continue
@@ -205,13 +192,13 @@ func openNewOrders(p *params) {
 	}
 }
 
-func syncHighestNewOrder(p *params) {
+func syncHighestNewOrder(p *robot.AppParams) {
 	// Synchronize order status
-	o := p.db.GetHighestNewBuyOrder(*p.queryOrder)
+	o := p.DB.GetHighestNewBuyOrder(p.QO)
 	if o == nil {
 		return
 	}
-	exo, err := p.exchange.GetOrder(*o)
+	exo, err := p.Repo.GetOrder(*o)
 	if err != nil || exo == nil {
 		h.Log("GetOrder")
 		os.Exit(1)
@@ -224,7 +211,7 @@ func syncHighestNewOrder(p *params) {
 	if o.Status != exo.Status {
 		o.Status = exo.Status
 		o.UpdateTime = exo.UpdateTime
-		err := p.db.UpdateOrder(*o)
+		err := p.DB.UpdateOrder(*o)
 		if err != nil {
 			h.Log("UpdateOrder", err)
 			return
@@ -238,19 +225,19 @@ func syncHighestNewOrder(p *params) {
 	}
 }
 
-func syncLowestFilledOrder(p *params) {
+func syncLowestFilledOrder(p *robot.AppParams) {
 	// Place a new Take Profit order
-	o := p.db.GetLowestFilledBuyOrder(*p.queryOrder)
-	if o != nil && o.TPPrice > 0 && p.db.GetTPOrder(o.ID) == nil {
+	o := p.DB.GetLowestFilledBuyOrder(p.QO)
+	if o != nil && o.TPPrice > 0 && p.DB.GetTPOrder(o.ID) == nil {
 		// Keep only one TP order, because Binance has a 'MAX_NUM_ALGO_ORDERS=5'
-		tpOrders := p.db.GetNewTPOrders(*p.queryOrder)
+		tpOrders := p.DB.GetNewTPOrders(p.QO)
 		if len(tpOrders) > 0 {
 			tpo := tpOrders[0]
 			// Ignore when the order TP price is so far, keep calm and waiting
 			if tpo.OpenPrice < o.TPPrice {
 				return
 			}
-			exo, err := p.exchange.CancelOrder(tpo)
+			exo, err := p.Repo.CancelOrder(tpo)
 			if err != nil || exo == nil {
 				h.Log("CancelOrder")
 				os.Exit(1)
@@ -258,7 +245,7 @@ func syncLowestFilledOrder(p *params) {
 
 			tpo.Status = exo.Status
 			tpo.UpdateTime = exo.UpdateTime
-			err = p.db.UpdateOrder(tpo)
+			err = p.DB.UpdateOrder(tpo)
 			if err != nil {
 				h.Log(err)
 				return
@@ -266,18 +253,18 @@ func syncLowestFilledOrder(p *params) {
 			h.LogCanceled(&tpo)
 		}
 
-		if p.ticker.Price < h.CalcTPStop(o.Side, o.TPPrice, float64(p.tpStop), p.priceDigits) {
+		if p.Ticker.Price < h.CalcTPStop(o.Side, o.TPPrice, float64(p.BP.SLim.TPStop), p.BP.PriceDigits) {
 			return
 		}
-		stopPrice := h.CalcTPStop(o.Side, o.TPPrice, float64(p.tpLimit), p.priceDigits)
+		stopPrice := h.CalcTPStop(o.Side, o.TPPrice, float64(p.BP.SLim.TPLimit), p.BP.PriceDigits)
 
 		// The price moves so fast
-		if p.ticker.Price > stopPrice && o.CloseOrderID == "" {
+		if p.Ticker.Price > stopPrice && o.CloseOrderID == "" {
 			o.CloseOrderID = "0"
 			o.ClosePrice = o.TPPrice
 			o.CloseTime = h.Now13()
-			o.PL = h.NormalizeDouble(((o.ClosePrice - o.OpenPrice) * o.Qty), p.priceDigits)
-			err := p.db.UpdateOrder(*o)
+			o.PL = h.NormalizeDouble(((o.ClosePrice - o.OpenPrice) * o.Qty), p.BP.PriceDigits)
+			err := p.DB.UpdateOrder(*o)
 			if err != nil {
 				h.Log(err)
 			}
@@ -297,7 +284,7 @@ func syncLowestFilledOrder(p *params) {
 			StopPrice:   stopPrice,
 			OpenPrice:   o.TPPrice,
 		}
-		exo, err := p.exchange.PlaceStopOrder(tpo)
+		exo, err := p.Repo.OpenStopOrder(tpo)
 		if err != nil || exo == nil {
 			h.Log("PlaceTPOrder")
 			os.Exit(1)
@@ -305,7 +292,7 @@ func syncLowestFilledOrder(p *params) {
 
 		tpo.RefID = exo.RefID
 		tpo.OpenTime = exo.OpenTime
-		err = p.db.CreateOrder(tpo)
+		err = p.DB.CreateOrder(tpo)
 		if err != nil {
 			h.Log(err)
 			return
@@ -314,12 +301,12 @@ func syncLowestFilledOrder(p *params) {
 	}
 }
 
-func syncLowestTPOrder(p *params) {
-	tpo := p.db.GetLowestTPOrder(*p.queryOrder)
+func syncLowestTPOrder(p *robot.AppParams) {
+	tpo := p.DB.GetLowestTPOrder(p.QO)
 	if tpo == nil {
 		return
 	}
-	exo, err := p.exchange.GetOrder(*tpo)
+	exo, err := p.Repo.GetOrder(*tpo)
 	if err != nil || exo == nil {
 		h.Log("GetTPOrder")
 		os.Exit(1)
@@ -331,7 +318,7 @@ func syncLowestTPOrder(p *params) {
 	if tpo.Status != exo.Status {
 		tpo.Status = exo.Status
 		tpo.UpdateTime = exo.UpdateTime
-		err := p.db.UpdateOrder(*tpo)
+		err := p.DB.UpdateOrder(*tpo)
 		if err != nil {
 			h.Log(err)
 			return
@@ -345,13 +332,13 @@ func syncLowestTPOrder(p *params) {
 		return
 	}
 
-	oo := p.db.GetOrderByID(tpo.OpenOrderID)
-	if oo != nil && oo.CloseOrderID == "" && p.ticker.Price > tpo.OpenPrice {
+	oo := p.DB.GetOrderByID(tpo.OpenOrderID)
+	if oo != nil && oo.CloseOrderID == "" && p.Ticker.Price > tpo.OpenPrice {
 		oo.CloseOrderID = tpo.ID
 		oo.ClosePrice = tpo.OpenPrice
 		oo.CloseTime = h.Now13()
-		oo.PL = h.NormalizeDouble(((oo.ClosePrice-oo.OpenPrice)*tpo.Qty)-oo.Commission-tpo.Commission, p.priceDigits)
-		err := p.db.UpdateOrder(*oo)
+		oo.PL = h.NormalizeDouble(((oo.ClosePrice-oo.OpenPrice)*tpo.Qty)-oo.Commission-tpo.Commission, p.BP.PriceDigits)
+		err := p.DB.UpdateOrder(*oo)
 		if err != nil {
 			h.Log(err)
 			return
@@ -359,17 +346,17 @@ func syncLowestTPOrder(p *params) {
 		h.LogClosed(oo, tpo)
 
 		tpo.CloseTime = oo.CloseTime
-		err = p.db.UpdateOrder(*tpo)
+		err = p.DB.UpdateOrder(*tpo)
 		if err != nil {
 			h.Log("UpdateTPOrder", err)
 		}
 	}
 }
 
-func placeAsTaker(p *params) {
+func placeAsTaker(p *robot.AppParams) {
 	// Open new orders -----------------------------------------------------------
-	for _, o := range p.tradeOrders.OpenOrders {
-		book := p.exchange.GetOrderBook(p.symbol, 5)
+	for _, o := range p.TO.OpenOrders {
+		book := p.Repo.GetOrderBook(p.Ticker.Symbol, 5)
 		if book == nil || len(book.Asks) == 0 {
 			continue
 		}
@@ -378,12 +365,12 @@ func placeAsTaker(p *params) {
 			continue
 		}
 
-		_qty := h.NormalizeDouble(p.quoteQty/buyPrice, p.qtyDigits)
+		_qty := h.NormalizeDouble(p.BP.QuoteQty/buyPrice, p.BP.QtyDigits)
 		if _qty > o.Qty {
 			o.Qty = _qty
 		}
 		o.Type = t.OrderTypeMarket
-		exo, err := p.exchange.PlaceMarketOrder(o)
+		exo, err := p.Repo.OpenMarketOrder(o)
 		if err != nil || exo == nil {
 			h.Log("OpenOrder")
 			os.Exit(1)
@@ -395,7 +382,7 @@ func placeAsTaker(p *params) {
 		o.OpenPrice = exo.OpenPrice
 		o.Qty = exo.Qty
 		o.Commission = exo.Commission
-		err = p.db.CreateOrder(o)
+		err = p.DB.CreateOrder(o)
 		if err != nil {
 			h.Log("CreateOrder", err)
 			continue
@@ -404,9 +391,9 @@ func placeAsTaker(p *params) {
 	}
 
 	// Take Profit ---------------------------------------------------------------
-	o := p.db.GetLowestFilledBuyOrder(*p.queryOrder)
-	if o != nil && o.TPPrice > 0 && p.db.GetTPOrder(o.ID) == nil {
-		book := p.exchange.GetOrderBook(p.symbol, 5)
+	o := p.DB.GetLowestFilledBuyOrder(p.QO)
+	if o != nil && o.TPPrice > 0 && p.DB.GetTPOrder(o.ID) == nil {
+		book := p.Repo.GetOrderBook(p.Ticker.Symbol, 5)
 		if book == nil || len(book.Bids) == 0 {
 			return
 		}
@@ -426,7 +413,7 @@ func placeAsTaker(p *params) {
 			Status:      t.OrderStatusNew,
 			Type:        t.OrderTypeMarket,
 		}
-		exo, err := p.exchange.PlaceMarketOrder(tpo)
+		exo, err := p.Repo.OpenMarketOrder(tpo)
 		if err != nil || exo == nil {
 			h.Log("TakeProfit")
 			os.Exit(1)
@@ -440,7 +427,7 @@ func placeAsTaker(p *params) {
 		tpo.Qty = exo.Qty
 		tpo.Commission = exo.Commission
 		tpo.CloseTime = h.Now13()
-		err = p.db.CreateOrder(tpo)
+		err = p.DB.CreateOrder(tpo)
 		if err != nil {
 			h.Log("CreateTPOrder", err)
 			return
@@ -449,8 +436,8 @@ func placeAsTaker(p *params) {
 		o.CloseOrderID = tpo.ID
 		o.ClosePrice = tpo.OpenPrice
 		o.CloseTime = tpo.OpenTime
-		o.PL = h.NormalizeDouble(((o.ClosePrice-o.OpenPrice)*tpo.Qty)-o.Commission-tpo.Commission, p.priceDigits)
-		err = p.db.UpdateOrder(*o)
+		o.PL = h.NormalizeDouble(((o.ClosePrice-o.OpenPrice)*tpo.Qty)-o.Commission-tpo.Commission, p.BP.PriceDigits)
+		err = p.DB.UpdateOrder(*o)
 		if err != nil {
 			h.Log("UpdateOrder", err)
 			return
