@@ -3,15 +3,15 @@ package trend
 import (
 	"math"
 
-	"github.com/tonkla/autotp/db"
 	h "github.com/tonkla/autotp/helper"
+	"github.com/tonkla/autotp/rdb"
 	s "github.com/tonkla/autotp/strategy/common"
 	"github.com/tonkla/autotp/talib"
 	t "github.com/tonkla/autotp/types"
 )
 
 type OnTickParams struct {
-	DB        db.DB
+	DB        rdb.DB
 	Ticker    t.Ticker
 	BotParams t.BotParams
 	HPrices   []t.HistoricalPrice

@@ -1,7 +1,7 @@
 package strategy
 
 import (
-	rdb "github.com/tonkla/autotp/db"
+	"github.com/tonkla/autotp/rdb"
 	s "github.com/tonkla/autotp/strategy/common"
 	"github.com/tonkla/autotp/strategy/grid"
 	t "github.com/tonkla/autotp/types"

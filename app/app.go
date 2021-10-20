@@ -1,8 +1,8 @@
 package app
 
 import (
-	"github.com/tonkla/autotp/db"
 	"github.com/tonkla/autotp/exchange"
+	"github.com/tonkla/autotp/rdb"
 	s "github.com/tonkla/autotp/strategy/common"
 	"github.com/tonkla/autotp/types"
 )
@@ -11,7 +11,7 @@ import (
 type AppParams struct {
 	EX exchange.Repository
 	ST s.Repository
-	DB *db.DB
+	DB *rdb.DB
 	BP *types.BotParams
 	TK *types.Ticker
 	TO *types.TradeOrders

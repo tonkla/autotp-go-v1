@@ -8,8 +8,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	rdb "github.com/tonkla/autotp/db"
 	"github.com/tonkla/autotp/exchange"
+	"github.com/tonkla/autotp/rdb"
 	"github.com/tonkla/autotp/strategy"
 	s "github.com/tonkla/autotp/strategy/common"
 

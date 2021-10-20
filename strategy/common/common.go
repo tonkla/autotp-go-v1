@@ -3,7 +3,7 @@ package common
 import (
 	"math"
 
-	rdb "github.com/tonkla/autotp/db"
+	"github.com/tonkla/autotp/rdb"
 	"github.com/tonkla/autotp/talib"
 	t "github.com/tonkla/autotp/types"
 )

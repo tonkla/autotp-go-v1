@@ -1,14 +1,14 @@
 package daily
 
 import (
-	"github.com/tonkla/autotp/db"
 	h "github.com/tonkla/autotp/helper"
+	"github.com/tonkla/autotp/rdb"
 	s "github.com/tonkla/autotp/strategy/common"
 	t "github.com/tonkla/autotp/types"
 )
 
 type OnTickParams struct {
-	DB        db.DB
+	DB        rdb.DB
 	Ticker    t.Ticker
 	BotParams t.BotParams
 	HPrices   []t.HistoricalPrice

@@ -9,16 +9,16 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	rds "github.com/tonkla/autotp/db"
 	"github.com/tonkla/autotp/exchange"
 	binance "github.com/tonkla/autotp/exchange/binance/futures"
 	h "github.com/tonkla/autotp/helper"
+	"github.com/tonkla/autotp/rdb"
 	strategy "github.com/tonkla/autotp/strategy/trend"
 	t "github.com/tonkla/autotp/types"
 )
 
 type AppParams struct {
-	DB     rds.DB
+	DB     rdb.DB
 	Repo   exchange.Repository
 	Ticker t.Ticker
 	TO     t.TradeOrders
@@ -90,7 +90,7 @@ func CommonFutures() {
 	tpLimit := viper.GetInt64("tpLimit")
 	openLimit := viper.GetInt64("openLimit")
 
-	db := rds.Connect(dbName)
+	db := rdb.Connect(dbName)
 
 	ex := binance.NewFuturesClient(apiKey, secretKey)
 

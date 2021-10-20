@@ -3,8 +3,8 @@ package grid
 import (
 	"sort"
 
-	rdb "github.com/tonkla/autotp/db"
 	h "github.com/tonkla/autotp/helper"
+	"github.com/tonkla/autotp/rdb"
 	c "github.com/tonkla/autotp/strategy/common"
 	t "github.com/tonkla/autotp/types"
 )
