@@ -3,7 +3,7 @@ package daily
 import (
 	"github.com/tonkla/autotp/db"
 	h "github.com/tonkla/autotp/helper"
-	"github.com/tonkla/autotp/strategy"
+	s "github.com/tonkla/autotp/strategy/common"
 	t "github.com/tonkla/autotp/types"
 )
 
@@ -14,7 +14,7 @@ type OnTickParams struct {
 	HPrices   []t.HistoricalPrice
 }
 
-func OnTick(params OnTickParams) *t.TradeOrder {
+func OnTick(params OnTickParams) *t.TradeOrders {
 	var openOrders, closeOrders []t.Order
 
 	db := params.DB
@@ -37,8 +37,8 @@ func OnTick(params OnTickParams) *t.TradeOrder {
 	h_1 := p_1.High
 	l_1 := p_1.Low
 
-	trend := strategy.GetTrend(prices, int(bp.MAPeriod))
-	atr := strategy.GetATR(prices, int(bp.MAPeriod))
+	trend := s.GetTrend(prices, int(bp.MAPeriod))
+	atr := s.GetATR(prices, int(bp.MAPeriod))
 	mos := (h_1 - l_1) * bp.MoS // The Margin of Safety
 
 	qo := t.QueryOrder{
@@ -148,7 +148,7 @@ func OnTick(params OnTickParams) *t.TradeOrder {
 		}
 	}
 
-	return &t.TradeOrder{
+	return &t.TradeOrders{
 		OpenOrders:  openOrders,
 		CloseOrders: closeOrders,
 	}

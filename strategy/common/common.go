@@ -1,20 +1,31 @@
-package strategy
+package common
 
 import (
 	"math"
 
+	rdb "github.com/tonkla/autotp/db"
 	"github.com/tonkla/autotp/talib"
-	"github.com/tonkla/autotp/types"
+	t "github.com/tonkla/autotp/types"
 )
 
+type OnTickParams struct {
+	DB rdb.DB
+	TK t.Ticker
+	BP t.BotParams
+}
+
+type Repository interface {
+	OnTick(t.Ticker) t.TradeOrders
+}
+
 // IsDown returns true when the Close price is lower than the Open price
-func IsDown(hprices types.HistoricalPrice) bool {
+func IsDown(hprices t.HistoricalPrice) bool {
 	return hprices.Close < hprices.Open
 }
 
 // GetTrend returns a stupid trend, do not trust him
-func GetTrend(hprices []types.HistoricalPrice, period int) int {
-	trend := types.TrendNo
+func GetTrend(hprices []t.HistoricalPrice, period int) int {
+	trend := t.TrendNo
 
 	if len(hprices) < 10 || hprices[len(hprices)-1].Open == 0 || period <= 0 {
 		return trend
@@ -56,19 +67,19 @@ func GetTrend(hprices []types.HistoricalPrice, period int) int {
 
 	// Positive slope
 	if cma_1 < cma_0 {
-		trend = types.TrendUp1
+		trend = t.TrendUp1
 		// Higher low, and continued positive slope
 		if l_1 < l_0 && cma_2 < cma_1 {
-			trend = types.TrendUp2
+			trend = t.TrendUp2
 			// Green bar, or moving to top
 			if o_0 < c_0 || h_0-c_0 < (c_0-l_0)*0.5 {
-				trend = types.TrendUp3
+				trend = t.TrendUp3
 				// Low is greater than average close, or long green bar, or narrow upper band
 				if l_0 > cma_0 || h_0-l_0 > atr || hma_0-cma_0 < (cma_0-lma_0)*0.6 {
-					trend = types.TrendUp4
+					trend = t.TrendUp4
 					// Low is greater than average high, or very long green bar
 					if l_0 > hma_0 || h_0-l_0 > 1.25*atr {
-						trend = types.TrendUp5
+						trend = t.TrendUp5
 					}
 				}
 			}
@@ -76,19 +87,19 @@ func GetTrend(hprices []types.HistoricalPrice, period int) int {
 	}
 	// Negative slope
 	if cma_1 > cma_0 {
-		trend = types.TrendDown1
+		trend = t.TrendDown1
 		// Lower high, and continued negative slope
 		if h_1 > h_0 && cma_2 > cma_1 {
-			trend = types.TrendDown2
+			trend = t.TrendDown2
 			// Red bar, or moving to bottom
 			if o_0 > c_0 || (h_0-c_0)*0.5 > c_0-l_0 {
-				trend = types.TrendDown3
+				trend = t.TrendDown3
 				// High is less than average close, or long red bar, or narrow lower band
 				if h_0 < cma_0 || h_0-l_0 > atr || (hma_0-cma_0)*0.6 > cma_0-lma_0 {
-					trend = types.TrendDown4
+					trend = t.TrendDown4
 					// High is less than average low, or very long red bar
 					if h_0 < lma_0 || h_0-l_0 > 1.25*atr {
-						trend = types.TrendDown5
+						trend = t.TrendDown5
 					}
 				}
 			}
@@ -98,7 +109,7 @@ func GetTrend(hprices []types.HistoricalPrice, period int) int {
 }
 
 // GetATR returns @tonkla's ATR, that is not the "J. Welles Wilder Jr."'s ATR :-P
-func GetATR(hprices []types.HistoricalPrice, period int) float64 {
+func GetATR(hprices []t.HistoricalPrice, period int) float64 {
 	var h, l []float64
 	for _, p := range hprices {
 		h = append(h, p.High)

@@ -1,328 +1,330 @@
 package main
 
-import (
-	"fmt"
-	"os"
-	"path"
-	"time"
+// package main
 
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
+// import (
+// "fmt"
+// "os"
+// "path"
+// "time"
 
-	rds "github.com/tonkla/autotp/db"
-	"github.com/tonkla/autotp/exchange/binance"
-	h "github.com/tonkla/autotp/helper"
-	"github.com/tonkla/autotp/robot"
-	strategy "github.com/tonkla/autotp/strategy/trend"
-	t "github.com/tonkla/autotp/types"
-)
+// "github.com/spf13/cobra"
+// "github.com/spf13/viper"
 
-var rootCmd = &cobra.Command{
-	Use:   "autotp",
-	Short: "AutoTP: Auto Take Profit (Trend)",
-	Long:  "AutoTP: Auto Trading Platform (Trend)",
-	Run:   func(cmd *cobra.Command, args []string) {},
-}
+// rds "github.com/tonkla/autotp/db"
+// "github.com/tonkla/autotp/exchange/binance"
+// h "github.com/tonkla/autotp/helper"
+// "github.com/tonkla/autotp/robot"
+// strategy "github.com/tonkla/autotp/strategy/trend"
+// t "github.com/tonkla/autotp/types"
+// )
 
-var (
-	configFile string
-)
+// var rootCmd = &cobra.Command{
+// Use:   "autotp",
+// Short: "AutoTP: Auto Take Profit (Trend)",
+// Long:  "AutoTP: Auto Trading Platform (Trend)",
+// Run:   func(cmd *cobra.Command, args []string) {},
+// }
 
-func init() {
-	rootCmd.Flags().StringVarP(&configFile, "configFile", "c", "", "Configuration File (required)")
-	rootCmd.MarkFlagRequired("configFile")
-}
+// var (
+// configFile string
+// )
 
-func main() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(0)
-	} else if _, err := os.Stat(configFile); os.IsNotExist(err) {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(0)
-	} else if ext := path.Ext(configFile); ext != ".yml" && ext != ".yaml" {
-		fmt.Fprintln(os.Stderr, "Accept only YAML file")
-		os.Exit(0)
-	}
+// func init() {
+// rootCmd.Flags().StringVarP(&configFile, "configFile", "c", "", "Configuration File (required)")
+// rootCmd.MarkFlagRequired("configFile")
+// }
 
-	viper.SetConfigFile(configFile)
-	err := viper.ReadInConfig()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(0)
-	}
+// func main() {
+// if err := rootCmd.Execute(); err != nil {
+// fmt.Fprintln(os.Stderr, err)
+// os.Exit(0)
+// } else if _, err := os.Stat(configFile); os.IsNotExist(err) {
+// fmt.Fprintln(os.Stderr, err)
+// os.Exit(0)
+// } else if ext := path.Ext(configFile); ext != ".yml" && ext != ".yaml" {
+// fmt.Fprintln(os.Stderr, "Accept only YAML file")
+// os.Exit(0)
+// }
 
-	apiKey := viper.GetString("apiKey")
-	secretKey := viper.GetString("secretKey")
-	dbName := viper.GetString("dbName")
-	symbol := viper.GetString("symbol")
-	botID := viper.GetInt64("botID")
-	priceDigits := viper.GetInt64("priceDigits")
-	qtyDigits := viper.GetInt64("qtyDigits")
-	startPrice := viper.GetFloat64("startPrice")
-	baseQty := viper.GetFloat64("baseQty")
-	quoteQty := viper.GetFloat64("quoteQty")
-	intervalSec := viper.GetInt64("intervalSec")
-	maTimeframe := viper.GetString("maTimeframe")
-	maPeriod := viper.GetInt64("maPeriod")
-	autoTP := viper.GetBool("autoTP")
-	atrTP := viper.GetFloat64("atrTP")
-	minGap := viper.GetFloat64("minGap")
-	orderType := viper.GetString("orderType")
+// viper.SetConfigFile(configFile)
+// err := viper.ReadInConfig()
+// if err != nil {
+// fmt.Fprintln(os.Stderr, err)
+// os.Exit(0)
+// }
 
-	tpStop := viper.GetInt64("tpStop")
-	tpLimit := viper.GetInt64("tpLimit")
-	openLimit := viper.GetInt64("openLimit")
+// apiKey := viper.GetString("apiKey")
+// secretKey := viper.GetString("secretKey")
+// dbName := viper.GetString("dbName")
+// symbol := viper.GetString("symbol")
+// botID := viper.GetInt64("botID")
+// priceDigits := viper.GetInt64("priceDigits")
+// qtyDigits := viper.GetInt64("qtyDigits")
+// startPrice := viper.GetFloat64("startPrice")
+// baseQty := viper.GetFloat64("baseQty")
+// quoteQty := viper.GetFloat64("quoteQty")
+// intervalSec := viper.GetInt64("intervalSec")
+// maTimeframe := viper.GetString("maTimeframe")
+// maPeriod := viper.GetInt64("maPeriod")
+// autoTP := viper.GetBool("autoTP")
+// atrTP := viper.GetFloat64("atrTP")
+// orderGap := viper.GetFloat64("orderGap")
+// orderType := viper.GetString("orderType")
 
-	db := rds.Connect(dbName)
+// tpStop := viper.GetInt64("tpStop")
+// tpLimit := viper.GetInt64("tpLimit")
+// openLimit := viper.GetInt64("openLimit")
 
-	exchange := binance.NewSpotClient(apiKey, secretKey)
+// db := rds.Connect(dbName)
 
-	bp := t.BotParams{
-		BotID:       botID,
-		PriceDigits: priceDigits,
-		QtyDigits:   qtyDigits,
-		BaseQty:     baseQty,
-		QuoteQty:    quoteQty,
-		MATimeframe: maTimeframe,
-		MAPeriod:    maPeriod,
-		AutoTP:      autoTP,
-		AtrTP:       atrTP,
-		MinGap:      minGap,
-		View:        "LONG",
-	}
-	if orderType == t.OrderTypeLimit {
-		bp.SLim = t.StopLimit{
-			TPStop:    tpStop,
-			TPLimit:   tpLimit,
-			OpenLimit: openLimit,
-		}
-	}
+// exchange := binance.NewSpotClient(apiKey, secretKey)
 
-	queryOrder := t.QueryOrder{
-		BotID:    botID,
-		Exchange: t.ExcBinance,
-		Symbol:   symbol,
-	}
+// bp := t.BotParams{
+// BotID:       botID,
+// PriceDigits: priceDigits,
+// QtyDigits:   qtyDigits,
+// BaseQty:     baseQty,
+// QuoteQty:    quoteQty,
+// MATimeframe: maTimeframe,
+// MAPeriod:    maPeriod,
+// AutoTP:      autoTP,
+// AtrTP:       atrTP,
+// OrderGap:    orderGap,
+// View:        "LONG",
+// }
+// if orderType == t.OrderTypeLimit {
+// bp.SLim = t.StopLimit{
+// TPStop:    tpStop,
+// TPLimit:   tpLimit,
+// OpenLimit: openLimit,
+// }
+// }
 
-	_params := robot.AppParams{
-		DB:   *db,
-		Repo: &exchange,
-		QO:   queryOrder,
-		BP:   bp,
-	}
+// queryOrder := t.QueryOrder{
+// BotID:    botID,
+// Exchange: t.ExcBinance,
+// Symbol:   symbol,
+// }
 
-	if intervalSec == 0 {
-		intervalSec = 3
-	}
+// _params := robot.AppParams{
+// DB:   *db,
+// Repo: &exchange,
+// QO:   queryOrder,
+// BP:   bp,
+// }
 
-	h.Logf("{Exchange:BinanceSpot Symbol:%s BotID:%d Strategy:TrendFollowing}\n", symbol, botID)
+// if intervalSec == 0 {
+// intervalSec = 3
+// }
 
-	for range time.Tick(time.Duration(intervalSec) * time.Second) {
-		ticker := exchange.GetTicker(symbol)
-		if ticker == nil || ticker.Price <= 0 {
-			continue
-		}
+// h.Logf("{Exchange:BinanceSpot Symbol:%s BotID:%d Strategy:TrendFollowing}\n", symbol, botID)
 
-		if startPrice > 0 && ticker.Price > startPrice && len(db.GetActiveOrders(queryOrder)) == 0 {
-			continue
-		}
+// for range time.Tick(time.Duration(intervalSec) * time.Second) {
+// ticker := exchange.GetTicker(symbol)
+// if ticker == nil || ticker.Price <= 0 {
+// continue
+// }
 
-		var _period int64 = 50
-		const n int64 = 4
-		if maPeriod*n > _period {
-			_period *= (n - 1)
-		}
-		hprices := exchange.GetHistoricalPrices(symbol, maTimeframe, int(_period))
-		if len(hprices) == 0 || hprices[0].Open == 0 {
-			continue
-		}
+// if startPrice > 0 && ticker.Price > startPrice && len(db.GetActiveOrders(queryOrder)) == 0 {
+// continue
+// }
 
-		tradeOrders := strategy.OnTick(strategy.OnTickParams{
-			DB:        *db,
-			Ticker:    *ticker,
-			BotParams: bp,
-			HPrices:   hprices,
-		})
-		if tradeOrders == nil {
-			continue
-		}
+// var _period int64 = 50
+// const n int64 = 4
+// if maPeriod*n > _period {
+// _period *= (n - 1)
+// }
+// hprices := exchange.GetHistoricalPrices(symbol, maTimeframe, int(_period))
+// if len(hprices) == 0 || hprices[0].Open == 0 {
+// continue
+// }
 
-		_params.Ticker = *ticker
-		_params.TO = *tradeOrders
-		if orderType == t.OrderTypeLimit {
-			placeAsMaker(&_params)
-		} else if orderType == t.OrderTypeMarket {
-			placeAsTaker(&_params)
-		}
-	}
-}
+// tradeOrders := strategy.OnTick(strategy.OnTickParams{
+// DB:        *db,
+// Ticker:    *ticker,
+// BotParams: bp,
+// HPrices:   hprices,
+// })
+// if tradeOrders == nil {
+// continue
+// }
 
-func placeAsMaker(p *robot.AppParams) {
-	for _, o := range p.TO.CloseOrders {
-		exo, err := p.Repo.OpenStopOrder(o)
-		if err != nil || exo == nil {
-			os.Exit(1)
-		}
+// _params.Ticker = *ticker
+// _params.TO = *tradeOrders
+// if orderType == t.OrderTypeLimit {
+// placeAsMaker(&_params)
+// } else if orderType == t.OrderTypeMarket {
+// placeAsTaker(&_params)
+// }
+// }
+// }
 
-		o.RefID = exo.RefID
-		o.OpenTime = exo.OpenTime
-		err = p.DB.CreateOrder(o)
-		if err != nil {
-			h.Log(err)
-			return
-		}
+// func placeAsMaker(p *robot.AppParams) {
+// for _, o := range p.TO.CloseOrders {
+// exo, err := p.Repo.OpenStopOrder(o)
+// if err != nil || exo == nil {
+// os.Exit(1)
+// }
 
-		log := t.LogCloseOrder{
-			Action: "NEW_TP",
-			Qty:    o.Qty,
-			Close:  o.OpenPrice,
-		}
-		h.Log(log)
-	}
+// o.RefID = exo.RefID
+// o.OpenTime = exo.OpenTime
+// err = p.DB.CreateOrder(o)
+// if err != nil {
+// h.Log(err)
+// return
+// }
 
-	for _, o := range p.TO.OpenOrders {
-		exo, err := p.Repo.OpenLimitOrder(o)
-		if err != nil || exo == nil {
-			os.Exit(1)
-		}
+// log := t.LogCloseOrder{
+// Action: "NEW_TP",
+// Qty:    o.Qty,
+// Close:  o.OpenPrice,
+// }
+// h.Log(log)
+// }
 
-		o.RefID = exo.RefID
-		o.Status = exo.Status
-		o.OpenTime = exo.OpenTime
-		o.OpenPrice = exo.OpenPrice
-		err = p.DB.CreateOrder(o)
-		if err != nil {
-			h.Log(err)
-			return
-		}
+// for _, o := range p.TO.OpenOrders {
+// exo, err := p.Repo.OpenLimitOrder(o)
+// if err != nil || exo == nil {
+// os.Exit(1)
+// }
 
-		log := t.LogOpenOrder{
-			Action: "NEW",
-			Qty:    o.Qty,
-			Open:   o.OpenPrice,
-		}
-		h.Log(log)
-	}
+// o.RefID = exo.RefID
+// o.Status = exo.Status
+// o.OpenTime = exo.OpenTime
+// o.OpenPrice = exo.OpenPrice
+// err = p.DB.CreateOrder(o)
+// if err != nil {
+// h.Log(err)
+// return
+// }
 
-	syncTPOrder(p)
-	syncLimitOrder(p)
-}
+// log := t.LogOpenOrder{
+// Action: "NEW",
+// Qty:    o.Qty,
+// Open:   o.OpenPrice,
+// }
+// h.Log(log)
+// }
 
-func syncTPOrder(p *robot.AppParams) {
-	tpo := p.DB.GetLowestTPOrder(p.QO)
-	if tpo == nil {
-		return
-	}
-	exo, err := p.Repo.GetOrder(*tpo)
-	if err != nil || exo == nil {
-		os.Exit(1)
-	}
-	if exo.Status == t.OrderStatusNew {
-		return
-	}
+// syncTPOrder(p)
+// syncLimitOrder(p)
+// }
 
-	if tpo.Status != exo.Status {
-		tpo.Status = exo.Status
-		tpo.UpdateTime = exo.UpdateTime
-		err := p.DB.UpdateOrder(*tpo)
-		if err != nil {
-			h.Log(err)
-			return
-		}
+// func syncTPOrder(p *robot.AppParams) {
+// tpo := p.DB.GetLowestTPOrder(p.QO)
+// if tpo == nil {
+// return
+// }
+// exo, err := p.Repo.GetOrder(*tpo)
+// if err != nil || exo == nil {
+// os.Exit(1)
+// }
+// if exo.Status == t.OrderStatusNew {
+// return
+// }
 
-		if exo.Status == t.OrderStatusFilled {
-			log := t.LogCloseOrder{
-				Action: "FILLED_TP",
-				Qty:    tpo.Qty,
-				Open:   tpo.OpenPrice,
-			}
-			h.Log(log)
-		}
+// if tpo.Status != exo.Status {
+// tpo.Status = exo.Status
+// tpo.UpdateTime = exo.UpdateTime
+// err := p.DB.UpdateOrder(*tpo)
+// if err != nil {
+// h.Log(err)
+// return
+// }
 
-		if exo.Status == t.OrderStatusCanceled {
-			log := t.LogCloseOrder{
-				Action: "CANCELED_TP",
-				Qty:    tpo.Qty,
-				Open:   tpo.OpenPrice,
-			}
-			h.Log(log)
-		}
-	}
+// if exo.Status == t.OrderStatusFilled {
+// log := t.LogCloseOrder{
+// Action: "FILLED_TP",
+// Qty:    tpo.Qty,
+// Open:   tpo.OpenPrice,
+// }
+// h.Log(log)
+// }
 
-	if p.Ticker.Price > tpo.OpenPrice && tpo.CloseTime == 0 {
-		o := p.DB.GetOrderByID(tpo.OpenOrderID)
-		if o == nil {
-			return
-		}
+// if exo.Status == t.OrderStatusCanceled {
+// log := t.LogCloseOrder{
+// Action: "CANCELED_TP",
+// Qty:    tpo.Qty,
+// Open:   tpo.OpenPrice,
+// }
+// h.Log(log)
+// }
+// }
 
-		o.CloseOrderID = tpo.ID
-		o.ClosePrice = tpo.OpenPrice
-		o.CloseTime = h.Now13()
-		o.PL = h.NormalizeDouble(((o.ClosePrice-o.OpenPrice)*tpo.Qty)-o.Commission-tpo.Commission, p.BP.PriceDigits)
-		err := p.DB.UpdateOrder(*o)
-		if err != nil {
-			h.Log(err)
-			return
-		}
+// if p.Ticker.Price > tpo.OpenPrice && tpo.CloseTime == 0 {
+// o := p.DB.GetOrderByID(tpo.OpenOrderID)
+// if o == nil {
+// return
+// }
 
-		tpo.CloseTime = o.CloseTime
-		err = p.DB.UpdateOrder(*tpo)
-		if err != nil {
-			h.Log(err)
-			return
-		}
+// o.CloseOrderID = tpo.ID
+// o.ClosePrice = tpo.OpenPrice
+// o.CloseTime = h.Now13()
+// o.PL = h.NormalizeDouble(((o.ClosePrice-o.OpenPrice)*tpo.Qty)-o.Commission-tpo.Commission, p.BP.PriceDigits)
+// err := p.DB.UpdateOrder(*o)
+// if err != nil {
+// h.Log(err)
+// return
+// }
 
-		log := t.LogCloseOrder{
-			Action: "CLOSED_TP",
-			Qty:    tpo.Qty,
-			Close:  o.ClosePrice,
-			Open:   o.OpenPrice,
-			Profit: o.PL,
-		}
-		h.Log(log)
-	}
-}
+// tpo.CloseTime = o.CloseTime
+// err = p.DB.UpdateOrder(*tpo)
+// if err != nil {
+// h.Log(err)
+// return
+// }
 
-func syncLimitOrder(p *robot.AppParams) {
-	o := p.DB.GetHighestNewBuyOrder(p.QO)
-	if o == nil {
-		return
-	}
-	exo, err := p.Repo.GetOrder(*o)
-	if err != nil || exo == nil {
-		os.Exit(1)
-	}
-	if exo.Status == t.OrderStatusNew {
-		return
-	}
+// log := t.LogCloseOrder{
+// Action: "CLOSED_TP",
+// Qty:    tpo.Qty,
+// Close:  o.ClosePrice,
+// Open:   o.OpenPrice,
+// Profit: o.PL,
+// }
+// h.Log(log)
+// }
+// }
 
-	if o.Status != exo.Status {
-		o.Status = exo.Status
-		o.UpdateTime = exo.UpdateTime
-		err := p.DB.UpdateOrder(*o)
-		if err != nil {
-			h.Log(err)
-			return
-		}
-		if exo.Status == t.OrderStatusFilled {
-			log := t.LogOpenOrder{
-				Action: "FILLED",
-				Qty:    o.Qty,
-				Open:   o.OpenPrice,
-			}
-			h.Log(log)
-		}
-		if exo.Status == t.OrderStatusCanceled {
-			log := t.LogOpenOrder{
-				Action: "CANCELED",
-				Qty:    o.Qty,
-				Open:   o.OpenPrice,
-			}
-			h.Log(log)
-		}
-	}
-}
+// func syncLimitOrder(p *robot.AppParams) {
+// o := p.DB.GetHighestNewBuyOrder(p.QO)
+// if o == nil {
+// return
+// }
+// exo, err := p.Repo.GetOrder(*o)
+// if err != nil || exo == nil {
+// os.Exit(1)
+// }
+// if exo.Status == t.OrderStatusNew {
+// return
+// }
 
-func placeAsTaker(p *robot.AppParams) {
-}
+// if o.Status != exo.Status {
+// o.Status = exo.Status
+// o.UpdateTime = exo.UpdateTime
+// err := p.DB.UpdateOrder(*o)
+// if err != nil {
+// h.Log(err)
+// return
+// }
+// if exo.Status == t.OrderStatusFilled {
+// log := t.LogOpenOrder{
+// Action: "FILLED",
+// Qty:    o.Qty,
+// Open:   o.OpenPrice,
+// }
+// h.Log(log)
+// }
+// if exo.Status == t.OrderStatusCanceled {
+// log := t.LogOpenOrder{
+// Action: "CANCELED",
+// Qty:    o.Qty,
+// Open:   o.OpenPrice,
+// }
+// h.Log(log)
+// }
+// }
+// }
+
+// func placeAsTaker(p *robot.AppParams) {
+// }

@@ -4,36 +4,25 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/tonkla/autotp/db"
-	"github.com/tonkla/autotp/exchange"
+	"github.com/tonkla/autotp/app"
 	h "github.com/tonkla/autotp/helper"
 	t "github.com/tonkla/autotp/types"
 )
 
-// Note: cannot move this to /types because of circular import of 'db'
-type AppParams struct {
-	DB     db.DB
-	Repo   exchange.Repository
-	Ticker t.Ticker
-	TO     t.TradeOrder
-	QO     t.QueryOrder
-	BP     t.BotParams
+func PlaceAsMaker(p *app.AppParams) {
 }
 
-func PlaceAsMaker(p *AppParams) {
+func PlaceAsTaker(p *app.AppParams) {
 }
 
-func PlaceAsTaker(p *AppParams) {
-}
-
-func OpenLimitSpotOrders(p *AppParams) {
+func OpenLimitSpotOrders(p *app.AppParams) {
 	for _, o := range p.TO.OpenOrders {
-		if o.OpenPrice < h.CalcStopBehindTicker(t.OrderSideBuy, p.Ticker.Price,
+		if o.OpenPrice < h.CalcStopBehindTicker(t.OrderSideBuy, p.TK.Price,
 			float64(p.BP.SLim.OpenLimit), p.BP.PriceDigits) {
 			return
 		}
 
-		exo, err := p.Repo.OpenLimitOrder(o)
+		exo, err := p.EX.OpenLimitOrder(o)
 		if err != nil || exo == nil {
 			h.Log("OpenOrder")
 			os.Exit(1)
@@ -52,9 +41,9 @@ func OpenLimitSpotOrders(p *AppParams) {
 	}
 }
 
-func OpenLimitFuturesOrders(p *AppParams) {
+func OpenLimitFuturesOrders(p *app.AppParams) {
 	for _, o := range p.TO.OpenOrders {
-		exo, err := p.Repo.OpenLimitOrder(o)
+		exo, err := p.EX.OpenLimitOrder(o)
 		if err != nil || exo == nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
@@ -74,9 +63,9 @@ func OpenLimitFuturesOrders(p *AppParams) {
 	}
 }
 
-func CloseOrders(p *AppParams) {
+func CloseOrders(p *app.AppParams) {
 	for _, o := range p.TO.CloseOrders {
-		exo, err := p.Repo.OpenStopOrder(o)
+		exo, err := p.EX.OpenStopOrder(o)
 		if err != nil || exo == nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
@@ -94,13 +83,13 @@ func CloseOrders(p *AppParams) {
 	}
 }
 
-func SyncNewLimitOrder(p *AppParams) {
+func SyncNewLimitOrder(p *app.AppParams) {
 	// Synchronize order status
 	o := p.DB.GetHighestNewBuyOrder(p.QO)
 	if o == nil {
 		return
 	}
-	exo, err := p.Repo.GetOrder(*o)
+	exo, err := p.EX.GetOrder(*o)
 	if err != nil || exo == nil {
 		h.Log("GetOrder")
 		os.Exit(1)
@@ -127,7 +116,7 @@ func SyncNewLimitOrder(p *AppParams) {
 	}
 }
 
-func SyncFilledLimitOrder(p *AppParams) {
+func SyncFilledLimitOrder(p *app.AppParams) {
 	// Place a new Take Profit order
 	o := p.DB.GetLowestFilledBuyOrder(p.QO)
 	if o != nil && o.TPPrice > 0 && p.DB.GetTPOrder(o.ID) == nil {
@@ -139,7 +128,7 @@ func SyncFilledLimitOrder(p *AppParams) {
 			if tpo.OpenPrice < o.TPPrice {
 				return
 			}
-			exo, err := p.Repo.CancelOrder(tpo)
+			exo, err := p.EX.CancelOrder(tpo)
 			if err != nil || exo == nil {
 				h.Log("CancelOrder")
 				os.Exit(1)
@@ -155,13 +144,13 @@ func SyncFilledLimitOrder(p *AppParams) {
 			h.LogCanceled(&tpo)
 		}
 
-		if p.Ticker.Price < h.CalcTPStop(o.Side, o.TPPrice, float64(p.BP.SLim.TPStop), p.BP.PriceDigits) {
+		if p.TK.Price < h.CalcTPStop(o.Side, o.TPPrice, float64(p.BP.SLim.TPStop), p.BP.PriceDigits) {
 			return
 		}
 		stopPrice := h.CalcTPStop(o.Side, o.TPPrice, float64(p.BP.SLim.TPLimit), p.BP.PriceDigits)
 
 		// The price moves so fast
-		if p.Ticker.Price > stopPrice && o.CloseOrderID == "" {
+		if p.TK.Price > stopPrice && o.CloseOrderID == "" {
 			o.CloseOrderID = "0"
 			o.ClosePrice = o.TPPrice
 			o.CloseTime = h.Now13()
@@ -186,7 +175,7 @@ func SyncFilledLimitOrder(p *AppParams) {
 			StopPrice:   stopPrice,
 			OpenPrice:   o.TPPrice,
 		}
-		exo, err := p.Repo.OpenStopOrder(tpo)
+		exo, err := p.EX.OpenStopOrder(tpo)
 		if err != nil || exo == nil {
 			h.Log("PlaceTPOrder")
 			os.Exit(1)
@@ -203,12 +192,12 @@ func SyncFilledLimitOrder(p *AppParams) {
 	}
 }
 
-func SyncTPLimitOrder(p *AppParams) {
+func SyncTPLimitOrder(p *app.AppParams) {
 	tpo := p.DB.GetLowestTPOrder(p.QO)
 	if tpo == nil {
 		return
 	}
-	exo, err := p.Repo.GetOrder(*tpo)
+	exo, err := p.EX.GetOrder(*tpo)
 	if err != nil || exo == nil {
 		h.Log("GetTPOrder")
 		os.Exit(1)
@@ -235,7 +224,7 @@ func SyncTPLimitOrder(p *AppParams) {
 	}
 
 	oo := p.DB.GetOrderByID(tpo.OpenOrderID)
-	if oo != nil && oo.CloseOrderID == "" && p.Ticker.Price > tpo.OpenPrice {
+	if oo != nil && oo.CloseOrderID == "" && p.TK.Price > tpo.OpenPrice {
 		oo.CloseOrderID = tpo.ID
 		oo.ClosePrice = tpo.OpenPrice
 		oo.CloseTime = h.Now13()
@@ -255,12 +244,12 @@ func SyncTPLimitOrder(p *AppParams) {
 	}
 }
 
-func SyncSLLongOrders(p *AppParams) {
+func SyncSLLongOrders(p *app.AppParams) {
 	slo := p.DB.GetHighestSLLongOrder(p.QO)
 	if slo == nil {
 		return
 	}
-	exo, err := p.Repo.GetOrder(*slo)
+	exo, err := p.EX.GetOrder(*slo)
 	if err != nil || exo == nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -287,7 +276,7 @@ func SyncSLLongOrders(p *AppParams) {
 		}
 	}
 
-	if p.Ticker.Price < slo.OpenPrice && slo.CloseTime == 0 {
+	if p.TK.Price < slo.OpenPrice && slo.CloseTime == 0 {
 		o := p.DB.GetOrderByID(slo.OpenOrderID)
 		if o == nil {
 			slo.CloseTime = h.Now13()
@@ -319,12 +308,12 @@ func SyncSLLongOrders(p *AppParams) {
 	}
 }
 
-func SyncSLShortOrders(p *AppParams) {
+func SyncSLShortOrders(p *app.AppParams) {
 	slo := p.DB.GetLowestSLShortOrder(p.QO)
 	if slo == nil {
 		return
 	}
-	exo, err := p.Repo.GetOrder(*slo)
+	exo, err := p.EX.GetOrder(*slo)
 	if err != nil || exo == nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -351,7 +340,7 @@ func SyncSLShortOrders(p *AppParams) {
 		}
 	}
 
-	if p.Ticker.Price > slo.OpenPrice && slo.CloseTime == 0 {
+	if p.TK.Price > slo.OpenPrice && slo.CloseTime == 0 {
 		o := p.DB.GetOrderByID(slo.OpenOrderID)
 		if o == nil {
 			slo.CloseTime = h.Now13()
@@ -383,12 +372,12 @@ func SyncSLShortOrders(p *AppParams) {
 	}
 }
 
-func SyncTPLongOrders(p *AppParams) {
+func SyncTPLongOrders(p *app.AppParams) {
 	tpo := p.DB.GetLowestTPLongOrder(p.QO)
 	if tpo == nil {
 		return
 	}
-	exo, err := p.Repo.GetOrder(*tpo)
+	exo, err := p.EX.GetOrder(*tpo)
 	if err != nil || exo == nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -415,7 +404,7 @@ func SyncTPLongOrders(p *AppParams) {
 		}
 	}
 
-	if p.Ticker.Price > tpo.OpenPrice && tpo.CloseTime == 0 {
+	if p.TK.Price > tpo.OpenPrice && tpo.CloseTime == 0 {
 		o := p.DB.GetOrderByID(tpo.OpenOrderID)
 		if o == nil {
 			tpo.CloseTime = h.Now13()
@@ -447,12 +436,12 @@ func SyncTPLongOrders(p *AppParams) {
 	}
 }
 
-func SyncTPShortOrders(p *AppParams) {
+func SyncTPShortOrders(p *app.AppParams) {
 	tpo := p.DB.GetHighestTPShortOrder(p.QO)
 	if tpo == nil {
 		return
 	}
-	exo, err := p.Repo.GetOrder(*tpo)
+	exo, err := p.EX.GetOrder(*tpo)
 	if err != nil || exo == nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -479,7 +468,7 @@ func SyncTPShortOrders(p *AppParams) {
 		}
 	}
 
-	if p.Ticker.Price < tpo.OpenPrice && tpo.CloseTime == 0 {
+	if p.TK.Price < tpo.OpenPrice && tpo.CloseTime == 0 {
 		o := p.DB.GetOrderByID(tpo.OpenOrderID)
 		if o == nil {
 			tpo.CloseTime = h.Now13()
@@ -511,12 +500,12 @@ func SyncTPShortOrders(p *AppParams) {
 	}
 }
 
-func SyncLimitLongOrders(p *AppParams) {
+func SyncLimitLongOrders(p *app.AppParams) {
 	o := p.DB.GetHighestNewLongOrder(p.QO)
 	if o == nil {
 		return
 	}
-	exo, err := p.Repo.GetOrder(*o)
+	exo, err := p.EX.GetOrder(*o)
 	if err != nil || exo == nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -542,12 +531,12 @@ func SyncLimitLongOrders(p *AppParams) {
 	}
 }
 
-func SyncLimitShortOrders(p *AppParams) {
+func SyncLimitShortOrders(p *app.AppParams) {
 	o := p.DB.GetLowestNewShortOrder(p.QO)
 	if o == nil {
 		return
 	}
-	exo, err := p.Repo.GetOrder(*o)
+	exo, err := p.EX.GetOrder(*o)
 	if err != nil || exo == nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -573,4 +562,4 @@ func SyncLimitShortOrders(p *AppParams) {
 	}
 }
 
-func SyncClosedOrders(p *AppParams) {}
+func SyncClosedOrders(p *app.AppParams) {}

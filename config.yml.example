@@ -5,8 +5,17 @@ secretKey: SECRET_KEY
 # The SQLite database name
 dbName: autotp.db
 
+# The exchange
+exchange: BINANCE | FTX
+
+# The type of the trading products
+product: SPOT | FUTURES
+
 # One robot per symbol
 symbol: BNBUSDT
+
+# The trading strategy (placed in the `/strategy` directory)
+strategy: grid
 
 # Use along with the Exchange and the Symbol to identify the robot
 botID: 1
@@ -87,7 +96,7 @@ atrSL: 0.5
 atrTP: 0.5
 
 # The minimum price gap between two orders
-minGap: 10
+orderGap: 10
 
 # The Stop/Limit ranges from the market ticker price (integer)
 slStop: 100

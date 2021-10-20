@@ -6,6 +6,13 @@ const (
 	ExcFTX     = "FTX"
 	ExcSatang  = "SATANG"
 
+	ProductSpot    = "SPOT"
+	ProductFutures = "FUTURES"
+
+	StrategyDaily = "DAILY"
+	StrategyGrid  = "GRID"
+	StrategyTrend = "TREND"
+
 	OrderStatusNew      = "NEW"
 	OrderStatusFilled   = "FILLED"
 	OrderStatusCanceled = "CANCELED"
@@ -143,7 +150,7 @@ type LogCloseFOrder struct {
 	Profit  float64
 }
 
-type TradeOrder struct {
+type TradeOrders struct {
 	OpenOrders  []Order
 	CloseOrders []Order
 }
@@ -162,30 +169,49 @@ type OrderBook struct {
 }
 
 type BotParams struct {
+	ApiKey    string
+	SecretKey string
+	DbName    string
+	OrderType string
+	View      string
+
+	IntervalSec int64
+
 	BotID       int64
-	UpperPrice  float64
-	LowerPrice  float64
-	GridSize    float64
-	GridTP      float64
-	ApplyTrend  bool
-	OpenZones   int64
+	Exchange    string
+	Symbol      string
+	Product     string
+	Strategy    string
 	PriceDigits int64
 	QtyDigits   int64
 	BaseQty     float64
 	QuoteQty    float64
-	View        string
-	Slippage    float64
+
+	StartPrice float64
+	UpperPrice float64
+	LowerPrice float64
+	GridSize   float64
+	GridTP     float64
+	OpenZones  int64
+	ApplyTrend bool
+
+	OrderGap float64
+	MoS      float64
+	Slippage float64
+
 	MATimeframe string
 	MAPeriod    int64
-	MoS         float64
-	AutoSL      bool
-	AutoTP      bool
-	QuoteSL     float64
-	QuoteTP     float64
-	AtrSL       float64
-	AtrTP       float64
-	MinGap      float64
-	SLim        StopLimit
+
+	AutoSL  bool
+	AutoTP  bool
+	QuoteSL float64
+	QuoteTP float64
+	AtrSL   float64
+	AtrTP   float64
+
+	HPrices []HistoricalPrice
+
+	SLim StopLimit
 }
 
 type StopLimit struct {
@@ -196,7 +222,7 @@ type StopLimit struct {
 	OpenLimit int64
 }
 
-type Client struct {
+type APIClient struct {
 	BaseURL   string
 	APIKey    string
 	SecretKey string

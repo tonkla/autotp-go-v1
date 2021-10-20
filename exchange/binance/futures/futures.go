@@ -1,4 +1,4 @@
-package binance
+package futures
 
 import (
 	"errors"
@@ -80,6 +80,10 @@ func (c Client) OpenLimitOrder(o t.Order) (*t.Order, error) {
 		o.OpenPrice = price
 	}
 	return &o, nil
+}
+
+func (c Client) OpenMarketOrder(o t.Order) (*t.Order, error) {
+	return nil, nil
 }
 
 // OpenStopOrder opens a stop order

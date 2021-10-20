@@ -5,7 +5,7 @@ import (
 
 	"github.com/tonkla/autotp/db"
 	h "github.com/tonkla/autotp/helper"
-	"github.com/tonkla/autotp/strategy"
+	s "github.com/tonkla/autotp/strategy/common"
 	"github.com/tonkla/autotp/talib"
 	t "github.com/tonkla/autotp/types"
 )
@@ -18,7 +18,7 @@ type OnTickParams struct {
 	IsFutures bool
 }
 
-func OnTick(params OnTickParams) *t.TradeOrder {
+func OnTick(params OnTickParams) *t.TradeOrders {
 	var openOrders, closeOrders []t.Order
 
 	db := params.DB
@@ -44,7 +44,7 @@ func OnTick(params OnTickParams) *t.TradeOrder {
 	cma_0 := cma[len(cma)-1]
 	cma_1 := cma[len(cma)-2]
 
-	atr := strategy.GetATR(prices, int(bp.MAPeriod))
+	atr := s.GetATR(prices, int(bp.MAPeriod))
 
 	qo := t.QueryOrder{
 		BotID:    bp.BotID,
@@ -240,7 +240,7 @@ func OnTick(params OnTickParams) *t.TradeOrder {
 			qo.OpenPrice = _openPrice
 			norder := db.GetNearestOrder(qo)
 			// Open a new limit order with safe minimum price gap
-			if _openPrice < cma_0 && (norder == nil || math.Abs(norder.OpenPrice-_openPrice) >= bp.MinGap) {
+			if _openPrice < cma_0 && (norder == nil || math.Abs(norder.OpenPrice-_openPrice) >= bp.OrderGap) {
 				o := t.Order{
 					ID:        h.GenID(),
 					BotID:     bp.BotID,
@@ -268,7 +268,7 @@ func OnTick(params OnTickParams) *t.TradeOrder {
 			qo.OpenPrice = _openPrice
 			norder := db.GetNearestOrder(qo)
 			// Open a new limit order with safe minimum price gap
-			if _openPrice > cma_0 && (norder == nil || math.Abs(norder.OpenPrice-_openPrice) >= bp.MinGap) {
+			if _openPrice > cma_0 && (norder == nil || math.Abs(norder.OpenPrice-_openPrice) >= bp.OrderGap) {
 				o := t.Order{
 					ID:        h.GenID(),
 					BotID:     bp.BotID,
@@ -288,7 +288,7 @@ func OnTick(params OnTickParams) *t.TradeOrder {
 		}
 	}
 
-	return &t.TradeOrder{
+	return &t.TradeOrders{
 		OpenOrders:  openOrders,
 		CloseOrders: closeOrders,
 	}
