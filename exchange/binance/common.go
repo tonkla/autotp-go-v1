@@ -14,7 +14,7 @@ import (
 	t "github.com/tonkla/autotp/types"
 )
 
-type CClient struct {
+type Client struct {
 	BaseURL   string
 	ApiKey    string
 	SecretKey string
@@ -116,7 +116,7 @@ func GetHistoricalPrices(baseURL string, symbol string, timeframe string, limit 
 }
 
 // GetOrderByIDs returns the order by its IDs
-func GetOrderByIDs(c CClient, symbol string, ID string, refID string) (*t.Order, error) {
+func GetOrderByIDs(c Client, symbol string, ID string, refID string) (*t.Order, error) {
 	if symbol == "" || (ID == "" && refID == "") {
 		return nil, nil
 	}
@@ -156,7 +156,7 @@ func GetOrderByIDs(c CClient, symbol string, ID string, refID string) (*t.Order,
 }
 
 // GetOrder returns the order by its IDs
-func GetOrder(c CClient, o t.Order) (*t.Order, error) {
+func GetOrder(c Client, o t.Order) (*t.Order, error) {
 	exo, err := GetOrderByIDs(c, o.Symbol, o.ID, o.RefID)
 	if err != nil {
 		return nil, err

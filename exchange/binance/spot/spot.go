@@ -1,4 +1,4 @@
-package binance
+package spot
 
 import (
 	"errors"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/tidwall/gjson"
 
+	b "github.com/tonkla/autotp/exchange/binance"
 	h "github.com/tonkla/autotp/helper"
 	t "github.com/tonkla/autotp/types"
 )
@@ -30,17 +31,17 @@ func NewSpotClient(apiKey string, secretKey string) Client {
 
 // GetTicker returns the latest ticker
 func (c Client) GetTicker(symbol string) *t.Ticker {
-	return GetTicker(c.baseURL, symbol)
+	return b.GetTicker(c.baseURL, symbol)
 }
 
 // GetOrderBook returns an order book (market depth
 func (c Client) GetOrderBook(symbol string, limit int) *t.OrderBook {
-	return GetOrderBook(c.baseURL, symbol, limit)
+	return b.GetOrderBook(c.baseURL, symbol, limit)
 }
 
 // GetHistoricalPrices returns historical prices in a format of k-lines/candlesticks
 func (c Client) GetHistoricalPrices(symbol string, timeframe string, limit int) []t.HistoricalPrice {
-	return GetHistoricalPrices(c.baseURL, symbol, timeframe, limit)
+	return b.GetHistoricalPrices(c.baseURL, symbol, timeframe, limit)
 }
 
 // GetExchangeInfo returns the exchange information of the specified symbol
@@ -90,12 +91,12 @@ func (c Client) Get5mHistoricalPrices(symbol string, limit int) []t.HistoricalPr
 func (c Client) GetOpenOrders(symbol string) []t.Order {
 	var payload, url strings.Builder
 
-	BuildBaseQS(&payload, symbol)
+	b.BuildBaseQS(&payload, symbol)
 
-	signature := Sign(payload.String(), c.secretKey)
+	signature := b.Sign(payload.String(), c.secretKey)
 
 	fmt.Fprintf(&url, "%s/openOrders?%s&signature=%s", c.baseURL, payload.String(), signature)
-	data, err := h.GetH(url.String(), NewHeader(c.apiKey))
+	data, err := h.GetH(url.String(), b.NewHeader(c.apiKey))
 	if err != nil {
 		return nil
 	}
@@ -130,7 +131,7 @@ func (c Client) GetOpenOrders(symbol string) []t.Order {
 func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime int) []t.Order {
 	var payload, url strings.Builder
 
-	BuildBaseQS(&payload, symbol)
+	b.BuildBaseQS(&payload, symbol)
 
 	if limit > 0 {
 		fmt.Fprintf(&payload, "&limit=%d", limit)
@@ -142,10 +143,10 @@ func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime in
 		fmt.Fprintf(&payload, "&endTime=%d", endTime)
 	}
 
-	signature := Sign(payload.String(), c.secretKey)
+	signature := b.Sign(payload.String(), c.secretKey)
 
 	fmt.Fprintf(&url, "%s/allOrders?%s&signature=%s", c.baseURL, payload.String(), signature)
-	data, err := h.GetH(url.String(), NewHeader(c.apiKey))
+	data, err := h.GetH(url.String(), b.NewHeader(c.apiKey))
 	if err != nil {
 		return nil
 	}
@@ -184,14 +185,14 @@ func (c Client) OpenLimitOrder(o t.Order) (*t.Order, error) {
 
 	var payload, url strings.Builder
 
-	BuildBaseQS(&payload, o.Symbol)
+	b.BuildBaseQS(&payload, o.Symbol)
 	fmt.Fprintf(&payload, "&newClientOrderId=%s&side=%s&type=%s&quantity=%f&price=%f&timeInForce=GTC",
 		o.ID, o.Side, o.Type, o.Qty, o.OpenPrice)
 
-	signature := Sign(payload.String(), c.secretKey)
+	signature := b.Sign(payload.String(), c.secretKey)
 
 	fmt.Fprintf(&url, "%s/order?%s&signature=%s", c.baseURL, payload.String(), signature)
-	data, err := h.Post(url.String(), NewHeader(c.apiKey))
+	data, err := h.Post(url.String(), b.NewHeader(c.apiKey))
 	if err != nil {
 		return nil, err
 	}
@@ -225,14 +226,14 @@ func (c Client) OpenStopOrder(o t.Order) (*t.Order, error) {
 
 	var payload, url strings.Builder
 
-	BuildBaseQS(&payload, o.Symbol)
+	b.BuildBaseQS(&payload, o.Symbol)
 	fmt.Fprintf(&payload, "&newClientOrderId=%s&side=%s&type=%s&quantity=%f&price=%f&stopPrice=%f&timeInForce=GTC",
 		o.ID, o.Side, o.Type, o.Qty, o.OpenPrice, o.StopPrice)
 
-	signature := Sign(payload.String(), c.secretKey)
+	signature := b.Sign(payload.String(), c.secretKey)
 
 	fmt.Fprintf(&url, "%s/order?%s&signature=%s", c.baseURL, payload.String(), signature)
-	data, err := h.Post(url.String(), NewHeader(c.apiKey))
+	data, err := h.Post(url.String(), b.NewHeader(c.apiKey))
 	if err != nil {
 		return nil, err
 	}
@@ -257,14 +258,14 @@ func (c Client) OpenMarketOrder(o t.Order) (*t.Order, error) {
 
 	var payload, url strings.Builder
 
-	BuildBaseQS(&payload, o.Symbol)
+	b.BuildBaseQS(&payload, o.Symbol)
 	fmt.Fprintf(&payload, "&newClientOrderId=%s&side=%s&type=%s&quantity=%f",
 		o.ID, o.Side, o.Type, o.Qty)
 
-	signature := Sign(payload.String(), c.secretKey)
+	signature := b.Sign(payload.String(), c.secretKey)
 
 	fmt.Fprintf(&url, "%s/order?%s&signature=%s", c.baseURL, payload.String(), signature)
-	data, err := h.Post(url.String(), NewHeader(c.apiKey))
+	data, err := h.Post(url.String(), b.NewHeader(c.apiKey))
 	if err != nil {
 		return nil, err
 	}
@@ -294,13 +295,13 @@ func (c Client) OpenMarketOrder(o t.Order) (*t.Order, error) {
 func (c Client) CancelOrder(o t.Order) (*t.Order, error) {
 	var payload, url strings.Builder
 
-	BuildBaseQS(&payload, o.Symbol)
+	b.BuildBaseQS(&payload, o.Symbol)
 	fmt.Fprintf(&payload, "&orderId=%s&origClientOrderId=%s", o.RefID, o.ID)
 
-	signature := Sign(payload.String(), c.secretKey)
+	signature := b.Sign(payload.String(), c.secretKey)
 
 	fmt.Fprintf(&url, "%s/order?%s&signature=%s", c.baseURL, payload.String(), signature)
-	data, err := h.Delete(url.String(), NewHeader(c.apiKey))
+	data, err := h.Delete(url.String(), b.NewHeader(c.apiKey))
 	if err != nil {
 		return nil, err
 	}
@@ -323,12 +324,12 @@ func (c Client) CancelOrder(o t.Order) (*t.Order, error) {
 
 // GetOrder returns the order by its IDs
 func (c Client) GetOrder(o t.Order) (*t.Order, error) {
-	cc := CClient{
+	cc := b.Client{
 		BaseURL:   c.baseURL,
 		ApiKey:    c.apiKey,
 		SecretKey: c.secretKey,
 	}
-	return GetOrder(cc, o)
+	return b.GetOrder(cc, o)
 }
 
 func (c Client) CloseOrder(o t.Order) (*t.Order, error) {

@@ -159,7 +159,7 @@ func (c Client) GetTradeList(symbol string, limit int64) ([]t.Order, error) {
 
 // GetOrder returns the order by its IDs
 func (c Client) GetOrder(o t.Order) (*t.Order, error) {
-	cc := b.CClient{
+	cc := b.Client{
 		BaseURL:   c.baseURL,
 		ApiKey:    c.apiKey,
 		SecretKey: c.secretKey,

@@ -1,16 +1,26 @@
 package strategy
 
 import (
+	"errors"
+
 	"github.com/tonkla/autotp/rdb"
-	s "github.com/tonkla/autotp/strategy/common"
+	"github.com/tonkla/autotp/strategy/daily"
 	"github.com/tonkla/autotp/strategy/grid"
+	"github.com/tonkla/autotp/strategy/trend"
 	t "github.com/tonkla/autotp/types"
 )
 
-func New(db rdb.DB, bp t.BotParams) (s.Repository, error) {
+type Repository interface {
+	OnTick(*t.Ticker) t.TradeOrders
+}
+
+func New(db *rdb.DB, bp *t.BotParams) (Repository, error) {
 	if bp.Strategy == t.StrategyGrid {
 		return grid.New(db, bp), nil
+	} else if bp.Strategy == t.StrategyTrend {
+		return trend.New(db, bp), nil
+	} else if bp.Strategy == t.StrategyDaily {
+		return daily.New(db, bp), nil
 	}
-
-	return nil, nil
+	return nil, errors.New("strategy not found")
 }

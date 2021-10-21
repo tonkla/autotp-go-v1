@@ -14,10 +14,6 @@ type OnTickParams struct {
 	BP t.BotParams
 }
 
-type Repository interface {
-	OnTick(t.Ticker) t.TradeOrders
-}
-
 // IsDown returns true when the Close price is lower than the Open price
 func IsDown(hprices t.HistoricalPrice) bool {
 	return hprices.Close < hprices.Open

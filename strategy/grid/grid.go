@@ -1,30 +1,44 @@
 package grid
 
 import (
+	"fmt"
+	"os"
 	"sort"
 
 	h "github.com/tonkla/autotp/helper"
 	"github.com/tonkla/autotp/rdb"
-	c "github.com/tonkla/autotp/strategy/common"
+	"github.com/tonkla/autotp/strategy/common"
 	t "github.com/tonkla/autotp/types"
 )
 
 type Strategy struct {
-	DB rdb.DB
-	BP t.BotParams
+	DB *rdb.DB
+	BP *t.BotParams
 }
 
-func New(db rdb.DB, bp t.BotParams) c.Repository {
+func New(db *rdb.DB, bp *t.BotParams) Strategy {
 	return Strategy{
 		DB: db,
 		BP: bp,
 	}
 }
 
-func (s Strategy) OnTick(ticker t.Ticker) t.TradeOrders {
-	var orders []t.Order
+func (s Strategy) OnTick(ticker *t.Ticker) t.TradeOrders {
+	if s.BP.UpperPrice <= s.BP.LowerPrice {
+		fmt.Fprintln(os.Stderr, "The upper price must be greater than the lower price")
+		return t.TradeOrders{}
+	} else if s.BP.GridSize < 2 {
+		fmt.Fprintln(os.Stderr, "Grid size must be greater than 1")
+		return t.TradeOrders{}
+	} else if s.BP.BaseQty == 0 && s.BP.QuoteQty == 0 {
+		fmt.Fprintln(os.Stderr, "Quantity per grid must be greater than 0")
+		os.Exit(0)
+		return t.TradeOrders{}
+	}
 
-	buyPrice, sellPrice, gridWidth := c.GetGridRange(ticker.Price, s.BP.LowerPrice, s.BP.UpperPrice, s.BP.GridSize)
+	var openOrders, closeOrders []t.Order
+
+	buyPrice, sellPrice, gridWidth := common.GetGridRange(ticker.Price, s.BP.LowerPrice, s.BP.UpperPrice, s.BP.GridSize)
 
 	qo := t.QueryOrder{
 		BotID:    s.BP.BotID,
@@ -47,7 +61,7 @@ func (s Strategy) OnTick(ticker t.Ticker) t.TradeOrders {
 
 	if s.BP.View == t.ViewLong || s.BP.View == t.ViewNeutral {
 		var count int64 = 0
-		zones, _ := c.GetGridZones(ticker.Price, s.BP.LowerPrice, s.BP.UpperPrice, s.BP.GridSize)
+		zones, _ := common.GetGridZones(ticker.Price, s.BP.LowerPrice, s.BP.UpperPrice, s.BP.GridSize)
 		for _, zone := range zones {
 			o := order
 			o.Side = t.OrderSideBuy
@@ -66,7 +80,7 @@ func (s Strategy) OnTick(ticker t.Ticker) t.TradeOrders {
 				if s.BP.GridTP > 0 {
 					o.TPPrice = h.NormalizeDouble(zone+gridWidth*s.BP.GridTP, s.BP.PriceDigits)
 				}
-				orders = append(orders, o)
+				openOrders = append(openOrders, o)
 			}
 			if count++; count == s.BP.OpenZones {
 				break
@@ -76,7 +90,7 @@ func (s Strategy) OnTick(ticker t.Ticker) t.TradeOrders {
 
 	if s.BP.View == t.ViewShort || s.BP.View == t.ViewNeutral {
 		var count int64 = 0
-		zones, _ := c.GetGridZones(ticker.Price, s.BP.LowerPrice, s.BP.UpperPrice, s.BP.GridSize)
+		zones, _ := common.GetGridZones(ticker.Price, s.BP.LowerPrice, s.BP.UpperPrice, s.BP.GridSize)
 		// Sort DESC
 		sort.Slice(zones, func(i, j int) bool {
 			return zones[i] > zones[j]
@@ -99,7 +113,7 @@ func (s Strategy) OnTick(ticker t.Ticker) t.TradeOrders {
 				if s.BP.GridTP > 0 {
 					o.TPPrice = h.NormalizeDouble(zone-gridWidth*s.BP.GridTP, s.BP.PriceDigits)
 				}
-				orders = append(orders, o)
+				openOrders = append(openOrders, o)
 			}
 			if count++; count == s.BP.OpenZones {
 				break
@@ -108,6 +122,7 @@ func (s Strategy) OnTick(ticker t.Ticker) t.TradeOrders {
 	}
 
 	return t.TradeOrders{
-		OpenOrders: orders,
+		OpenOrders:  openOrders,
+		CloseOrders: closeOrders,
 	}
 }

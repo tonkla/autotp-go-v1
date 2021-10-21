@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/tonkla/autotp/exchange/binance"
+	binance "github.com/tonkla/autotp/exchange/binance/spot"
 	"github.com/tonkla/autotp/talib"
 )
 

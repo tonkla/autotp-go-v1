@@ -3,8 +3,8 @@ package exchange
 import (
 	"errors"
 
-	bs "github.com/tonkla/autotp/exchange/binance"
 	bf "github.com/tonkla/autotp/exchange/binance/futures"
+	bs "github.com/tonkla/autotp/exchange/binance/spot"
 	t "github.com/tonkla/autotp/types"
 )
 
@@ -23,9 +23,9 @@ type Repository interface {
 func New(bp *t.BotParams) (Repository, error) {
 	if bp.Exchange == t.ExcBinance {
 		if bp.Product == t.ProductSpot {
-			return bs.NewSpotClient("", ""), nil
+			return bs.NewSpotClient(bp.ApiKey, bp.SecretKey), nil
 		} else if bp.Product == t.ProductFutures {
-			return bf.NewFuturesClient("", ""), nil
+			return bf.NewFuturesClient(bp.ApiKey, bp.SecretKey), nil
 		}
 	}
 	return nil, errors.New("exchange not found")

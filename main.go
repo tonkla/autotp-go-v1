@@ -8,24 +8,14 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/tonkla/autotp/exchange"
-	"github.com/tonkla/autotp/rdb"
-	"github.com/tonkla/autotp/strategy"
-	s "github.com/tonkla/autotp/strategy/common"
-
 	"github.com/tonkla/autotp/app"
+	"github.com/tonkla/autotp/exchange"
 	h "github.com/tonkla/autotp/helper"
+	"github.com/tonkla/autotp/rdb"
+	"github.com/tonkla/autotp/robot"
+	"github.com/tonkla/autotp/strategy"
 	t "github.com/tonkla/autotp/types"
 )
-
-type AppParams struct {
-	EX exchange.Repository
-	ST s.Repository
-	BP *t.BotParams
-	TK *t.Ticker
-	TO *t.TradeOrders
-	QO *t.QueryOrder
-}
 
 var rootCmd = &cobra.Command{
 	Use:   "autotp",
@@ -119,24 +109,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	st, err := strategy.New(*db, bp)
+	st, err := strategy.New(db, &bp)
 	if err != nil {
-
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
 	qo := t.QueryOrder{
 		BotID:    bp.BotID,
-		Exchange: t.ExcBinance,
+		Exchange: bp.Exchange,
 		Symbol:   bp.Symbol,
 	}
 
 	ap := app.AppParams{
 		EX: ex,
 		ST: st,
-		BP: &bp,
 		DB: db,
+		BP: &bp,
 		QO: qo,
 	}
 
@@ -147,6 +136,7 @@ func main() {
 		if ticker == nil || ticker.Price <= 0 {
 			continue
 		}
+		ap.TK = ticker
 
 		if bp.StartPrice > 0 && ticker.Price > bp.StartPrice && len(db.GetActiveOrders(qo)) == 0 {
 			continue
@@ -161,18 +151,15 @@ func main() {
 		if len(hprices) == 0 || hprices[0].Open == 0 {
 			continue
 		}
-
 		bp.HPrices = hprices
 
-		tradeOrders := ap.ST.OnTick(*ticker)
-
-		ap.TK = ticker
-		ap.TO = &tradeOrders
+		tradeOrders := ap.ST.OnTick(ticker)
+		ap.TO = tradeOrders
 
 		if bp.OrderType == t.OrderTypeLimit {
-			// PlaceAsMaker(&ap)
+			robot.PlaceAsMaker(&ap)
 		} else if bp.OrderType == t.OrderTypeMarket {
-			// PlaceAsTaker(&ap)
+			robot.PlaceAsTaker(&ap)
 		}
 	}
 }
