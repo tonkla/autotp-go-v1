@@ -1,7 +1,6 @@
 package robot
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/tonkla/autotp/app"
@@ -10,9 +9,49 @@ import (
 )
 
 func PlaceAsMaker(p *app.AppParams) {
+	CloseOrders(p)
+	SyncClosedOrders(p)
+	if p.BP.Product == t.ProductSpot {
+		OpenLimitSpotOrders(p)
+		SyncLimitOrder(p)
+		SyncTPOrder(p)
+	} else if p.BP.Product == t.ProductFutures {
+		OpenLimitFuturesOrders(p)
+		SyncLimitLongOrder(p)
+		SyncLimitShortOrder(p)
+		SyncSLLongOrder(p)
+		SyncSLShortOrder(p)
+		SyncTPLongOrder(p)
+		SyncTPShortOrder(p)
+	}
 }
 
 func PlaceAsTaker(p *app.AppParams) {
+	if p.BP.Product == t.ProductSpot {
+		OpenMarketSpotOrders(p)
+	} else if p.BP.Product == t.ProductFutures {
+		OpenMarketFuturesOrders(p)
+	}
+}
+
+func CloseOrders(p *app.AppParams) {
+	for _, o := range p.TO.CloseOrders {
+		exo, err := p.EX.OpenStopOrder(o)
+		if err != nil || exo == nil {
+			h.Log(err)
+			os.Exit(1)
+		}
+
+		o.RefID = exo.RefID
+		o.OpenTime = exo.OpenTime
+		err = p.DB.CreateOrder(o)
+		if err != nil {
+			h.Log(err)
+			return
+		}
+
+		h.LogNewF(&o)
+	}
 }
 
 func OpenLimitSpotOrders(p *app.AppParams) {
@@ -24,7 +63,7 @@ func OpenLimitSpotOrders(p *app.AppParams) {
 
 		exo, err := p.EX.OpenLimitOrder(o)
 		if err != nil || exo == nil {
-			h.Log("OpenOrder")
+			h.Log(err)
 			os.Exit(1)
 		}
 
@@ -34,7 +73,7 @@ func OpenLimitSpotOrders(p *app.AppParams) {
 		o.OpenTime = exo.OpenTime
 		err = p.DB.CreateOrder(o)
 		if err != nil {
-			h.Log("CreateOrder", err)
+			h.Log(err)
 			continue
 		}
 		h.LogNew(&o)
@@ -45,7 +84,7 @@ func OpenLimitFuturesOrders(p *app.AppParams) {
 	for _, o := range p.TO.OpenOrders {
 		exo, err := p.EX.OpenLimitOrder(o)
 		if err != nil || exo == nil {
-			fmt.Fprintln(os.Stderr, err)
+			h.Log(err)
 			os.Exit(1)
 		}
 
@@ -63,48 +102,33 @@ func OpenLimitFuturesOrders(p *app.AppParams) {
 	}
 }
 
-func CloseOrders(p *app.AppParams) {
-	for _, o := range p.TO.CloseOrders {
-		exo, err := p.EX.OpenStopOrder(o)
-		if err != nil || exo == nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-
-		o.RefID = exo.RefID
-		o.OpenTime = exo.OpenTime
-		err = p.DB.CreateOrder(o)
-		if err != nil {
-			h.Log(err)
-			return
-		}
-
-		h.LogNewF(&o)
-	}
+func OpenMarketSpotOrders(p *app.AppParams) {
 }
 
-func SyncNewLimitOrder(p *app.AppParams) {
-	// Synchronize order status
+func OpenMarketFuturesOrders(p *app.AppParams) {
+}
+
+func SyncLimitOrder(p *app.AppParams) {
 	o := p.DB.GetHighestNewBuyOrder(p.QO)
 	if o == nil {
 		return
 	}
+
 	exo, err := p.EX.GetOrder(*o)
 	if err != nil || exo == nil {
-		h.Log("GetOrder")
+		h.Log(err)
 		os.Exit(1)
 	}
 	if exo.Status == t.OrderStatusNew {
 		return
 	}
 
-	// Synchronize FILLED/CANCELED order
 	if o.Status != exo.Status {
 		o.Status = exo.Status
 		o.UpdateTime = exo.UpdateTime
 		err := p.DB.UpdateOrder(*o)
 		if err != nil {
-			h.Log("UpdateOrder", err)
+			h.Log(err)
 			return
 		}
 		if exo.Status == t.OrderStatusFilled {
@@ -130,7 +154,7 @@ func SyncFilledLimitOrder(p *app.AppParams) {
 			}
 			exo, err := p.EX.CancelOrder(tpo)
 			if err != nil || exo == nil {
-				h.Log("CancelOrder")
+				h.Log(err)
 				os.Exit(1)
 			}
 
@@ -177,7 +201,7 @@ func SyncFilledLimitOrder(p *app.AppParams) {
 		}
 		exo, err := p.EX.OpenStopOrder(tpo)
 		if err != nil || exo == nil {
-			h.Log("PlaceTPOrder")
+			h.Log(err)
 			os.Exit(1)
 		}
 
@@ -192,14 +216,15 @@ func SyncFilledLimitOrder(p *app.AppParams) {
 	}
 }
 
-func SyncTPLimitOrder(p *app.AppParams) {
+func SyncTPOrder(p *app.AppParams) {
 	tpo := p.DB.GetLowestTPOrder(p.QO)
 	if tpo == nil {
 		return
 	}
+
 	exo, err := p.EX.GetOrder(*tpo)
 	if err != nil || exo == nil {
-		h.Log("GetTPOrder")
+		h.Log(err)
 		os.Exit(1)
 	}
 	if exo.Status == t.OrderStatusNew {
@@ -239,19 +264,84 @@ func SyncTPLimitOrder(p *app.AppParams) {
 		tpo.CloseTime = oo.CloseTime
 		err = p.DB.UpdateOrder(*tpo)
 		if err != nil {
-			h.Log("UpdateTPOrder", err)
+			h.Log(err)
 		}
 	}
 }
 
-func SyncSLLongOrders(p *app.AppParams) {
+func SyncLimitLongOrder(p *app.AppParams) {
+	o := p.DB.GetHighestNewLongOrder(p.QO)
+	if o == nil {
+		return
+	}
+
+	exo, err := p.EX.GetOrder(*o)
+	if err != nil || exo == nil {
+		h.Log(err)
+		os.Exit(1)
+	}
+	if exo.Status == t.OrderStatusNew {
+		return
+	}
+
+	if o.Status != exo.Status {
+		o.Status = exo.Status
+		o.UpdateTime = exo.UpdateTime
+		err := p.DB.UpdateOrder(*o)
+		if err != nil {
+			h.Log(err)
+			return
+		}
+		if exo.Status == t.OrderStatusFilled {
+			h.LogFilledF(o)
+		}
+		if exo.Status == t.OrderStatusCanceled {
+			h.LogCanceledF(o)
+		}
+	}
+}
+
+func SyncLimitShortOrder(p *app.AppParams) {
+	o := p.DB.GetLowestNewShortOrder(p.QO)
+	if o == nil {
+		return
+	}
+
+	exo, err := p.EX.GetOrder(*o)
+	if err != nil || exo == nil {
+		h.Log(err)
+		os.Exit(1)
+	}
+	if exo.Status == t.OrderStatusNew {
+		return
+	}
+
+	if o.Status != exo.Status {
+		o.Status = exo.Status
+		o.UpdateTime = exo.UpdateTime
+		err := p.DB.UpdateOrder(*o)
+		if err != nil {
+			h.Log(err)
+			return
+		}
+		if exo.Status == t.OrderStatusFilled {
+			h.LogFilledF(o)
+		}
+		if exo.Status == t.OrderStatusCanceled {
+			h.LogCanceledF(o)
+		}
+	}
+}
+
+func SyncSLLongOrder(p *app.AppParams) {
 	slo := p.DB.GetHighestSLLongOrder(p.QO)
 	if slo == nil {
 		return
 	}
+
 	exo, err := p.EX.GetOrder(*slo)
 	if err != nil || exo == nil {
-		fmt.Fprintln(os.Stderr, err)
+		h.Log(err)
 		os.Exit(1)
 	}
 	if exo.Status == t.OrderStatusNew {
@@ -308,14 +398,15 @@ func SyncSLLongOrders(p *app.AppParams) {
 	}
 }
 
-func SyncSLShortOrders(p *app.AppParams) {
+func SyncSLShortOrder(p *app.AppParams) {
 	slo := p.DB.GetLowestSLShortOrder(p.QO)
 	if slo == nil {
 		return
 	}
+
 	exo, err := p.EX.GetOrder(*slo)
 	if err != nil || exo == nil {
-		fmt.Fprintln(os.Stderr, err)
+		h.Log(err)
 		os.Exit(1)
 	}
 	if exo.Status == t.OrderStatusNew {
@@ -372,14 +463,15 @@ func SyncSLShortOrders(p *app.AppParams) {
 	}
 }
 
-func SyncTPLongOrders(p *app.AppParams) {
+func SyncTPLongOrder(p *app.AppParams) {
 	tpo := p.DB.GetLowestTPLongOrder(p.QO)
 	if tpo == nil {
 		return
 	}
+
 	exo, err := p.EX.GetOrder(*tpo)
 	if err != nil || exo == nil {
-		fmt.Fprintln(os.Stderr, err)
+		h.Log(err)
 		os.Exit(1)
 	}
 	if exo.Status == t.OrderStatusNew {
@@ -436,14 +528,15 @@ func SyncTPLongOrders(p *app.AppParams) {
 	}
 }
 
-func SyncTPShortOrders(p *app.AppParams) {
+func SyncTPShortOrder(p *app.AppParams) {
 	tpo := p.DB.GetHighestTPShortOrder(p.QO)
 	if tpo == nil {
 		return
 	}
+
 	exo, err := p.EX.GetOrder(*tpo)
 	if err != nil || exo == nil {
-		fmt.Fprintln(os.Stderr, err)
+		h.Log(err)
 		os.Exit(1)
 	}
 	if exo.Status == t.OrderStatusNew {
@@ -497,68 +590,6 @@ func SyncTPShortOrders(p *app.AppParams) {
 		}
 
 		h.LogClosedF(o, tpo)
-	}
-}
-
-func SyncLimitLongOrders(p *app.AppParams) {
-	o := p.DB.GetHighestNewLongOrder(p.QO)
-	if o == nil {
-		return
-	}
-	exo, err := p.EX.GetOrder(*o)
-	if err != nil || exo == nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	if exo.Status == t.OrderStatusNew {
-		return
-	}
-
-	if o.Status != exo.Status {
-		o.Status = exo.Status
-		o.UpdateTime = exo.UpdateTime
-		err := p.DB.UpdateOrder(*o)
-		if err != nil {
-			h.Log(err)
-			return
-		}
-		if exo.Status == t.OrderStatusFilled {
-			h.LogFilledF(o)
-		}
-		if exo.Status == t.OrderStatusCanceled {
-			h.LogCanceledF(o)
-		}
-	}
-}
-
-func SyncLimitShortOrders(p *app.AppParams) {
-	o := p.DB.GetLowestNewShortOrder(p.QO)
-	if o == nil {
-		return
-	}
-	exo, err := p.EX.GetOrder(*o)
-	if err != nil || exo == nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	if exo.Status == t.OrderStatusNew {
-		return
-	}
-
-	if o.Status != exo.Status {
-		o.Status = exo.Status
-		o.UpdateTime = exo.UpdateTime
-		err := p.DB.UpdateOrder(*o)
-		if err != nil {
-			h.Log(err)
-			return
-		}
-		if exo.Status == t.OrderStatusFilled {
-			h.LogFilledF(o)
-		}
-		if exo.Status == t.OrderStatusCanceled {
-			h.LogCanceledF(o)
-		}
 	}
 }
 

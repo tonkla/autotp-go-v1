@@ -83,7 +83,7 @@ func (s Strategy) OnTick(ticker *t.Ticker) t.TradeOrders {
 		if (s.BP.View == t.ViewLong || s.BP.View == t.ViewNeutral) && ticker.Price < h_1-mos && ticker.Price < c_1 {
 			qo.Side = t.OrderSideBuy
 			qo.OpenTime = p_0.Time
-			activeOrders := s.DB.GetLimitOrdersBySide(qo)
+			activeOrders := s.DB.GetLimitOrders(qo)
 			maxOrders := 3
 			if len(activeOrders) == 0 || (activeOrders[0].OpenTime < p_0.Time && len(activeOrders) < maxOrders) {
 				o := t.Order{
@@ -131,7 +131,7 @@ func (s Strategy) OnTick(ticker *t.Ticker) t.TradeOrders {
 		if (s.BP.View == t.ViewShort || s.BP.View == t.ViewNeutral) && ticker.Price > l_1+mos && ticker.Price > c_1 {
 			qo.Side = t.OrderSideSell
 			qo.OpenTime = p_0.Time
-			activeOrders := s.DB.GetLimitOrdersBySide(qo)
+			activeOrders := s.DB.GetLimitOrders(qo)
 			maxOrders := 3
 			if len(activeOrders) == 0 || (activeOrders[0].OpenTime < p_0.Time && len(activeOrders) < maxOrders) {
 				o := t.Order{

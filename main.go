@@ -61,10 +61,10 @@ func main() {
 
 		IntervalSec: viper.GetInt64("intervalSec"),
 
-		BotID:       viper.GetInt64("botID"),
 		Exchange:    viper.GetString("exchange"),
-		Product:     viper.GetString("product"),
 		Symbol:      viper.GetString("symbol"),
+		BotID:       viper.GetInt64("botID"),
+		Product:     viper.GetString("product"),
 		Strategy:    viper.GetString("strategy"),
 		PriceDigits: viper.GetInt64("priceDigits"),
 		QtyDigits:   viper.GetInt64("qtyDigits"),
@@ -77,20 +77,20 @@ func main() {
 		GridSize:   viper.GetFloat64("gridSize"),
 		GridTP:     viper.GetFloat64("gridTP"),
 		OpenZones:  viper.GetInt64("openZones"),
-		ApplyTrend: viper.GetBool("applyTrend"),
-
-		OrderGap: viper.GetFloat64("orderGap"),
-		MoS:      viper.GetFloat64("mos"),
-		Slippage: viper.GetFloat64("slippage"),
+		ApplyTA:    viper.GetBool("applyTA"),
+		Slippage:   viper.GetFloat64("slippage"),
 
 		MATimeframe: viper.GetString("maTimeframe"),
 		MAPeriod:    viper.GetInt64("maPeriod"),
-		AutoSL:      viper.GetBool("autoSL"),
-		AutoTP:      viper.GetBool("autoTP"),
-		QuoteSL:     viper.GetFloat64("quoteSL"),
-		QuoteTP:     viper.GetFloat64("quoteTP"),
-		AtrSL:       viper.GetFloat64("atrSL"),
-		AtrTP:       viper.GetFloat64("atrTP"),
+		OrderGap:    viper.GetFloat64("orderGap"),
+		MoS:         viper.GetFloat64("mos"),
+
+		AutoSL:  viper.GetBool("autoSL"),
+		AutoTP:  viper.GetBool("autoTP"),
+		QuoteSL: viper.GetFloat64("quoteSL"),
+		QuoteTP: viper.GetFloat64("quoteTP"),
+		AtrSL:   viper.GetFloat64("atrSL"),
+		AtrTP:   viper.GetFloat64("atrTP"),
 
 		SLim: t.StopLimit{
 			SLStop:    viper.GetInt64("slStop"),
@@ -129,32 +129,29 @@ func main() {
 		QO: qo,
 	}
 
-	h.Logf("{Exchange:%s Product:%s Symbol:%s Strategy:%s BotID:%d}\n", bp.Exchange, bp.Product, bp.Symbol, bp.Strategy, bp.BotID)
+	h.Logf("{Exchange:%s Product:%s Symbol:%s Strategy:%s BotID:%d}\n",
+		bp.Exchange, bp.Product, bp.Symbol, bp.Strategy, bp.BotID)
+
+	const numberOfBars = 50
 
 	for range time.Tick(time.Duration(bp.IntervalSec) * time.Second) {
 		ticker := ex.GetTicker(bp.Symbol)
 		if ticker == nil || ticker.Price <= 0 {
 			continue
 		}
-		ap.TK = ticker
 
 		if bp.StartPrice > 0 && ticker.Price > bp.StartPrice && len(db.GetActiveOrders(qo)) == 0 {
 			continue
 		}
 
-		var _period int64 = 50
-		const n int64 = 4
-		if bp.MAPeriod*n > _period {
-			_period *= (n - 1)
-		}
-		hprices := ex.GetHistoricalPrices(bp.Symbol, bp.MATimeframe, int(_period))
+		hprices := ex.GetHistoricalPrices(bp.Symbol, bp.MATimeframe, numberOfBars)
 		if len(hprices) == 0 || hprices[0].Open == 0 {
 			continue
 		}
 		bp.HPrices = hprices
 
-		tradeOrders := ap.ST.OnTick(ticker)
-		ap.TO = tradeOrders
+		ap.TK = ticker
+		ap.TO = ap.ST.OnTick(ticker)
 
 		if bp.OrderType == t.OrderTypeLimit {
 			robot.PlaceAsMaker(&ap)

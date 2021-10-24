@@ -5,23 +5,29 @@ secretKey: SECRET_KEY
 # The SQLite database name
 dbName: autotp.db
 
+# The type of a new order
+orderType: LIMIT | MARKET
+
+# The direction of a new order
+view: NEUTRAL | LONG | SHORT
+
+# The interval seconds of fetching a ticker
+intervalSec: 5
+
 # The exchange
 exchange: BINANCE | FTX
-
-# The type of the trading products
-product: SPOT | FUTURES
 
 # One robot per symbol
 symbol: BNBUSDT
 
-# The trading strategy (placed in the `/strategy` directory)
-strategy: grid
-
 # Use along with the Exchange and the Symbol to identify the robot
 botID: 1
 
-# The interval seconds of each trading
-intervalSec: 5
+# The type of a trading product
+product: SPOT | FUTURES
+
+# The trading strategy (placed in the `/strategy` directory)
+strategy: grid
 
 # The price digits of the symbol
 priceDigits: 2
@@ -36,16 +42,6 @@ baseQty: 0.1
 # The fixed quantity in a quote currency
 # For BNBBUSD pair, a quote currency is BUSD
 quoteQty: 10
-
-# The padding (+/-) percentage from the price of an order
-# For LIMIT order, slippage is normally 0
-slippage: 0
-
-# The type of a new order
-orderType: LIMIT | MARKET
-
-# The direction of a new order
-view: NEUTRAL | LONG | SHORT
 
 # The trigger price, start when the ticker price is lower than this price (LONG)
 startPrice: 150
@@ -65,11 +61,21 @@ gridTP: 2
 # The available zones that will be open at the current price (cheaper)
 openZones: 1
 
+# Should apply a technical analysis when opening a grid order?
+applyTA: false
+
+# The padding (+/-) percentage from the price of an order
+# For LIMIT order, slippage is normally 0
+slippage: 0
+
 # The timeframe that use to calculate a Moving Average
 maTimeframe: 1h
 
 # The period that use to calculate a Moving Average
 maPeriod: 20
+
+# The minimum price gap between two orders (values in a base currency)
+orderGap: 10
 
 # The Margin-of-Safety multiplier from the high/low of the previous bar
 mos: 0.5
@@ -94,9 +100,6 @@ atrSL: 0.5
 # The multiplier of the "maTimeframe"'s ATR that use to calculate a Volatility Stop (TP)
 # (the second priority TP, used when quoteTP=0)
 atrTP: 0.5
-
-# The minimum price gap between two orders
-orderGap: 10
 
 # The Stop/Limit ranges from the market ticker price (integer)
 slStop: 100

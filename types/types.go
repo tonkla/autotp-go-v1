@@ -177,9 +177,9 @@ type BotParams struct {
 
 	IntervalSec int64
 
-	BotID       int64
 	Exchange    string
 	Symbol      string
+	BotID       int64
 	Product     string
 	Strategy    string
 	PriceDigits int64
@@ -193,14 +193,13 @@ type BotParams struct {
 	GridSize   float64
 	GridTP     float64
 	OpenZones  int64
-	ApplyTrend bool
-
-	OrderGap float64
-	MoS      float64
-	Slippage float64
+	ApplyTA    bool
+	Slippage   float64
 
 	MATimeframe string
 	MAPeriod    int64
+	OrderGap    float64
+	MoS         float64
 
 	AutoSL  bool
 	AutoTP  bool
@@ -209,9 +208,9 @@ type BotParams struct {
 	AtrSL   float64
 	AtrTP   float64
 
-	HPrices []HistoricalPrice
-
 	SLim StopLimit
+
+	HPrices []HistoricalPrice
 }
 
 type StopLimit struct {
