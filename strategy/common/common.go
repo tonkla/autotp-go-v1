@@ -17,13 +17,22 @@ func IsDown(p t.HistoricalPrice) bool {
 	return p.Close < p.Open
 }
 
-// IsLower returns true if the price is lower than the current WMA price
-func IsLower(price float64, prices []t.HistoricalPrice, period int64) bool {
+// IsOverMA returns true if the price is higher than the current WMA price
+func IsOverMA(price float64, prices []t.HistoricalPrice, period int64, gap float64) bool {
 	cwma := talib.WMA(getCloses(prices), int(period))
 	if len(cwma) == 0 {
 		return false
 	}
-	return price < cwma[len(cwma)-1]
+	return price-gap > cwma[len(cwma)-1]
+}
+
+// IsUnderMA returns true if the price is lower than the current WMA price
+func IsUnderMA(price float64, prices []t.HistoricalPrice, period int64, gap float64) bool {
+	cwma := talib.WMA(getCloses(prices), int(period))
+	if len(cwma) == 0 {
+		return false
+	}
+	return price+gap < cwma[len(cwma)-1]
 }
 
 // GetTrend returns a stupid trend, do not trust him

@@ -41,8 +41,11 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	if s.BP.ApplyTA {
 		const numberOfBars = 50
 		prices4h := s.EX.Get4hHistoricalPrices(s.BP.Symbol, numberOfBars)
+		if !common.IsUnderMA(ticker.Price, prices4h, s.BP.MAPeriod, 0) {
+			return nil
+		}
 		prices1h := s.EX.Get1hHistoricalPrices(s.BP.Symbol, numberOfBars)
-		if !common.IsLower(ticker.Price, prices4h, s.BP.MAPeriod) || !common.IsLower(ticker.Price, prices1h, s.BP.MAPeriod) {
+		if !common.IsUnderMA(ticker.Price, prices1h, s.BP.MAPeriod, 0) {
 			return nil
 		}
 	}
@@ -53,15 +56,6 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		Exchange: s.BP.Exchange,
 		Symbol:   s.BP.Symbol,
 		BotID:    s.BP.BotID,
-	}
-
-	genesis := t.Order{
-		Exchange: s.BP.Exchange,
-		Symbol:   s.BP.Symbol,
-		BotID:    s.BP.BotID,
-		Qty:      s.BP.BaseQty,
-		Status:   t.OrderStatusNew,
-		Type:     t.OrderTypeLimit,
 	}
 
 	lowerPrice, _, gridWidth := common.GetGridRange(ticker.Price, s.BP.LowerPrice, s.BP.UpperPrice, s.BP.GridSize)
@@ -78,15 +72,22 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		var count int64 = 0
 		zones, _ := common.GetGridZones(ticker.Price, s.BP.LowerPrice, s.BP.UpperPrice, s.BP.GridSize)
 		for _, zone := range zones {
-			o := genesis
-			o.Side = t.OrderSideBuy
-			o.OpenPrice = h.NormalizeDouble(lowerPrice, s.BP.PriceDigits)
-			o.ZonePrice = h.NormalizeDouble(zone, s.BP.PriceDigits)
-
+			zonePrice := h.NormalizeDouble(zone, s.BP.PriceDigits)
+			qo.ZonePrice = zonePrice
 			qo.Side = t.OrderSideBuy
-			qo.ZonePrice = o.ZonePrice
 			if s.DB.IsEmptyZone(qo) {
-				o.ID = h.GenID()
+				o := t.Order{
+					ID:        h.GenID(),
+					Exchange:  s.BP.Exchange,
+					Symbol:    s.BP.Symbol,
+					BotID:     s.BP.BotID,
+					Qty:       s.BP.BaseQty,
+					Status:    t.OrderStatusNew,
+					Type:      t.OrderTypeLimit,
+					Side:      t.OrderSideBuy,
+					OpenPrice: h.NormalizeDouble(lowerPrice, s.BP.PriceDigits),
+					ZonePrice: zonePrice,
+				}
 				_qty := h.NormalizeDouble(s.BP.QuoteQty/o.OpenPrice, s.BP.QtyDigits)
 				if _qty > o.Qty {
 					o.Qty = _qty
