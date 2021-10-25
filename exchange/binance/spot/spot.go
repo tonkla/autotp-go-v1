@@ -39,11 +39,6 @@ func (c Client) GetOrderBook(symbol string, limit int) *t.OrderBook {
 	return b.GetOrderBook(c.baseURL, symbol, limit)
 }
 
-// GetHistoricalPrices returns historical prices in a format of k-lines/candlesticks
-func (c Client) GetHistoricalPrices(symbol string, timeframe string, limit int) []t.HistoricalPrice {
-	return b.GetHistoricalPrices(c.baseURL, symbol, timeframe, limit)
-}
-
 // GetExchangeInfo returns the exchange information of the specified symbol
 func (c Client) GetExchangeInfo(symbol string) error {
 	var url strings.Builder
@@ -58,6 +53,11 @@ func (c Client) GetExchangeInfo(symbol string) error {
 		return errors.New("")
 	}
 	return nil
+}
+
+// GetHistoricalPrices returns historical prices in a format of k-lines/candlesticks
+func (c Client) GetHistoricalPrices(symbol string, timeframe string, limit int) []t.HistoricalPrice {
+	return b.GetHistoricalPrices(c.baseURL, symbol, timeframe, limit)
 }
 
 // Get1wHistoricalPrices returns '1w' historical prices in a format of k-lines/candlesticks
@@ -80,9 +80,9 @@ func (c Client) Get1hHistoricalPrices(symbol string, limit int) []t.HistoricalPr
 	return c.GetHistoricalPrices(symbol, "1h", limit)
 }
 
-// Get5mHistoricalPrices returns '5m' historical prices in a format of k-lines/candlesticks
-func (c Client) Get5mHistoricalPrices(symbol string, limit int) []t.HistoricalPrice {
-	return c.GetHistoricalPrices(symbol, "5m", limit)
+// Get15mHistoricalPrices returns '15m' historical prices in a format of k-lines/candlesticks
+func (c Client) Get15mHistoricalPrices(symbol string, limit int) []t.HistoricalPrice {
+	return c.GetHistoricalPrices(symbol, "15m", limit)
 }
 
 // Private APIs ----------------------------------------------------------------
@@ -227,7 +227,8 @@ func (c Client) OpenStopOrder(o t.Order) (*t.Order, error) {
 	var payload, url strings.Builder
 
 	b.BuildBaseQS(&payload, o.Symbol)
-	fmt.Fprintf(&payload, "&newClientOrderId=%s&side=%s&type=%s&quantity=%f&price=%f&stopPrice=%f&timeInForce=GTC",
+	fmt.Fprintf(&payload,
+		"&newClientOrderId=%s&side=%s&type=%s&quantity=%f&price=%f&stopPrice=%f&timeInForce=GTC",
 		o.ID, o.Side, o.Type, o.Qty, o.OpenPrice, o.StopPrice)
 
 	signature := b.Sign(payload.String(), c.secretKey)

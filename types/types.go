@@ -67,9 +67,9 @@ type HistoricalPrice struct {
 type Order struct {
 	ID       string `gorm:"index"`
 	RefID    string `gorm:"index"`
-	BotID    int64  `gorm:"index"`
 	Exchange string `gorm:"index"`
 	Symbol   string `gorm:"index"`
+	BotID    int64  `gorm:"index"`
 	Side     string `gorm:"index"`
 	PosSide  string `gorm:"index"`
 	Type     string `gorm:"index"`
@@ -80,8 +80,6 @@ type Order struct {
 	OpenPrice  float64
 	ZonePrice  float64
 	StopPrice  float64 `gorm:"-"`
-	TPPrice    float64
-	SLPrice    float64
 	PL         float64
 	Commission float64
 
@@ -100,9 +98,9 @@ type Order struct {
 type QueryOrder struct {
 	ID        string
 	RefID     string
-	BotID     int64
 	Exchange  string
 	Symbol    string
+	BotID     int64
 	Side      string
 	PosSide   string
 	Type      string

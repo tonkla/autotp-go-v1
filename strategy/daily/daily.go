@@ -19,7 +19,7 @@ func New(db *rdb.DB, bp *t.BotParams) Strategy {
 	}
 }
 
-func (s Strategy) OnTick(ticker *t.Ticker) t.TradeOrders {
+func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	var openOrders, closeOrders []t.Order
 
 	prices := s.BP.HPrices
@@ -32,7 +32,7 @@ func (s Strategy) OnTick(ticker *t.Ticker) t.TradeOrders {
 
 	p_0 := prices[len(prices)-1]
 	if p_0.Open == 0 || p_0.High == 0 || p_0.Low == 0 || p_0.Close == 0 {
-		return t.TradeOrders{}
+		return nil
 	}
 	p_1 := prices[len(prices)-2]
 	c_1 := p_1.Close
@@ -150,7 +150,7 @@ func (s Strategy) OnTick(ticker *t.Ticker) t.TradeOrders {
 		}
 	}
 
-	return t.TradeOrders{
+	return &t.TradeOrders{
 		OpenOrders:  openOrders,
 		CloseOrders: closeOrders,
 	}

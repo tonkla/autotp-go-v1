@@ -12,7 +12,7 @@ type AppParams struct {
 	ST strategy.Repository
 	DB *rdb.DB
 	BP *t.BotParams
-	TK *t.Ticker
+	TK t.Ticker
 	TO t.TradeOrders
 	QO t.QueryOrder
 }

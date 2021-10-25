@@ -3,20 +3,27 @@ package common
 import (
 	"math"
 
-	"github.com/tonkla/autotp/rdb"
 	"github.com/tonkla/autotp/talib"
 	t "github.com/tonkla/autotp/types"
 )
 
-type OnTickParams struct {
-	DB rdb.DB
-	TK t.Ticker
-	BP t.BotParams
+// IsUp returns true when the Close price is higher than the Open price
+func IsUp(p t.HistoricalPrice) bool {
+	return p.Close > p.Open
 }
 
 // IsDown returns true when the Close price is lower than the Open price
-func IsDown(hprices t.HistoricalPrice) bool {
-	return hprices.Close < hprices.Open
+func IsDown(p t.HistoricalPrice) bool {
+	return p.Close < p.Open
+}
+
+// IsLower returns true if the price is lower than the current WMA price
+func IsLower(price float64, prices []t.HistoricalPrice, period int64) bool {
+	cwma := talib.WMA(getCloses(prices), int(period))
+	if len(cwma) == 0 {
+		return false
+	}
+	return price < cwma[len(cwma)-1]
 }
 
 // GetTrend returns a stupid trend, do not trust him
@@ -231,4 +238,12 @@ func GetGridZones(target float64, lowerNum float64, upperNum float64, grids floa
 		zones = append(zones, num)
 	}
 	return zones, gridWidth
+}
+
+func getCloses(prices []t.HistoricalPrice) []float64 {
+	var c []float64
+	for _, p := range prices {
+		c = append(c, p.Close)
+	}
+	return c
 }

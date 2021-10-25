@@ -41,6 +41,31 @@ func (c Client) GetHistoricalPrices(symbol string, timeframe string, limit int) 
 	return b.GetHistoricalPrices(c.baseURL, symbol, timeframe, limit)
 }
 
+// Get1wHistoricalPrices returns '1w' historical prices in a format of k-lines/candlesticks
+func (c Client) Get1wHistoricalPrices(symbol string, limit int) []t.HistoricalPrice {
+	return c.GetHistoricalPrices(symbol, "1w", limit)
+}
+
+// Get1dHistoricalPrices returns '1d' historical prices in a format of k-lines/candlesticks
+func (c Client) Get1dHistoricalPrices(symbol string, limit int) []t.HistoricalPrice {
+	return c.GetHistoricalPrices(symbol, "1d", limit)
+}
+
+// Get4hHistoricalPrices returns '4h' historical prices in a format of k-lines/candlesticks
+func (c Client) Get4hHistoricalPrices(symbol string, limit int) []t.HistoricalPrice {
+	return c.GetHistoricalPrices(symbol, "4h", limit)
+}
+
+// Get1hHistoricalPrices returns '1h' historical prices in a format of k-lines/candlesticks
+func (c Client) Get1hHistoricalPrices(symbol string, limit int) []t.HistoricalPrice {
+	return c.GetHistoricalPrices(symbol, "1h", limit)
+}
+
+// Get15mHistoricalPrices returns '15m' historical prices in a format of k-lines/candlesticks
+func (c Client) Get15mHistoricalPrices(symbol string, limit int) []t.HistoricalPrice {
+	return c.GetHistoricalPrices(symbol, "15m", limit)
+}
+
 // OpenLimitOrder opens a limit order
 func (c Client) OpenLimitOrder(o t.Order) (*t.Order, error) {
 	if o.Type != t.OrderTypeLimit {

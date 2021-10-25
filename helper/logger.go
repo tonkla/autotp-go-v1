@@ -71,7 +71,6 @@ func logOpen(action string, o *types.Order) {
 		Qty:    o.Qty,
 		Open:   o.OpenPrice,
 		Zone:   o.ZonePrice,
-		TP:     o.TPPrice,
 	}
 	Log(log)
 }

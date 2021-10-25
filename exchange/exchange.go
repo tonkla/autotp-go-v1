@@ -10,6 +10,12 @@ import (
 
 type Repository interface {
 	GetHistoricalPrices(string, string, int) []t.HistoricalPrice
+	Get1wHistoricalPrices(string, int) []t.HistoricalPrice
+	Get1dHistoricalPrices(string, int) []t.HistoricalPrice
+	Get4hHistoricalPrices(string, int) []t.HistoricalPrice
+	Get1hHistoricalPrices(string, int) []t.HistoricalPrice
+	Get15mHistoricalPrices(string, int) []t.HistoricalPrice
+
 	GetOrder(t.Order) (*t.Order, error)
 	GetOrderBook(string, int) *t.OrderBook
 	GetTicker(string) *t.Ticker

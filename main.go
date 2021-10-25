@@ -109,7 +109,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	st, err := strategy.New(db, &bp)
+	st, err := strategy.New(db, &bp, ex)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -132,31 +132,16 @@ func main() {
 	h.Logf("{Exchange:%s Product:%s Symbol:%s Strategy:%s BotID:%d}\n",
 		bp.Exchange, bp.Product, bp.Symbol, bp.Strategy, bp.BotID)
 
-	const numberOfBars = 50
-
 	for range time.Tick(time.Duration(bp.IntervalSec) * time.Second) {
 		ticker := ex.GetTicker(bp.Symbol)
 		if ticker == nil || ticker.Price <= 0 {
 			continue
 		}
-
-		if bp.StartPrice > 0 && ticker.Price > bp.StartPrice && len(db.GetActiveOrders(qo)) == 0 {
-			continue
-		}
-
-		hprices := ex.GetHistoricalPrices(bp.Symbol, bp.MATimeframe, numberOfBars)
-		if len(hprices) == 0 || hprices[0].Open == 0 {
-			continue
-		}
-		bp.HPrices = hprices
-
-		ap.TK = ticker
-		ap.TO = ap.ST.OnTick(ticker)
-
-		if bp.OrderType == t.OrderTypeLimit {
-			robot.PlaceAsMaker(&ap)
-		} else if bp.OrderType == t.OrderTypeMarket {
-			robot.PlaceAsTaker(&ap)
+		ap.TK = *ticker
+		tradeOrders := ap.ST.OnTick(*ticker)
+		if tradeOrders != nil {
+			ap.TO = *tradeOrders
+			robot.Trade(&ap)
 		}
 	}
 }
