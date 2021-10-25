@@ -231,15 +231,15 @@ func GetGridRange(target float64, lowerNum float64, upperNum float64, gridSize f
 }
 
 // GetGridZones returns all buyable zones of the grid
-func GetGridZones(target float64, lowerNum float64, upperNum float64, grids float64) ([]float64, float64) {
-	if target <= lowerNum || lowerNum >= upperNum || grids < 2 {
+func GetGridZones(target float64, lowerNum float64, upperNum float64, gridSize float64) ([]float64, float64) {
+	if target <= lowerNum || lowerNum >= upperNum || gridSize < 2 {
 		return nil, 0
 	}
 
-	start, _, gridWidth := GetGridRange(target, lowerNum, upperNum, grids)
+	start, _, gridWidth := GetGridRange(target, lowerNum, upperNum, gridSize)
 
 	var zones []float64
-	for i := 0.0; i < grids; i++ {
+	for i := 0.0; i < gridSize; i++ {
 		num := start + i*gridWidth
 		if num >= upperNum {
 			break

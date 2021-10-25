@@ -51,9 +51,10 @@ func (d DB) GetOrderByID(id string) *t.Order {
 // GetHighestNewBuyOrder returns the highest price, NEW, BUY order
 func (d DB) GetHighestNewBuyOrder(o t.QueryOrder) *t.Order {
 	var orders []t.Order
-	d.db.Where(`bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND type = ?
-	AND status = ? AND close_time = 0`, o.BotID, o.Exchange, o.Symbol, t.OrderSideBuy,
-		t.OrderTypeLimit, t.OrderStatusNew).Order("zone_price desc").Limit(1).Find(&orders)
+	d.db.Where(
+		`bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND type = ?  AND status = ? AND close_time = 0`,
+		o.BotID, o.Exchange, o.Symbol, t.OrderSideBuy, t.OrderTypeLimit, t.OrderStatusNew).
+		Order("zone_price desc").Limit(1).Find(&orders)
 	if len(orders) == 0 {
 		return nil
 	}
@@ -63,9 +64,10 @@ func (d DB) GetHighestNewBuyOrder(o t.QueryOrder) *t.Order {
 // GetLowestFilledBuyOrder returns the lowest price, FILLED, BUY order
 func (d DB) GetLowestFilledBuyOrder(o t.QueryOrder) *t.Order {
 	var orders []t.Order
-	d.db.Where(`bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND (type = ? OR type = ?)
-	AND status = ? AND close_time = 0`, o.BotID, o.Exchange, o.Symbol, t.OrderSideBuy, t.OrderTypeLimit,
-		t.OrderTypeMarket, t.OrderStatusFilled).Order("zone_price asc").Limit(1).Find(&orders)
+	d.db.Where(
+		`bot_id = ? AND exchange = ? AND symbol = ? AND side = ? AND (type = ? OR type = ?) AND status = ? AND close_time = 0`,
+		o.BotID, o.Exchange, o.Symbol, t.OrderSideBuy, t.OrderTypeLimit, t.OrderTypeMarket, t.OrderStatusFilled).
+		Order("zone_price asc").Limit(1).Find(&orders)
 	if len(orders) == 0 {
 		return nil
 	}

@@ -34,7 +34,6 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		return nil
 	} else if s.BP.BaseQty == 0 && s.BP.QuoteQty == 0 {
 		fmt.Fprintln(os.Stderr, "Quantity per grid must be greater than 0")
-		os.Exit(0)
 		return nil
 	}
 
@@ -70,6 +69,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		}
 
 		var count int64 = 0
+
 		zones, _ := common.GetGridZones(ticker.Price, s.BP.LowerPrice, s.BP.UpperPrice, s.BP.GridSize)
 		for _, zone := range zones {
 			zonePrice := h.NormalizeDouble(zone, s.BP.PriceDigits)
@@ -100,11 +100,8 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		}
 
 		if s.BP.GridTP > 0 {
-			for _, o := range s.DB.GetFilledLimitBuyOrders(qo) {
-				if s.DB.GetTPOrder(o.ID) != nil {
-					continue
-				}
-
+			o := s.DB.GetLowestFilledBuyOrder(qo)
+			if o != nil && s.DB.GetTPOrder(o.ID) == nil {
 				_tp := h.NormalizeDouble(o.ZonePrice+gridWidth*s.BP.GridTP, s.BP.PriceDigits)
 				_stop := h.CalcTPStop(t.OrderSideBuy, _tp, float64(s.BP.SLim.TPStop), s.BP.PriceDigits)
 				if ticker.Price+(_tp-_stop) > _stop {
