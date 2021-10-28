@@ -236,7 +236,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	// Uptrend: Open Long --------------------------------------------------------
 	if cma_1 < cma_0 {
 		if s.BP.View == t.ViewNeutral || s.BP.View == t.ViewLong {
-			_openPrice := h.CalcStopBehindTicker(t.OrderSideBuy, ticker.Price, openLimit, s.BP.PriceDigits)
+			_openPrice := h.CalcStopLowerTicker(ticker.Price, openLimit, s.BP.PriceDigits)
 			qo.Side = t.OrderSideBuy
 			qo.OpenPrice = _openPrice
 			norder := s.DB.GetNearestOrder(qo)
@@ -264,7 +264,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	// Downtrend: Open Short -----------------------------------------------------
 	if cma_1 > cma_0 {
 		if s.BP.View == t.ViewNeutral || s.BP.View == t.ViewShort {
-			_openPrice := h.CalcStopBehindTicker(t.OrderSideSell, ticker.Price, openLimit, s.BP.PriceDigits)
+			_openPrice := h.CalcStopUpperTicker(ticker.Price, openLimit, s.BP.PriceDigits)
 			qo.Side = t.OrderSideSell
 			qo.OpenPrice = _openPrice
 			norder := s.DB.GetNearestOrder(qo)

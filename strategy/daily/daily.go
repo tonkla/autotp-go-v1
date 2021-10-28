@@ -95,7 +95,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 					Type:      t.OrderTypeLimit,
 					Status:    t.OrderStatusNew,
 					Qty:       qo.Qty,
-					OpenPrice: h.CalcStopBehindTicker(t.OrderSideBuy, ticker.Price, openLimit, s.BP.PriceDigits),
+					OpenPrice: h.CalcStopLowerTicker(ticker.Price, openLimit, s.BP.PriceDigits),
 				}
 				openOrders = append(openOrders, o)
 			}
@@ -143,7 +143,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 					Type:      t.OrderTypeLimit,
 					Status:    t.OrderStatusNew,
 					Qty:       qo.Qty,
-					OpenPrice: h.CalcStopBehindTicker(t.OrderSideSell, ticker.Price, openLimit, s.BP.PriceDigits),
+					OpenPrice: h.CalcStopUpperTicker(ticker.Price, openLimit, s.BP.PriceDigits),
 				}
 				openOrders = append(openOrders, o)
 			}

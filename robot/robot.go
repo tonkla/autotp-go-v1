@@ -19,12 +19,11 @@ func Trade(ap *app.AppParams) {
 func placeAsMaker(p *app.AppParams) {
 	closeOrders(p)
 	syncClosedOrders(p)
+	openLimitOrders(p)
 	if p.BP.Product == t.ProductSpot {
-		openLimitSpotOrders(p)
 		syncLimitOrder(p)
 		syncTPOrder(p)
 	} else if p.BP.Product == t.ProductFutures {
-		openLimitFuturesOrders(p)
 		syncLimitLongOrder(p)
 		syncLimitShortOrder(p)
 		syncSLLongOrder(p)
@@ -35,11 +34,7 @@ func placeAsMaker(p *app.AppParams) {
 }
 
 func placeAsTaker(p *app.AppParams) {
-	if p.BP.Product == t.ProductSpot {
-		openMarketSpotOrders(p)
-	} else if p.BP.Product == t.ProductFutures {
-		openMarketFuturesOrders(p)
-	}
+	openMarketOrders(p)
 }
 
 func closeOrders(p *app.AppParams) {
@@ -55,20 +50,19 @@ func closeOrders(p *app.AppParams) {
 		err = p.DB.CreateOrder(o)
 		if err != nil {
 			h.Log(err)
-			return
+			continue
 		}
 
-		h.LogNewF(&o)
+		if o.PosSide != "" {
+			h.LogNewF(o)
+		} else {
+			h.LogNew(o)
+		}
 	}
 }
 
-func openLimitSpotOrders(p *app.AppParams) {
+func openLimitOrders(p *app.AppParams) {
 	for _, o := range p.TO.OpenOrders {
-		if o.OpenPrice < h.CalcStopBehindTicker(t.OrderSideBuy, p.TK.Price,
-			float64(p.BP.SLim.OpenLimit), p.BP.PriceDigits) {
-			return
-		}
-
 		exo, err := p.EX.OpenLimitOrder(o)
 		if err != nil || exo == nil {
 			h.Log(err)
@@ -84,13 +78,23 @@ func openLimitSpotOrders(p *app.AppParams) {
 			h.Log(err)
 			continue
 		}
-		h.LogNew(&o)
+
+		if o.PosSide != "" {
+			h.LogNewF(o)
+		} else {
+			h.LogNew(o)
+		}
 	}
 }
 
-func openLimitFuturesOrders(p *app.AppParams) {
+func openMarketOrders(p *app.AppParams) {
 	for _, o := range p.TO.OpenOrders {
-		exo, err := p.EX.OpenLimitOrder(o)
+		_qty := h.NormalizeDouble(p.BP.QuoteQty/p.TK.Price, p.BP.QtyDigits)
+		if _qty > o.Qty {
+			o.Qty = _qty
+		}
+		o.Type = t.OrderTypeMarket
+		exo, err := p.EX.OpenMarketOrder(o)
 		if err != nil || exo == nil {
 			h.Log(err)
 			os.Exit(1)
@@ -100,20 +104,19 @@ func openLimitFuturesOrders(p *app.AppParams) {
 		o.Status = exo.Status
 		o.OpenTime = exo.OpenTime
 		o.OpenPrice = exo.OpenPrice
+		o.Qty = exo.Qty
+		o.Commission = exo.Commission
 		err = p.DB.CreateOrder(o)
 		if err != nil {
-			h.Log(err)
-			return
+			continue
 		}
 
-		h.LogNewF(&o)
+		if o.PosSide != "" {
+			h.LogFilledF(o)
+		} else {
+			h.LogFilled(o)
+		}
 	}
-}
-
-func openMarketSpotOrders(p *app.AppParams) {
-}
-
-func openMarketFuturesOrders(p *app.AppParams) {
 }
 
 func syncLimitOrder(p *app.AppParams) {
@@ -122,30 +125,7 @@ func syncLimitOrder(p *app.AppParams) {
 		return
 	}
 
-	exo, err := p.EX.GetOrder(*o)
-	if err != nil || exo == nil {
-		h.Log(err)
-		os.Exit(1)
-	}
-	if exo.Status == t.OrderStatusNew {
-		return
-	}
-
-	if o.Status != exo.Status {
-		o.Status = exo.Status
-		o.UpdateTime = exo.UpdateTime
-		err := p.DB.UpdateOrder(*o)
-		if err != nil {
-			h.Log(err)
-			return
-		}
-		if exo.Status == t.OrderStatusFilled {
-			h.LogFilled(o)
-		}
-		if exo.Status == t.OrderStatusCanceled {
-			h.LogCanceled(o)
-		}
-	}
+	syncStatus(*o, p)
 }
 
 func syncTPOrder(p *app.AppParams) {
@@ -154,51 +134,8 @@ func syncTPOrder(p *app.AppParams) {
 		return
 	}
 
-	exo, err := p.EX.GetOrder(*tpo)
-	if err != nil || exo == nil {
-		h.Log(err)
-		os.Exit(1)
-	}
-	if exo.Status == t.OrderStatusNew {
-		return
-	}
-
-	if tpo.Status != exo.Status {
-		tpo.Status = exo.Status
-		tpo.UpdateTime = exo.UpdateTime
-		err := p.DB.UpdateOrder(*tpo)
-		if err != nil {
-			h.Log(err)
-			return
-		}
-		if exo.Status == t.OrderStatusCanceled {
-			h.LogCanceled(tpo)
-			return
-		}
-	}
-	if exo.Status == t.OrderStatusCanceled {
-		return
-	}
-
-	oo := p.DB.GetOrderByID(tpo.OpenOrderID)
-	if oo != nil && oo.CloseOrderID == "" && p.TK.Price > tpo.OpenPrice {
-		oo.CloseOrderID = tpo.ID
-		oo.ClosePrice = tpo.OpenPrice
-		oo.CloseTime = h.Now13()
-		oo.PL = h.NormalizeDouble(((oo.ClosePrice-oo.OpenPrice)*tpo.Qty)-oo.Commission-tpo.Commission, p.BP.PriceDigits)
-		err := p.DB.UpdateOrder(*oo)
-		if err != nil {
-			h.Log(err)
-			return
-		}
-		h.LogClosed(oo, tpo)
-
-		tpo.CloseTime = oo.CloseTime
-		err = p.DB.UpdateOrder(*tpo)
-		if err != nil {
-			h.Log(err)
-		}
-	}
+	syncStatus(*tpo, p)
+	syncTPLong(*tpo, p)
 }
 
 func syncLimitLongOrder(p *app.AppParams) {
@@ -207,30 +144,7 @@ func syncLimitLongOrder(p *app.AppParams) {
 		return
 	}
 
-	exo, err := p.EX.GetOrder(*o)
-	if err != nil || exo == nil {
-		h.Log(err)
-		os.Exit(1)
-	}
-	if exo.Status == t.OrderStatusNew {
-		return
-	}
-
-	if o.Status != exo.Status {
-		o.Status = exo.Status
-		o.UpdateTime = exo.UpdateTime
-		err := p.DB.UpdateOrder(*o)
-		if err != nil {
-			h.Log(err)
-			return
-		}
-		if exo.Status == t.OrderStatusFilled {
-			h.LogFilledF(o)
-		}
-		if exo.Status == t.OrderStatusCanceled {
-			h.LogCanceledF(o)
-		}
-	}
+	syncStatus(*o, p)
 }
 
 func syncLimitShortOrder(p *app.AppParams) {
@@ -239,7 +153,55 @@ func syncLimitShortOrder(p *app.AppParams) {
 		return
 	}
 
-	exo, err := p.EX.GetOrder(*o)
+	syncStatus(*o, p)
+}
+
+func syncSLLongOrder(p *app.AppParams) {
+	slo := p.DB.GetHighestSLLongOrder(p.QO)
+	if slo == nil {
+		return
+	}
+
+	syncStatus(*slo, p)
+	syncSLLong(*slo, p)
+}
+
+func syncSLShortOrder(p *app.AppParams) {
+	slo := p.DB.GetLowestSLShortOrder(p.QO)
+	if slo == nil {
+		return
+	}
+
+	syncStatus(*slo, p)
+	syncSLShort(*slo, p)
+}
+
+func syncTPLongOrder(p *app.AppParams) {
+	tpo := p.DB.GetLowestTPLongOrder(p.QO)
+	if tpo == nil {
+		return
+	}
+
+	syncStatus(*tpo, p)
+	syncTPLong(*tpo, p)
+}
+
+func syncTPShortOrder(p *app.AppParams) {
+	tpo := p.DB.GetHighestTPShortOrder(p.QO)
+	if tpo == nil {
+		return
+	}
+
+	syncStatus(*tpo, p)
+	syncTPShort(*tpo, p)
+}
+
+func syncClosedOrders(p *app.AppParams) {
+	// TODO: exchange.GetAllOrders()
+}
+
+func syncStatus(o t.Order, p *app.AppParams) {
+	exo, err := p.EX.GetOrder(o)
 	if err != nil || exo == nil {
 		h.Log(err)
 		os.Exit(1)
@@ -251,278 +213,174 @@ func syncLimitShortOrder(p *app.AppParams) {
 	if o.Status != exo.Status {
 		o.Status = exo.Status
 		o.UpdateTime = exo.UpdateTime
-		err := p.DB.UpdateOrder(*o)
-		if err != nil {
-			h.Log(err)
-			return
-		}
-		if exo.Status == t.OrderStatusFilled {
-			h.LogFilledF(o)
-		}
-		if exo.Status == t.OrderStatusCanceled {
-			h.LogCanceledF(o)
-		}
-	}
-}
-
-func syncSLLongOrder(p *app.AppParams) {
-	slo := p.DB.GetHighestSLLongOrder(p.QO)
-	if slo == nil {
-		return
-	}
-
-	exo, err := p.EX.GetOrder(*slo)
-	if err != nil || exo == nil {
-		h.Log(err)
-		os.Exit(1)
-	}
-	if exo.Status == t.OrderStatusNew {
-		return
-	}
-
-	if slo.Status != exo.Status {
-		slo.Status = exo.Status
-		slo.UpdateTime = exo.UpdateTime
-		err := p.DB.UpdateOrder(*slo)
+		err := p.DB.UpdateOrder(o)
 		if err != nil {
 			h.Log(err)
 			return
 		}
 
 		if exo.Status == t.OrderStatusFilled {
-			h.LogFilledF(slo)
-		}
-
-		if exo.Status == t.OrderStatusCanceled {
-			h.LogCanceledF(slo)
-		}
-	}
-
-	if p.TK.Price < slo.OpenPrice && slo.CloseTime == 0 {
-		o := p.DB.GetOrderByID(slo.OpenOrderID)
-		if o == nil {
-			slo.CloseTime = h.Now13()
-			err = p.DB.UpdateOrder(*slo)
-			if err != nil {
-				h.Log(err)
+			if o.PosSide != "" {
+				h.LogFilledF(o)
+			} else {
+				h.LogFilled(o)
 			}
-			return
-		}
-
-		o.CloseOrderID = slo.ID
-		o.ClosePrice = slo.OpenPrice
-		o.CloseTime = h.Now13()
-		o.PL = h.NormalizeDouble(((o.ClosePrice-o.OpenPrice)*slo.Qty)-o.Commission-slo.Commission, p.BP.PriceDigits)
-		err := p.DB.UpdateOrder(*o)
-		if err != nil {
-			h.Log(err)
-			return
-		}
-
-		slo.CloseTime = o.CloseTime
-		err = p.DB.UpdateOrder(*slo)
-		if err != nil {
-			h.Log(err)
-			return
-		}
-
-		h.LogClosedF(o, slo)
-	}
-}
-
-func syncSLShortOrder(p *app.AppParams) {
-	slo := p.DB.GetLowestSLShortOrder(p.QO)
-	if slo == nil {
-		return
-	}
-
-	exo, err := p.EX.GetOrder(*slo)
-	if err != nil || exo == nil {
-		h.Log(err)
-		os.Exit(1)
-	}
-	if exo.Status == t.OrderStatusNew {
-		return
-	}
-
-	if slo.Status != exo.Status {
-		slo.Status = exo.Status
-		slo.UpdateTime = exo.UpdateTime
-		err := p.DB.UpdateOrder(*slo)
-		if err != nil {
-			h.Log(err)
-			return
-		}
-
-		if exo.Status == t.OrderStatusFilled {
-			h.LogFilledF(slo)
 		}
 
 		if exo.Status == t.OrderStatusCanceled {
-			h.LogCanceledF(slo)
-		}
-	}
-
-	if p.TK.Price > slo.OpenPrice && slo.CloseTime == 0 {
-		o := p.DB.GetOrderByID(slo.OpenOrderID)
-		if o == nil {
-			slo.CloseTime = h.Now13()
-			err = p.DB.UpdateOrder(*slo)
-			if err != nil {
-				h.Log(err)
+			if o.PosSide != "" {
+				h.LogCanceledF(o)
+			} else {
+				h.LogCanceled(o)
 			}
-			return
 		}
-
-		o.CloseOrderID = slo.ID
-		o.ClosePrice = slo.OpenPrice
-		o.CloseTime = h.Now13()
-		o.PL = h.NormalizeDouble(((o.OpenPrice-o.ClosePrice)*slo.Qty)-o.Commission-slo.Commission, p.BP.PriceDigits)
-		err := p.DB.UpdateOrder(*o)
-		if err != nil {
-			h.Log(err)
-			return
-		}
-
-		slo.CloseTime = o.CloseTime
-		err = p.DB.UpdateOrder(*slo)
-		if err != nil {
-			h.Log(err)
-			return
-		}
-
-		h.LogClosedF(o, slo)
 	}
 }
 
-func syncTPLongOrder(p *app.AppParams) {
-	tpo := p.DB.GetLowestTPLongOrder(p.QO)
-	if tpo == nil {
+func syncSLLong(slo t.Order, p *app.AppParams) {
+	if !(p.TK.Price < slo.OpenPrice && slo.CloseTime == 0) {
 		return
 	}
 
-	exo, err := p.EX.GetOrder(*tpo)
-	if err != nil || exo == nil {
+	o := p.DB.GetOrderByID(slo.OpenOrderID)
+	if o == nil {
+		slo.CloseTime = h.Now13()
+		err := p.DB.UpdateOrder(slo)
+		if err != nil {
+			h.Log(err)
+		}
+		return
+	}
+
+	o.CloseOrderID = slo.ID
+	o.ClosePrice = slo.OpenPrice
+	o.CloseTime = h.Now13()
+	o.PL = h.NormalizeDouble(((o.ClosePrice-o.OpenPrice)*slo.Qty)-o.Commission-slo.Commission, p.BP.PriceDigits)
+	err := p.DB.UpdateOrder(*o)
+	if err != nil {
 		h.Log(err)
-		os.Exit(1)
-	}
-	if exo.Status == t.OrderStatusNew {
 		return
 	}
 
-	if tpo.Status != exo.Status {
-		tpo.Status = exo.Status
-		tpo.UpdateTime = exo.UpdateTime
-		err := p.DB.UpdateOrder(*tpo)
-		if err != nil {
-			h.Log(err)
-			return
-		}
-
-		if exo.Status == t.OrderStatusFilled {
-			h.LogFilledF(tpo)
-		}
-
-		if exo.Status == t.OrderStatusCanceled {
-			h.LogCanceledF(tpo)
-		}
-	}
-
-	if p.TK.Price > tpo.OpenPrice && tpo.CloseTime == 0 {
-		o := p.DB.GetOrderByID(tpo.OpenOrderID)
-		if o == nil {
-			tpo.CloseTime = h.Now13()
-			err = p.DB.UpdateOrder(*tpo)
-			if err != nil {
-				h.Log(err)
-			}
-			return
-		}
-
-		o.CloseOrderID = tpo.ID
-		o.ClosePrice = tpo.OpenPrice
-		o.CloseTime = h.Now13()
-		o.PL = h.NormalizeDouble(((o.ClosePrice-o.OpenPrice)*tpo.Qty)-o.Commission-tpo.Commission, p.BP.PriceDigits)
-		err := p.DB.UpdateOrder(*o)
-		if err != nil {
-			h.Log(err)
-			return
-		}
-
-		tpo.CloseTime = o.CloseTime
-		err = p.DB.UpdateOrder(*tpo)
-		if err != nil {
-			h.Log(err)
-			return
-		}
-
-		h.LogClosedF(o, tpo)
-	}
-}
-
-func syncTPShortOrder(p *app.AppParams) {
-	tpo := p.DB.GetHighestTPShortOrder(p.QO)
-	if tpo == nil {
-		return
-	}
-
-	exo, err := p.EX.GetOrder(*tpo)
-	if err != nil || exo == nil {
+	slo.CloseTime = o.CloseTime
+	err = p.DB.UpdateOrder(slo)
+	if err != nil {
 		h.Log(err)
-		os.Exit(1)
-	}
-	if exo.Status == t.OrderStatusNew {
 		return
 	}
 
-	if tpo.Status != exo.Status {
-		tpo.Status = exo.Status
-		tpo.UpdateTime = exo.UpdateTime
-		err := p.DB.UpdateOrder(*tpo)
-		if err != nil {
-			h.Log(err)
-			return
-		}
+	h.LogClosedF(*o, slo)
+}
 
-		if exo.Status == t.OrderStatusFilled {
-			h.LogFilledF(tpo)
-		}
-
-		if exo.Status == t.OrderStatusCanceled {
-			h.LogCanceledF(tpo)
-		}
+func syncSLShort(slo t.Order, p *app.AppParams) {
+	if !(p.TK.Price > slo.OpenPrice && slo.CloseTime == 0) {
+		return
 	}
 
-	if p.TK.Price < tpo.OpenPrice && tpo.CloseTime == 0 {
-		o := p.DB.GetOrderByID(tpo.OpenOrderID)
-		if o == nil {
-			tpo.CloseTime = h.Now13()
-			err = p.DB.UpdateOrder(*tpo)
-			if err != nil {
-				h.Log(err)
-			}
-			return
-		}
-
-		o.CloseOrderID = tpo.ID
-		o.ClosePrice = tpo.OpenPrice
-		o.CloseTime = h.Now13()
-		o.PL = h.NormalizeDouble(((o.OpenPrice-o.ClosePrice)*tpo.Qty)-o.Commission-tpo.Commission, p.BP.PriceDigits)
-		err := p.DB.UpdateOrder(*o)
+	o := p.DB.GetOrderByID(slo.OpenOrderID)
+	if o == nil {
+		slo.CloseTime = h.Now13()
+		err := p.DB.UpdateOrder(slo)
 		if err != nil {
 			h.Log(err)
-			return
 		}
+		return
+	}
 
-		tpo.CloseTime = o.CloseTime
-		err = p.DB.UpdateOrder(*tpo)
+	o.CloseOrderID = slo.ID
+	o.ClosePrice = slo.OpenPrice
+	o.CloseTime = h.Now13()
+	o.PL = h.NormalizeDouble(((o.OpenPrice-o.ClosePrice)*slo.Qty)-o.Commission-slo.Commission, p.BP.PriceDigits)
+	err := p.DB.UpdateOrder(*o)
+	if err != nil {
+		h.Log(err)
+		return
+	}
+
+	slo.CloseTime = o.CloseTime
+	err = p.DB.UpdateOrder(slo)
+	if err != nil {
+		h.Log(err)
+		return
+	}
+
+	h.LogClosedF(*o, slo)
+}
+
+func syncTPLong(tpo t.Order, p *app.AppParams) {
+	if !(p.TK.Price > tpo.OpenPrice && tpo.CloseTime == 0) {
+		return
+	}
+
+	o := p.DB.GetOrderByID(tpo.OpenOrderID)
+	if o == nil {
+		tpo.CloseTime = h.Now13()
+		err := p.DB.UpdateOrder(tpo)
 		if err != nil {
 			h.Log(err)
-			return
 		}
+		return
+	}
 
-		h.LogClosedF(o, tpo)
+	o.CloseOrderID = tpo.ID
+	o.ClosePrice = tpo.OpenPrice
+	o.CloseTime = h.Now13()
+	o.PL = h.NormalizeDouble(((o.ClosePrice-o.OpenPrice)*tpo.Qty)-o.Commission-tpo.Commission, p.BP.PriceDigits)
+	err := p.DB.UpdateOrder(*o)
+	if err != nil {
+		h.Log(err)
+		return
+	}
+
+	tpo.CloseTime = o.CloseTime
+	err = p.DB.UpdateOrder(tpo)
+	if err != nil {
+		h.Log(err)
+		return
+	}
+
+	if o.PosSide != "" {
+		h.LogClosedF(*o, tpo)
+	} else {
+		h.LogClosed(*o, tpo)
 	}
 }
 
-func syncClosedOrders(p *app.AppParams) {}
+func syncTPShort(tpo t.Order, p *app.AppParams) {
+	if !(p.TK.Price < tpo.OpenPrice && tpo.CloseTime == 0) {
+		return
+	}
+
+	o := p.DB.GetOrderByID(tpo.OpenOrderID)
+	if o == nil {
+		tpo.CloseTime = h.Now13()
+		err := p.DB.UpdateOrder(tpo)
+		if err != nil {
+			h.Log(err)
+		}
+		return
+	}
+
+	o.CloseOrderID = tpo.ID
+	o.ClosePrice = tpo.OpenPrice
+	o.CloseTime = h.Now13()
+	o.PL = h.NormalizeDouble(((o.OpenPrice-o.ClosePrice)*tpo.Qty)-o.Commission-tpo.Commission, p.BP.PriceDigits)
+	err := p.DB.UpdateOrder(*o)
+	if err != nil {
+		h.Log(err)
+		return
+	}
+
+	tpo.CloseTime = o.CloseTime
+	err = p.DB.UpdateOrder(tpo)
+	if err != nil {
+		h.Log(err)
+		return
+	}
+
+	if o.PosSide != "" {
+		h.LogClosedF(*o, tpo)
+	} else {
+		h.LogClosed(*o, tpo)
+	}
+}

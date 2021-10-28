@@ -51,14 +51,14 @@ func CalcTPStop(side string, tp float64, gap float64, digits int64) float64 {
 	return round((tp*pow+gap)/pow, pow)
 }
 
-// CalcStopBeyondTicker calculates a stop price beyond the ticker price
-func CalcStopBeyondTicker(side string, tickerPrice float64, gap float64, digits int64) float64 {
-	return CalcSLStop(side, tickerPrice, gap, digits)
+// CalcStopUpperTicker calculates a stop price upper than the ticker price
+func CalcStopUpperTicker(tickerPrice float64, gap float64, digits int64) float64 {
+	return CalcSLStop(t.OrderSideBuy, tickerPrice, gap, digits)
 }
 
-// CalcStopBehindTicker calculates a stop price behind the ticker price
-func CalcStopBehindTicker(side string, tickerPrice float64, gap float64, digits int64) float64 {
-	return CalcTPStop(side, tickerPrice, gap, digits)
+// CalcStopLowerTicker calculates a stop price lower than the ticker price
+func CalcStopLowerTicker(tickerPrice float64, gap float64, digits int64) float64 {
+	return CalcTPStop(t.OrderSideBuy, tickerPrice, gap, digits)
 }
 
 // Reverse returns the opposite side
