@@ -27,7 +27,7 @@ botID: 1
 product: SPOT | FUTURES
 
 # The trading strategy (placed in the `/strategy` directory)
-strategy: grid
+strategy: GRID
 
 # The price digits of the symbol
 priceDigits: 2

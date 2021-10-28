@@ -117,7 +117,6 @@ type LogOpenOrder struct {
 	Qty    float64
 	Open   float64
 	Zone   float64
-	TP     float64
 }
 
 type LogOpenFOrder struct {
