@@ -197,7 +197,28 @@ func syncTPShortOrder(p *app.AppParams) {
 }
 
 func syncClosedOrders(p *app.AppParams) {
-	// TODO: exchange.GetAllOrders()
+	count, err := p.EX.CountOpenOrders(p.BP.Symbol)
+	if err != nil {
+		return
+	}
+
+	if count == 0 {
+		for _, o := range p.DB.GetActiveOrders(p.QO) {
+			o.CloseOrderID = "0"
+			o.CloseTime = h.Now13()
+			err := p.DB.UpdateOrder(o)
+			if err != nil {
+				h.Log(err)
+				continue
+			}
+
+			if o.PosSide != "" {
+				h.LogClosedF(o, o)
+			} else {
+				h.LogClosed(o, o)
+			}
+		}
+	}
 }
 
 func syncStatus(o t.Order, p *app.AppParams) {

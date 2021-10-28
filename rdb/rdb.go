@@ -74,12 +74,13 @@ func (d DB) GetLowestFilledBuyOrder(o t.QueryOrder) *t.Order {
 	return &orders[0]
 }
 
-// GetActiveOrders returns all open orders that are not canceled
-func (d DB) GetActiveOrders(o t.QueryOrder) []t.Order {
+// GetActiveLimitOrders returns all open LIMIT/MARKET orders that are not canceled
+func (d DB) GetActiveLimitOrders(o t.QueryOrder) []t.Order {
 	var orders []t.Order
 
 	if o.Side == "" {
-		d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND (type = ? OR type = ?) AND status <> ? AND close_time = 0",
+		d.db.Where(
+			"bot_id = ? AND exchange = ? AND symbol = ? AND (type = ? OR type = ?) AND status <> ? AND close_time = 0",
 			o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderTypeMarket, t.OrderStatusCanceled).Find(&orders)
 		return orders
 	}
@@ -92,6 +93,14 @@ func (d DB) GetActiveOrders(o t.QueryOrder) []t.Order {
 	} else if o.Side == t.OrderSideSell {
 		q.Order("zone_price desc").Find(&orders)
 	}
+	return orders
+}
+
+// GetActiveOrders returns all open orders that are not canceled
+func (d DB) GetActiveOrders(o t.QueryOrder) []t.Order {
+	var orders []t.Order
+	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND status <> ? AND close_time = 0",
+		o.BotID, o.Exchange, o.Symbol, t.OrderStatusCanceled).Find(&orders)
 	return orders
 }
 

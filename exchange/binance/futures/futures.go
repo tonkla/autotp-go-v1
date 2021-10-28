@@ -192,6 +192,71 @@ func (c Client) GetOrder(o t.Order) (*t.Order, error) {
 	return b.GetOrder(cc, o)
 }
 
+// CountOpenOrders returns a number of open orders
+func (c Client) CountOpenOrders(symbol string) (int, error) {
+	var payload, url strings.Builder
+
+	b.BuildBaseQS(&payload, symbol)
+
+	signature := b.Sign(payload.String(), c.secretKey)
+
+	fmt.Fprintf(&url, "%s/openOrders?%s&signature=%s", c.baseURL, payload.String(), signature)
+	data, err := h.GetH(url.String(), b.NewHeader(c.apiKey))
+	if err != nil {
+		return 0, err
+	}
+
+	rs := gjson.ParseBytes(data)
+
+	if rs.Get("code").Int() < 0 {
+		h.Log("CountOpenOrders", rs)
+		return 0, errors.New("error")
+	}
+
+	return len(rs.Array()), nil
+}
+
+// GetOpenOrders returns open orders
+func (c Client) GetOpenOrders(symbol string) []t.Order {
+	var payload, url strings.Builder
+
+	b.BuildBaseQS(&payload, symbol)
+
+	signature := b.Sign(payload.String(), c.secretKey)
+
+	fmt.Fprintf(&url, "%s/openOrders?%s&signature=%s", c.baseURL, payload.String(), signature)
+	data, err := h.GetH(url.String(), b.NewHeader(c.apiKey))
+	if err != nil {
+		return nil
+	}
+
+	rs := gjson.ParseBytes(data)
+
+	if rs.Get("code").Int() < 0 {
+		h.Log("GetOpenOrders", rs)
+		return nil
+	}
+
+	var orders []t.Order
+	for _, r := range rs.Array() {
+		order := t.Order{
+			Symbol:     symbol,
+			ID:         r.Get("clientOrderId").String(),
+			RefID:      r.Get("orderId").String(),
+			Side:       r.Get("side").String(),
+			PosSide:    r.Get("positionSide").String(),
+			Status:     r.Get("status").String(),
+			Type:       r.Get("type").String(),
+			Qty:        r.Get("origQty").Float(),
+			OpenPrice:  r.Get("price").Float(),
+			OpenTime:   r.Get("time").Int(),
+			UpdateTime: r.Get("updateTime").Int(),
+		}
+		orders = append(orders, order)
+	}
+	return orders
+}
+
 // CloseOrder closes an order
 func (c Client) CloseOrder(o t.Order) (*t.Order, error) {
 	return nil, nil

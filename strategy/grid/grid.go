@@ -64,7 +64,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	}
 
 	if s.BP.View == t.ViewLong || s.BP.View == t.ViewNeutral {
-		if s.BP.StartPrice > 0 && ticker.Price > s.BP.StartPrice && len(s.DB.GetActiveOrders(qo)) == 0 {
+		if s.BP.StartPrice > 0 && ticker.Price > s.BP.StartPrice && len(s.DB.GetActiveLimitOrders(qo)) == 0 {
 			return nil
 		}
 

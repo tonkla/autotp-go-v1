@@ -9,16 +9,18 @@ import (
 )
 
 type Repository interface {
-	GetHistoricalPrices(string, string, int) []t.HistoricalPrice
-	Get1wHistoricalPrices(string, int) []t.HistoricalPrice
-	Get1dHistoricalPrices(string, int) []t.HistoricalPrice
-	Get4hHistoricalPrices(string, int) []t.HistoricalPrice
-	Get1hHistoricalPrices(string, int) []t.HistoricalPrice
-	Get15mHistoricalPrices(string, int) []t.HistoricalPrice
+	GetHistoricalPrices(symbol string, timeframe string, limit int) []t.HistoricalPrice
+	Get1wHistoricalPrices(symbol string, limit int) []t.HistoricalPrice
+	Get1dHistoricalPrices(symbol string, limit int) []t.HistoricalPrice
+	Get4hHistoricalPrices(symbol string, limit int) []t.HistoricalPrice
+	Get1hHistoricalPrices(symbol string, limit int) []t.HistoricalPrice
+	Get15mHistoricalPrices(symbol string, limit int) []t.HistoricalPrice
 
+	CountOpenOrders(symbol string) (int, error)
 	GetOrder(t.Order) (*t.Order, error)
-	GetOrderBook(string, int) *t.OrderBook
-	GetTicker(string) *t.Ticker
+	GetOpenOrders(symbol string) []t.Order
+	GetOrderBook(symbol string, limit int) *t.OrderBook
+	GetTicker(symbol string) *t.Ticker
 	OpenLimitOrder(t.Order) (*t.Order, error)
 	OpenMarketOrder(t.Order) (*t.Order, error)
 	OpenStopOrder(t.Order) (*t.Order, error)

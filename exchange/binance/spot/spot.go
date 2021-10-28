@@ -87,6 +87,30 @@ func (c Client) Get15mHistoricalPrices(symbol string, limit int) []t.HistoricalP
 
 // Private APIs ----------------------------------------------------------------
 
+// CountOpenOrders returns a number of open orders
+func (c Client) CountOpenOrders(symbol string) (int, error) {
+	var payload, url strings.Builder
+
+	b.BuildBaseQS(&payload, symbol)
+
+	signature := b.Sign(payload.String(), c.secretKey)
+
+	fmt.Fprintf(&url, "%s/openOrders?%s&signature=%s", c.baseURL, payload.String(), signature)
+	data, err := h.GetH(url.String(), b.NewHeader(c.apiKey))
+	if err != nil {
+		return 0, err
+	}
+
+	rs := gjson.ParseBytes(data)
+
+	if rs.Get("code").Int() < 0 {
+		h.Log("CountOpenOrders", rs)
+		return 0, errors.New("error")
+	}
+
+	return len(rs.Array()), nil
+}
+
 // GetOpenOrders returns open orders
 func (c Client) GetOpenOrders(symbol string) []t.Order {
 	var payload, url strings.Builder
