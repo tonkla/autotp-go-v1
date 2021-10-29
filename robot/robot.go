@@ -18,7 +18,6 @@ func Trade(ap *app.AppParams) {
 
 func placeAsMaker(p *app.AppParams) {
 	closeOrders(p)
-	syncClosedOrders(p)
 	openLimitOrders(p)
 	if p.BP.Product == t.ProductSpot {
 		syncLimitOrder(p)
@@ -194,31 +193,6 @@ func syncTPShortOrder(p *app.AppParams) {
 
 	syncStatus(*tpo, p)
 	syncTPShort(*tpo, p)
-}
-
-func syncClosedOrders(p *app.AppParams) {
-	count, err := p.EX.CountOpenOrders(p.BP.Symbol)
-	if err != nil {
-		return
-	}
-
-	if count == 0 {
-		for _, o := range p.DB.GetActiveOrders(p.QO) {
-			o.CloseOrderID = "0"
-			o.CloseTime = h.Now13()
-			err := p.DB.UpdateOrder(o)
-			if err != nil {
-				h.Log(err)
-				continue
-			}
-
-			if o.PosSide != "" {
-				h.LogClosedF(o, o)
-			} else {
-				h.LogClosed(o, o)
-			}
-		}
-	}
 }
 
 func syncStatus(o t.Order, p *app.AppParams) {

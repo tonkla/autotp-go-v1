@@ -19,6 +19,7 @@ type Repository interface {
 	CountOpenOrders(symbol string) (int, error)
 	GetOrder(t.Order) (*t.Order, error)
 	GetOpenOrders(symbol string) []t.Order
+	GetAllOrders(symbol string, limit int, startTime int, endTime int) []t.Order
 	GetOrderBook(symbol string, limit int) *t.OrderBook
 	GetTicker(symbol string) *t.Ticker
 	OpenLimitOrder(t.Order) (*t.Order, error)

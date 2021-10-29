@@ -257,6 +257,57 @@ func (c Client) GetOpenOrders(symbol string) []t.Order {
 	return orders
 }
 
+// GetAllOrders returns all account orders; active, canceled, or filled
+func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime int) []t.Order {
+	var payload, url strings.Builder
+
+	b.BuildBaseQS(&payload, symbol)
+
+	if limit > 0 {
+		fmt.Fprintf(&payload, "&limit=%d", limit)
+	}
+	if startTime > 0 {
+		fmt.Fprintf(&payload, "&startTime=%d", startTime)
+	}
+	if endTime > 0 {
+		fmt.Fprintf(&payload, "&endTime=%d", endTime)
+	}
+
+	signature := b.Sign(payload.String(), c.secretKey)
+
+	fmt.Fprintf(&url, "%s/allOrders?%s&signature=%s", c.baseURL, payload.String(), signature)
+	data, err := h.GetH(url.String(), b.NewHeader(c.apiKey))
+	if err != nil {
+		return nil
+	}
+
+	rs := gjson.ParseBytes(data)
+
+	if rs.Get("code").Int() < 0 {
+		h.Log("GetAllOrders", rs)
+		return nil
+	}
+
+	var orders []t.Order
+	for _, r := range rs.Array() {
+		order := t.Order{
+			Symbol:     symbol,
+			ID:         r.Get("clientOrderId").String(),
+			RefID:      r.Get("orderId").String(),
+			Side:       r.Get("side").String(),
+			PosSide:    r.Get("positionSide").String(),
+			Status:     r.Get("status").String(),
+			Type:       r.Get("type").String(),
+			Qty:        r.Get("origQty").Float(),
+			OpenPrice:  r.Get("price").Float(),
+			OpenTime:   r.Get("time").Int(),
+			UpdateTime: r.Get("updateTime").Int(),
+		}
+		orders = append(orders, order)
+	}
+	return orders
+}
+
 // CloseOrder closes an order
 func (c Client) CloseOrder(o t.Order) (*t.Order, error) {
 	return nil, nil

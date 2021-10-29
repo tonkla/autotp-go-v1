@@ -79,7 +79,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 			qo.Side = t.OrderSideBuy
 			if s.DB.IsEmptyZone(qo) {
 				o := t.Order{
-					ID:        h.GenID(),
+					ID:        fmt.Sprintf("%s%d", h.GenID(), count),
 					Exchange:  s.BP.Exchange,
 					Symbol:    s.BP.Symbol,
 					BotID:     s.BP.BotID,
