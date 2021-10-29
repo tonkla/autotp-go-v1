@@ -3,6 +3,7 @@ package trend
 import (
 	"math"
 
+	"github.com/tonkla/autotp/exchange"
 	h "github.com/tonkla/autotp/helper"
 	"github.com/tonkla/autotp/rdb"
 	"github.com/tonkla/autotp/strategy/common"
@@ -13,30 +14,29 @@ import (
 type Strategy struct {
 	DB *rdb.DB
 	BP *t.BotParams
+	EX exchange.Repository
 }
 
-func New(db *rdb.DB, bp *t.BotParams) Strategy {
+func New(db *rdb.DB, bp *t.BotParams, ex exchange.Repository) Strategy {
 	return Strategy{
 		DB: db,
 		BP: bp,
+		EX: ex,
 	}
 }
 
 func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	var openOrders, closeOrders []t.Order
 
-	prices := s.BP.HPrices
+	const numberOfBars = 50
+	prices := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATimeframe, numberOfBars)
 
 	p_0 := prices[len(prices)-1]
 	if p_0.Open == 0 || p_0.High == 0 || p_0.Low == 0 || p_0.Close == 0 {
 		return nil
 	}
 
-	var closes []float64
-	for _, _p := range prices {
-		closes = append(closes, _p.Close)
-	}
-	cma := talib.WMA(closes, int(s.BP.MAPeriod))
+	cma := talib.WMA(common.GetCloses(prices), int(s.BP.MAPeriod))
 	cma_0 := cma[len(cma)-1]
 	cma_1 := cma[len(cma)-2]
 
@@ -48,215 +48,50 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		Symbol:   ticker.Symbol,
 		Qty:      h.NormalizeDouble(s.BP.BaseQty, s.BP.QtyDigits),
 	}
-
-	_qty := h.NormalizeDouble(s.BP.QuoteQty/ticker.Price, s.BP.QtyDigits)
-	if _qty > s.BP.BaseQty {
-		qo.Qty = _qty
+	qty := h.NormalizeDouble(s.BP.QuoteQty/ticker.Price, s.BP.QtyDigits)
+	if qty > qo.Qty {
+		qo.Qty = qty
 	}
 
-	slStop := float64(s.BP.SLim.SLStop)
-	tpStop := float64(s.BP.SLim.TPStop)
 	openLimit := float64(s.BP.SLim.OpenLimit)
 	isFutures := s.BP.Product == t.ProductFutures
 
-	// Stop Loss -----------------------------------------------------------------
 	if s.BP.AutoSL {
-		// SL Long ----------------------------
-		for _, o := range s.DB.GetFilledLimitLongOrders(qo) {
-			if s.DB.GetSLOrder(o.ID) != nil {
-				continue
-			}
-
-			slPrice := 0.0
-			if s.BP.QuoteSL > 0 {
-				// SL by a value of the quote currency
-				slPrice = o.OpenPrice - s.BP.QuoteSL/o.Qty
-			} else if s.BP.AtrSL > 0 {
-				// SL by a volatility
-				slPrice = o.OpenPrice - s.BP.AtrSL*atr
-			}
-
-			if slPrice <= 0 {
-				continue
-			}
-
-			stopPrice := h.CalcSLStop(t.OrderSideBuy, slPrice, slStop, s.BP.PriceDigits)
-			if ticker.Price-(stopPrice-slPrice) < stopPrice {
-				slo := t.Order{
-					ID:          h.GenID(),
-					BotID:       s.BP.BotID,
-					Exchange:    qo.Exchange,
-					Symbol:      qo.Symbol,
-					Side:        t.OrderSideSell,
-					Type:        t.OrderTypeSL,
-					Status:      t.OrderStatusNew,
-					Qty:         h.NormalizeDouble(o.Qty, s.BP.QtyDigits),
-					StopPrice:   stopPrice,
-					OpenPrice:   h.NormalizeDouble(slPrice, s.BP.PriceDigits),
-					OpenOrderID: o.ID,
-				}
-				if isFutures {
-					slo.Type = t.OrderTypeFSL
-					slo.PosSide = o.PosSide
-				}
-				closeOrders = append(closeOrders, slo)
-			}
-		}
-
-		// SL Short ---------------------------
-		for _, o := range s.DB.GetFilledLimitShortOrders(qo) {
-			if s.DB.GetSLOrder(o.ID) != nil {
-				continue
-			}
-
-			slPrice := 0.0
-			if s.BP.QuoteSL > 0 {
-				// SL by a value of the quote currency
-				slPrice = o.OpenPrice + s.BP.QuoteSL/o.Qty
-			} else if s.BP.AtrSL > 0 {
-				// SL by a volatility
-				slPrice = o.OpenPrice + s.BP.AtrSL*atr
-			}
-
-			if slPrice <= 0 {
-				continue
-			}
-
-			stopPrice := h.CalcSLStop(t.OrderSideSell, slPrice, slStop, s.BP.PriceDigits)
-			if ticker.Price+(slPrice-stopPrice) > stopPrice {
-				slo := t.Order{
-					ID:          h.GenID(),
-					BotID:       s.BP.BotID,
-					Exchange:    qo.Exchange,
-					Symbol:      qo.Symbol,
-					Side:        t.OrderSideBuy,
-					Type:        t.OrderTypeSL,
-					Status:      t.OrderStatusNew,
-					Qty:         h.NormalizeDouble(o.Qty, s.BP.QtyDigits),
-					StopPrice:   stopPrice,
-					OpenPrice:   h.NormalizeDouble(slPrice, s.BP.PriceDigits),
-					OpenOrderID: o.ID,
-				}
-				if isFutures {
-					slo.Type = t.OrderTypeFSL
-					slo.PosSide = o.PosSide
-				}
-				closeOrders = append(closeOrders, slo)
-			}
-		}
+		closeOrders = append(closeOrders, common.SLLong(s.DB, s.BP, qo, ticker, atr)...)
+		closeOrders = append(closeOrders, common.SLShort(s.DB, s.BP, qo, ticker, atr)...)
 	}
 
-	// Take Profit ---------------------------------------------------------------
 	if s.BP.AutoTP {
-		// TP Long ----------------------------
-		for _, o := range s.DB.GetFilledLimitLongOrders(qo) {
-			if s.DB.GetTPOrder(o.ID) != nil {
-				continue
-			}
-
-			tpPrice := 0.0
-			if s.BP.QuoteTP > 0 {
-				// TP by a value of the quote currency
-				tpPrice = o.OpenPrice + s.BP.QuoteTP/o.Qty
-			} else if s.BP.AtrTP > 0 {
-				// TP by a volatility
-				tpPrice = o.OpenPrice + s.BP.AtrTP*atr
-			}
-
-			if tpPrice <= 0 {
-				continue
-			}
-
-			stopPrice := h.CalcTPStop(t.OrderSideBuy, tpPrice, tpStop, s.BP.PriceDigits)
-			if ticker.Price+(tpPrice-stopPrice) > stopPrice {
-				tpo := t.Order{
-					ID:          h.GenID(),
-					BotID:       s.BP.BotID,
-					Exchange:    qo.Exchange,
-					Symbol:      qo.Symbol,
-					Side:        t.OrderSideSell,
-					Type:        t.OrderTypeTP,
-					Status:      t.OrderStatusNew,
-					Qty:         h.NormalizeDouble(o.Qty, s.BP.QtyDigits),
-					StopPrice:   stopPrice,
-					OpenPrice:   h.NormalizeDouble(tpPrice, s.BP.PriceDigits),
-					OpenOrderID: o.ID,
-				}
-				if isFutures {
-					tpo.Type = t.OrderTypeFTP
-					tpo.PosSide = o.PosSide
-				}
-				closeOrders = append(closeOrders, tpo)
-			}
-		}
-
-		// TP Short ---------------------------
-		for _, o := range s.DB.GetFilledLimitShortOrders(qo) {
-			if s.DB.GetTPOrder(o.ID) != nil {
-				continue
-			}
-
-			tpPrice := 0.0
-			if s.BP.QuoteTP > 0 {
-				// TP by a value of the quote currency
-				tpPrice = o.OpenPrice - s.BP.QuoteTP/o.Qty
-			} else if s.BP.AtrTP > 0 {
-				// TP by a volatility
-				tpPrice = o.OpenPrice - s.BP.AtrTP*atr
-			}
-
-			if tpPrice <= 0 {
-				continue
-			}
-
-			stopPrice := h.CalcTPStop(t.OrderSideSell, tpPrice, tpStop, s.BP.PriceDigits)
-			if ticker.Price-(stopPrice-tpPrice) < stopPrice {
-				tpo := t.Order{
-					ID:          h.GenID(),
-					BotID:       s.BP.BotID,
-					Exchange:    qo.Exchange,
-					Symbol:      qo.Symbol,
-					Side:        t.OrderSideBuy,
-					Type:        t.OrderTypeTP,
-					Status:      t.OrderStatusNew,
-					Qty:         h.NormalizeDouble(o.Qty, s.BP.QtyDigits),
-					StopPrice:   stopPrice,
-					OpenPrice:   h.NormalizeDouble(tpPrice, s.BP.PriceDigits),
-					OpenOrderID: o.ID,
-				}
-				if isFutures {
-					tpo.Type = t.OrderTypeFTP
-					tpo.PosSide = o.PosSide
-				}
-				closeOrders = append(closeOrders, tpo)
-			}
-		}
+		closeOrders = append(closeOrders, common.TPLong(s.DB, s.BP, qo, ticker, atr)...)
+		closeOrders = append(closeOrders, common.TPShort(s.DB, s.BP, qo, ticker, atr)...)
 	}
 
 	// Uptrend: Open Long --------------------------------------------------------
 	if cma_1 < cma_0 {
 		if s.BP.View == t.ViewNeutral || s.BP.View == t.ViewLong {
-			_openPrice := h.CalcStopLowerTicker(ticker.Price, openLimit, s.BP.PriceDigits)
-			qo.Side = t.OrderSideBuy
-			qo.OpenPrice = _openPrice
-			norder := s.DB.GetNearestOrder(qo)
-			// Open a new limit order with safe minimum price gap
-			if _openPrice < cma_0 && (norder == nil || math.Abs(norder.OpenPrice-_openPrice) >= s.BP.OrderGap) {
-				o := t.Order{
-					ID:        h.GenID(),
-					BotID:     s.BP.BotID,
-					Exchange:  qo.Exchange,
-					Symbol:    qo.Symbol,
-					Side:      t.OrderSideBuy,
-					Type:      t.OrderTypeLimit,
-					Status:    t.OrderStatusNew,
-					Qty:       qo.Qty,
-					OpenPrice: qo.OpenPrice,
+			openPrice := h.CalcStopLowerTicker(ticker.Price, openLimit, s.BP.PriceDigits)
+			if openPrice < cma_0 {
+				qo.Side = t.OrderSideBuy
+				qo.OpenPrice = openPrice
+				norder := s.DB.GetNearestOrder(qo)
+				// Open a new limit order with safe minimum price gap
+				if norder == nil || math.Abs(norder.OpenPrice-openPrice) >= s.BP.OrderGap {
+					o := t.Order{
+						ID:        h.GenID(),
+						BotID:     s.BP.BotID,
+						Exchange:  qo.Exchange,
+						Symbol:    qo.Symbol,
+						Side:      t.OrderSideBuy,
+						Type:      t.OrderTypeLimit,
+						Status:    t.OrderStatusNew,
+						Qty:       qo.Qty,
+						OpenPrice: qo.OpenPrice,
+					}
+					if isFutures {
+						o.PosSide = t.OrderPosSideLong
+					}
+					openOrders = append(openOrders, o)
 				}
-				if isFutures {
-					o.PosSide = t.OrderPosSideLong
-				}
-				openOrders = append(openOrders, o)
 			}
 		}
 	}
@@ -264,27 +99,29 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	// Downtrend: Open Short -----------------------------------------------------
 	if cma_1 > cma_0 {
 		if s.BP.View == t.ViewNeutral || s.BP.View == t.ViewShort {
-			_openPrice := h.CalcStopUpperTicker(ticker.Price, openLimit, s.BP.PriceDigits)
-			qo.Side = t.OrderSideSell
-			qo.OpenPrice = _openPrice
-			norder := s.DB.GetNearestOrder(qo)
-			// Open a new limit order with safe minimum price gap
-			if _openPrice > cma_0 && (norder == nil || math.Abs(norder.OpenPrice-_openPrice) >= s.BP.OrderGap) {
-				o := t.Order{
-					ID:        h.GenID(),
-					BotID:     s.BP.BotID,
-					Exchange:  qo.Exchange,
-					Symbol:    qo.Symbol,
-					Side:      t.OrderSideSell,
-					Type:      t.OrderTypeLimit,
-					Status:    t.OrderStatusNew,
-					Qty:       qo.Qty,
-					OpenPrice: qo.OpenPrice,
+			openPrice := h.CalcStopUpperTicker(ticker.Price, openLimit, s.BP.PriceDigits)
+			if openPrice > cma_0 {
+				qo.Side = t.OrderSideSell
+				qo.OpenPrice = openPrice
+				norder := s.DB.GetNearestOrder(qo)
+				// Open a new limit order with safe minimum price gap
+				if norder == nil || math.Abs(norder.OpenPrice-openPrice) >= s.BP.OrderGap {
+					o := t.Order{
+						ID:        h.GenID(),
+						BotID:     s.BP.BotID,
+						Exchange:  qo.Exchange,
+						Symbol:    qo.Symbol,
+						Side:      t.OrderSideSell,
+						Type:      t.OrderTypeLimit,
+						Status:    t.OrderStatusNew,
+						Qty:       qo.Qty,
+						OpenPrice: qo.OpenPrice,
+					}
+					if isFutures {
+						o.PosSide = t.OrderPosSideShort
+					}
+					openOrders = append(openOrders, o)
 				}
-				if isFutures {
-					o.PosSide = t.OrderPosSideShort
-				}
-				openOrders = append(openOrders, o)
 			}
 		}
 	}

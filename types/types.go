@@ -206,8 +206,6 @@ type BotParams struct {
 	AtrTP   float64
 
 	SLim StopLimit
-
-	HPrices []HistoricalPrice
 }
 
 type StopLimit struct {

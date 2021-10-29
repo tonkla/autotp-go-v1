@@ -19,9 +19,9 @@ func New(db *rdb.DB, bp *t.BotParams, ex exchange.Repository) (Repository, error
 	if bp.Strategy == t.StrategyGrid {
 		return grid.New(db, bp, ex), nil
 	} else if bp.Strategy == t.StrategyTrend {
-		return trend.New(db, bp), nil
+		return trend.New(db, bp, ex), nil
 	} else if bp.Strategy == t.StrategyDaily {
-		return daily.New(db, bp), nil
+		return daily.New(db, bp, ex), nil
 	}
 	return nil, errors.New("strategy not found")
 }

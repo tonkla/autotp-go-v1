@@ -1,6 +1,7 @@
 package daily
 
 import (
+	"github.com/tonkla/autotp/exchange"
 	h "github.com/tonkla/autotp/helper"
 	"github.com/tonkla/autotp/rdb"
 	"github.com/tonkla/autotp/strategy/common"
@@ -10,25 +11,22 @@ import (
 type Strategy struct {
 	DB *rdb.DB
 	BP *t.BotParams
+	EX exchange.Repository
 }
 
-func New(db *rdb.DB, bp *t.BotParams) Strategy {
+func New(db *rdb.DB, bp *t.BotParams, ex exchange.Repository) Strategy {
 	return Strategy{
 		DB: db,
 		BP: bp,
+		EX: ex,
 	}
 }
 
 func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	var openOrders, closeOrders []t.Order
 
-	prices := s.BP.HPrices
-
-	slStop := float64(s.BP.SLim.SLStop)
-	slLimit := float64(s.BP.SLim.SLLimit)
-	tpStop := float64(s.BP.SLim.TPStop)
-	tpLimit := float64(s.BP.SLim.TPLimit)
-	openLimit := float64(s.BP.SLim.OpenLimit)
+	const numberOfBars = 50
+	prices := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATimeframe, numberOfBars)
 
 	p_0 := prices[len(prices)-1]
 	if p_0.Open == 0 || p_0.High == 0 || p_0.Low == 0 || p_0.Close == 0 {
@@ -49,43 +47,34 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		Symbol:   ticker.Symbol,
 		Qty:      h.NormalizeDouble(s.BP.BaseQty, s.BP.QtyDigits),
 	}
-
-	_qty := h.NormalizeDouble(s.BP.QuoteQty/ticker.Price, s.BP.QtyDigits)
-	if _qty > s.BP.BaseQty {
-		qo.Qty = _qty
+	qty := h.NormalizeDouble(s.BP.QuoteQty/ticker.Price, s.BP.QtyDigits)
+	if qty > qo.Qty {
+		qo.Qty = qty
 	}
+
+	openLimit := float64(s.BP.SLim.OpenLimit)
+	isFutures := s.BP.Product == t.ProductFutures
+
+	if s.BP.AutoSL {
+		closeOrders = append(closeOrders, common.SLLong(s.DB, s.BP, qo, ticker, atr)...)
+		closeOrders = append(closeOrders, common.SLShort(s.DB, s.BP, qo, ticker, atr)...)
+	}
+
+	if s.BP.AutoTP {
+		closeOrders = append(closeOrders, common.TPLong(s.DB, s.BP, qo, ticker, atr)...)
+		closeOrders = append(closeOrders, common.TPShort(s.DB, s.BP, qo, ticker, atr)...)
+	}
+
+	const maxOpenOrders = 3
 
 	// Uptrend -------------------------------------------------------------------
 	if trend >= t.TrendUp1 {
-		// Take Profit, by the configured Volatility Stop (TP)
-		if s.BP.AutoTP {
-			for _, o := range s.DB.GetFilledLimitBuyOrders(qo) {
-				if ticker.Price > o.OpenPrice+atr*s.BP.AtrTP && s.DB.GetTPOrder(o.ID) == nil {
-					tpo := t.Order{
-						ID:          h.GenID(),
-						BotID:       s.BP.BotID,
-						Exchange:    o.Exchange,
-						Symbol:      o.Symbol,
-						Side:        t.OrderSideSell,
-						Type:        t.OrderTypeTP,
-						Status:      t.OrderStatusNew,
-						Qty:         h.NormalizeDouble(o.Qty, s.BP.QtyDigits),
-						StopPrice:   h.CalcTPStop(t.OrderSideSell, ticker.Price, tpStop, s.BP.PriceDigits),
-						OpenPrice:   h.CalcTPStop(t.OrderSideSell, ticker.Price, tpLimit, s.BP.PriceDigits),
-						OpenOrderID: o.ID,
-					}
-					closeOrders = append(closeOrders, tpo)
-				}
-			}
-		}
-
 		// Open a new limit order, when no active BUY order
 		if (s.BP.View == t.ViewLong || s.BP.View == t.ViewNeutral) && ticker.Price < h_1-mos && ticker.Price < c_1 {
 			qo.Side = t.OrderSideBuy
 			qo.OpenTime = p_0.Time
 			activeOrders := s.DB.GetLimitOrders(qo)
-			maxOrders := 3
-			if len(activeOrders) == 0 || (activeOrders[0].OpenTime < p_0.Time && len(activeOrders) < maxOrders) {
+			if len(activeOrders) == 0 || (activeOrders[0].OpenTime < p_0.Time && len(activeOrders) < maxOpenOrders) {
 				o := t.Order{
 					ID:        h.GenID(),
 					BotID:     s.BP.BotID,
@@ -97,6 +86,9 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 					Qty:       qo.Qty,
 					OpenPrice: h.CalcStopLowerTicker(ticker.Price, openLimit, s.BP.PriceDigits),
 				}
+				if isFutures {
+					o.PosSide = t.OrderPosSideLong
+				}
 				openOrders = append(openOrders, o)
 			}
 		}
@@ -104,36 +96,12 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 
 	// Downtrend -----------------------------------------------------------------
 	if trend <= t.TrendDown1 {
-		// Stop Loss, for BUY orders
-		if s.BP.AutoSL {
-			for _, o := range s.DB.GetFilledLimitBuyOrders(qo) {
-				if s.DB.GetSLOrder(o.ID) != nil {
-					continue
-				}
-				slo := t.Order{
-					ID:          h.GenID(),
-					BotID:       s.BP.BotID,
-					Exchange:    o.Exchange,
-					Symbol:      o.Symbol,
-					Side:        t.OrderSideSell,
-					Type:        t.OrderTypeSL,
-					Status:      t.OrderStatusNew,
-					Qty:         h.NormalizeDouble(o.Qty, s.BP.QtyDigits),
-					StopPrice:   h.CalcSLStop(t.OrderSideSell, ticker.Price, slStop, s.BP.PriceDigits),
-					OpenPrice:   h.CalcSLStop(t.OrderSideSell, ticker.Price, slLimit, s.BP.PriceDigits),
-					OpenOrderID: o.ID,
-				}
-				closeOrders = append(closeOrders, slo)
-			}
-		}
-
 		// Open a new limit order, when no active SELL order
 		if (s.BP.View == t.ViewShort || s.BP.View == t.ViewNeutral) && ticker.Price > l_1+mos && ticker.Price > c_1 {
 			qo.Side = t.OrderSideSell
 			qo.OpenTime = p_0.Time
 			activeOrders := s.DB.GetLimitOrders(qo)
-			maxOrders := 3
-			if len(activeOrders) == 0 || (activeOrders[0].OpenTime < p_0.Time && len(activeOrders) < maxOrders) {
+			if len(activeOrders) == 0 || (activeOrders[0].OpenTime < p_0.Time && len(activeOrders) < maxOpenOrders) {
 				o := t.Order{
 					ID:        h.GenID(),
 					BotID:     s.BP.BotID,
@@ -144,6 +112,9 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 					Status:    t.OrderStatusNew,
 					Qty:       qo.Qty,
 					OpenPrice: h.CalcStopUpperTicker(ticker.Price, openLimit, s.BP.PriceDigits),
+				}
+				if isFutures {
+					o.PosSide = t.OrderPosSideShort
 				}
 				openOrders = append(openOrders, o)
 			}

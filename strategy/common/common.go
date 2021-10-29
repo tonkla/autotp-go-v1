@@ -3,6 +3,8 @@ package common
 import (
 	"math"
 
+	h "github.com/tonkla/autotp/helper"
+	"github.com/tonkla/autotp/rdb"
 	"github.com/tonkla/autotp/talib"
 	t "github.com/tonkla/autotp/types"
 )
@@ -17,18 +19,18 @@ func IsDown(p t.HistoricalPrice) bool {
 	return p.Close < p.Open
 }
 
-// IsOverMA returns true if the price is higher than the current WMA price
-func IsOverMA(price float64, prices []t.HistoricalPrice, period int64, gap float64) bool {
-	cwma := talib.WMA(getCloses(prices), int(period))
+// IsUpperMA returns true if the price is upper than the current WMA price
+func IsUpperMA(price float64, prices []t.HistoricalPrice, period int64, gap float64) bool {
+	cwma := talib.WMA(GetCloses(prices), int(period))
 	if len(cwma) == 0 {
 		return false
 	}
 	return price-gap > cwma[len(cwma)-1]
 }
 
-// IsUnderMA returns true if the price is lower than the current WMA price
-func IsUnderMA(price float64, prices []t.HistoricalPrice, period int64, gap float64) bool {
-	cwma := talib.WMA(getCloses(prices), int(period))
+// IsLowerMA returns true if the price is lower than the current WMA price
+func IsLowerMA(price float64, prices []t.HistoricalPrice, period int64, gap float64) bool {
+	cwma := talib.WMA(GetCloses(prices), int(period))
 	if len(cwma) == 0 {
 		return false
 	}
@@ -249,10 +251,215 @@ func GetGridZones(target float64, lowerNum float64, upperNum float64, gridSize f
 	return zones, gridWidth
 }
 
-func getCloses(prices []t.HistoricalPrice) []float64 {
+// GetCloses returns CLOSE prices of the historical prices
+func GetCloses(prices []t.HistoricalPrice) []float64 {
 	var c []float64
 	for _, p := range prices {
 		c = append(c, p.Close)
 	}
 	return c
+}
+
+// SLLong creates SL orders of active LONG orders
+func SLLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr float64) []t.Order {
+	var closeOrders []t.Order
+
+	slStop := float64(bp.SLim.SLStop)
+	isFutures := bp.Product == t.ProductFutures
+
+	for _, o := range db.GetFilledLimitLongOrders(qo) {
+		if db.GetSLOrder(o.ID) != nil {
+			continue
+		}
+
+		slPrice := 0.0
+		if bp.QuoteSL > 0 {
+			// SL by a value of the quote currency
+			slPrice = o.OpenPrice - bp.QuoteSL/o.Qty
+		} else if bp.AtrSL > 0 {
+			// SL by a volatility
+			slPrice = o.OpenPrice - bp.AtrSL*atr
+		}
+
+		if slPrice <= 0 {
+			continue
+		}
+
+		stopPrice := h.CalcSLStop(t.OrderSideBuy, slPrice, slStop, bp.PriceDigits)
+		if ticker.Price-(stopPrice-slPrice) < stopPrice {
+			slo := t.Order{
+				ID:          h.GenID(),
+				BotID:       bp.BotID,
+				Exchange:    bp.Exchange,
+				Symbol:      bp.Symbol,
+				Side:        t.OrderSideSell,
+				Type:        t.OrderTypeSL,
+				Status:      t.OrderStatusNew,
+				Qty:         h.NormalizeDouble(o.Qty, bp.QtyDigits),
+				StopPrice:   stopPrice,
+				OpenPrice:   h.NormalizeDouble(slPrice, bp.PriceDigits),
+				OpenOrderID: o.ID,
+			}
+			if isFutures {
+				slo.Type = t.OrderTypeFSL
+				slo.PosSide = o.PosSide
+			}
+			closeOrders = append(closeOrders, slo)
+		}
+	}
+
+	return closeOrders
+}
+
+// SLShort creates SL orders of active SHORT orders
+func SLShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr float64) []t.Order {
+	var closeOrders []t.Order
+
+	slStop := float64(bp.SLim.SLStop)
+	isFutures := bp.Product == t.ProductFutures
+
+	for _, o := range db.GetFilledLimitShortOrders(qo) {
+		if db.GetSLOrder(o.ID) != nil {
+			continue
+		}
+
+		slPrice := 0.0
+		if bp.QuoteSL > 0 {
+			// SL by a value of the quote currency
+			slPrice = o.OpenPrice + bp.QuoteSL/o.Qty
+		} else if bp.AtrSL > 0 {
+			// SL by a volatility
+			slPrice = o.OpenPrice + bp.AtrSL*atr
+		}
+
+		if slPrice <= 0 {
+			continue
+		}
+
+		stopPrice := h.CalcSLStop(t.OrderSideSell, slPrice, slStop, bp.PriceDigits)
+		if ticker.Price+(slPrice-stopPrice) > stopPrice {
+			slo := t.Order{
+				ID:          h.GenID(),
+				BotID:       bp.BotID,
+				Exchange:    qo.Exchange,
+				Symbol:      qo.Symbol,
+				Side:        t.OrderSideBuy,
+				Type:        t.OrderTypeSL,
+				Status:      t.OrderStatusNew,
+				Qty:         h.NormalizeDouble(o.Qty, bp.QtyDigits),
+				StopPrice:   stopPrice,
+				OpenPrice:   h.NormalizeDouble(slPrice, bp.PriceDigits),
+				OpenOrderID: o.ID,
+			}
+			if isFutures {
+				slo.Type = t.OrderTypeFSL
+				slo.PosSide = o.PosSide
+			}
+			closeOrders = append(closeOrders, slo)
+		}
+	}
+
+	return closeOrders
+}
+
+// TPLong creates TP orders of active LONG orders
+func TPLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr float64) []t.Order {
+	var closeOrders []t.Order
+
+	tpStop := float64(bp.SLim.TPStop)
+	isFutures := bp.Product == t.ProductFutures
+
+	for _, o := range db.GetFilledLimitLongOrders(qo) {
+		if db.GetTPOrder(o.ID) != nil {
+			continue
+		}
+
+		tpPrice := 0.0
+		if bp.QuoteTP > 0 {
+			// TP by a value of the quote currency
+			tpPrice = o.OpenPrice + bp.QuoteTP/o.Qty
+		} else if bp.AtrTP > 0 {
+			// TP by a volatility
+			tpPrice = o.OpenPrice + bp.AtrTP*atr
+		}
+
+		if tpPrice <= 0 {
+			continue
+		}
+
+		stopPrice := h.CalcTPStop(t.OrderSideBuy, tpPrice, tpStop, bp.PriceDigits)
+		if ticker.Price+(tpPrice-stopPrice) > stopPrice {
+			tpo := t.Order{
+				ID:          h.GenID(),
+				BotID:       bp.BotID,
+				Exchange:    qo.Exchange,
+				Symbol:      qo.Symbol,
+				Side:        t.OrderSideSell,
+				Type:        t.OrderTypeTP,
+				Status:      t.OrderStatusNew,
+				Qty:         h.NormalizeDouble(o.Qty, bp.QtyDigits),
+				StopPrice:   stopPrice,
+				OpenPrice:   h.NormalizeDouble(tpPrice, bp.PriceDigits),
+				OpenOrderID: o.ID,
+			}
+			if isFutures {
+				tpo.Type = t.OrderTypeFTP
+				tpo.PosSide = o.PosSide
+			}
+			closeOrders = append(closeOrders, tpo)
+		}
+	}
+
+	return closeOrders
+}
+
+// TPShort creates TP orders of active SHORT orders
+func TPShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr float64) []t.Order {
+	var closeOrders []t.Order
+
+	tpStop := float64(bp.SLim.TPStop)
+	isFutures := bp.Product == t.ProductFutures
+
+	for _, o := range db.GetFilledLimitShortOrders(qo) {
+		if db.GetTPOrder(o.ID) != nil {
+			continue
+		}
+
+		tpPrice := 0.0
+		if bp.QuoteTP > 0 {
+			// TP by a value of the quote currency
+			tpPrice = o.OpenPrice - bp.QuoteTP/o.Qty
+		} else if bp.AtrTP > 0 {
+			// TP by a volatility
+			tpPrice = o.OpenPrice - bp.AtrTP*atr
+		}
+
+		if tpPrice <= 0 {
+			continue
+		}
+
+		stopPrice := h.CalcTPStop(t.OrderSideSell, tpPrice, tpStop, bp.PriceDigits)
+		if ticker.Price-(stopPrice-tpPrice) < stopPrice {
+			tpo := t.Order{
+				ID:          h.GenID(),
+				BotID:       bp.BotID,
+				Exchange:    qo.Exchange,
+				Symbol:      qo.Symbol,
+				Side:        t.OrderSideBuy,
+				Type:        t.OrderTypeTP,
+				Status:      t.OrderStatusNew,
+				Qty:         h.NormalizeDouble(o.Qty, bp.QtyDigits),
+				StopPrice:   stopPrice,
+				OpenPrice:   h.NormalizeDouble(tpPrice, bp.PriceDigits),
+				OpenOrderID: o.ID,
+			}
+			if isFutures {
+				tpo.Type = t.OrderTypeFTP
+				tpo.PosSide = o.PosSide
+			}
+			closeOrders = append(closeOrders, tpo)
+		}
+	}
+
+	return closeOrders
 }
