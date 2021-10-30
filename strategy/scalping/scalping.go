@@ -74,19 +74,19 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 
 	isUp := macl1h[len(macl1h)-2] < macl1h[len(macl1h)-1] &&
 		macl15m[len(macl15m)-2] < macl15m[len(macl15m)-1] &&
-		p1h_1.Low < p1h_0.Low &&
-		p15m_1.Low < p15m_0.Low
+		p1h_1.High < p1h_0.High &&
+		p15m_1.High < p15m_0.High
 
 	isDown := macl1h[len(macl1h)-2] > macl1h[len(macl1h)-1] &&
 		macl15m[len(macl15m)-2] > macl15m[len(macl15m)-1] &&
-		p1h_1.High > p1h_0.High &&
-		p15m_1.High > p15m_0.High
+		p1h_1.Low > p1h_0.Low &&
+		p15m_1.Low > p15m_0.Low
 
 	shouldCloseLong := macl15m[len(macl15m)-2] > macl15m[len(macl15m)-1] &&
-		p15m_1.High > p15m_0.High
+		p15m_1.Low > p15m_0.Low
 
 	shouldCloseShort := macl15m[len(macl15m)-2] < macl15m[len(macl15m)-1] &&
-		p15m_1.Low < p15m_0.Low
+		p15m_1.High < p15m_0.High
 
 	if shouldCloseLong {
 		for _, o := range s.DB.GetFilledLimitLongOrders(qo) {
