@@ -1,8 +1,6 @@
 package scalping
 
 import (
-	"math"
-
 	"github.com/tonkla/autotp/exchange"
 	h "github.com/tonkla/autotp/helper"
 	"github.com/tonkla/autotp/rdb"
@@ -116,7 +114,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 			qo.OpenPrice = openPrice
 			qo.Side = t.OrderSideBuy
 			norder := s.DB.GetNearestOrder(qo)
-			if norder == nil || math.Abs(norder.OpenPrice-openPrice) >= s.BP.OrderGap {
+			if norder == nil || norder.OpenPrice-openPrice >= s.BP.OrderGap {
 				o := t.Order{
 					ID:        h.GenID(),
 					BotID:     s.BP.BotID,
@@ -142,7 +140,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 			qo.OpenPrice = openPrice
 			qo.Side = t.OrderSideSell
 			norder := s.DB.GetNearestOrder(qo)
-			if norder == nil || math.Abs(norder.OpenPrice-openPrice) >= s.BP.OrderGap {
+			if norder == nil || openPrice-norder.OpenPrice >= s.BP.OrderGap {
 				o := t.Order{
 					ID:        h.GenID(),
 					BotID:     s.BP.BotID,
