@@ -70,7 +70,6 @@ func openLimitOrders(p *app.AppParams) {
 
 		o.RefID = exo.RefID
 		o.Status = exo.Status
-		o.OpenPrice = exo.OpenPrice
 		o.OpenTime = exo.OpenTime
 		err = p.DB.CreateOrder(o)
 		if err != nil {
@@ -208,6 +207,14 @@ func syncStatus(o t.Order, p *app.AppParams) {
 	if o.Status != exo.Status {
 		o.Status = exo.Status
 		o.UpdateTime = exo.UpdateTime
+
+		if exo.Status == t.OrderStatusFilled {
+			commission := p.EX.GetCommission(p.BP.Symbol, o.RefID)
+			if commission != nil {
+				o.Commission = *commission
+			}
+		}
+
 		err := p.DB.UpdateOrder(o)
 		if err != nil {
 			h.Log(err)

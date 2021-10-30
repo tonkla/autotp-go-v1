@@ -17,6 +17,24 @@ type Client struct {
 	secretKey string
 }
 
+type TradeOrder struct {
+	Symbol          string
+	ID              string
+	OrderID         string
+	Side            string
+	Price           float64
+	Qty             float64
+	RealizedPnL     float64
+	MarginAsset     string
+	QuoteQty        float64
+	Commission      float64
+	CommissionAsset string
+	Time            int64
+	PositionSide    string
+	Buyer           bool
+	Maker           bool
+}
+
 // NewFuturesClient returns Binance USDⓈ-M Futures client
 func NewFuturesClient(apiKey string, secretKey string) Client {
 	return Client{
@@ -89,21 +107,17 @@ func (c Client) OpenLimitOrder(o t.Order) (*t.Order, error) {
 	r := gjson.ParseBytes(data)
 
 	if r.Get("code").Int() < 0 {
-		h.Log("PlaceLimitOrder", r)
+		h.Log("OpenLimitOrder", r)
 		return nil, errors.New(r.Get("msg").String())
 	}
 
 	status := r.Get("status").String()
-	if status != t.OrderStatusNew && status != t.OrderStatusFilled {
+	if !(status == t.OrderStatusNew || status == t.OrderStatusFilled) {
 		return nil, nil
 	}
 	o.Status = status
 	o.RefID = r.Get("orderId").String()
-	o.OpenTime = r.Get("transactTime").Int()
-	price := r.Get("price").Float()
-	if price > 0 {
-		o.OpenPrice = price
-	}
+	o.OpenTime = r.Get("updateTime").Int()
 	return &o, nil
 }
 
@@ -257,6 +271,63 @@ func (c Client) GetOpenOrders(symbol string) []t.Order {
 	return orders
 }
 
+// GetTradeOrders returns trade orders list
+func (c Client) GetTradeOrders(symbol string, limit int, startTime int, endTime int) []TradeOrder {
+	var payload, url strings.Builder
+
+	b.BuildBaseQS(&payload, symbol)
+
+	if limit > 0 {
+		fmt.Fprintf(&payload, "&limit=%d", limit)
+	} else {
+		fmt.Fprintf(&payload, "&limit=10")
+	}
+	if startTime > 0 {
+		fmt.Fprintf(&payload, "&startTime=%d", startTime)
+	}
+	if endTime > 0 {
+		fmt.Fprintf(&payload, "&endTime=%d", endTime)
+	}
+
+	signature := b.Sign(payload.String(), c.secretKey)
+
+	fmt.Fprintf(&url, "%s/userTrades?%s&signature=%s", c.baseURL, payload.String(), signature)
+	data, err := h.GetH(url.String(), b.NewHeader(c.apiKey))
+	if err != nil {
+		return nil
+	}
+
+	rs := gjson.ParseBytes(data)
+
+	if rs.Get("code").Int() < 0 {
+		h.Log("GetTradeOrders", rs)
+		return nil
+	}
+
+	var orders []TradeOrder
+	for _, r := range rs.Array() {
+		order := TradeOrder{
+			Symbol:          r.Get("symbol").String(),
+			ID:              r.Get("id").String(),
+			OrderID:         r.Get("orderId").String(),
+			Side:            r.Get("side").String(),
+			Price:           r.Get("price").Float(),
+			Qty:             r.Get("qty").Float(),
+			RealizedPnL:     r.Get("realizedPnl").Float(),
+			MarginAsset:     r.Get("marginAsset").String(),
+			QuoteQty:        r.Get("quoteQty").Float(),
+			Commission:      r.Get("commission").Float(),
+			CommissionAsset: r.Get("commissionAsset").String(),
+			Time:            r.Get("time").Int(),
+			PositionSide:    r.Get("positionSide").String(),
+			Buyer:           r.Get("buyer").Bool(),
+			Maker:           r.Get("maker").Bool(),
+		}
+		orders = append(orders, order)
+	}
+	return orders
+}
+
 // GetAllOrders returns all account orders; active, canceled, or filled
 func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime int) []t.Order {
 	var payload, url strings.Builder
@@ -306,6 +377,38 @@ func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime in
 		orders = append(orders, order)
 	}
 	return orders
+}
+
+func (c Client) GetCommission(symbol string, orderRefID string) *float64 {
+	var payload, url strings.Builder
+
+	b.BuildBaseQS(&payload, symbol)
+
+	fmt.Fprintf(&payload, "&limit=10")
+
+	signature := b.Sign(payload.String(), c.secretKey)
+
+	fmt.Fprintf(&url, "%s/userTrades?%s&signature=%s", c.baseURL, payload.String(), signature)
+	data, err := h.GetH(url.String(), b.NewHeader(c.apiKey))
+	if err != nil {
+		return nil
+	}
+
+	rs := gjson.ParseBytes(data)
+
+	if rs.Get("code").Int() < 0 {
+		h.Log("GetCommission", rs)
+		return nil
+	}
+
+	for _, r := range rs.Array() {
+		orderID := r.Get("orderId").String()
+		if orderRefID == orderID {
+			commission := r.Get("commission").Float()
+			return &commission
+		}
+	}
+	return nil
 }
 
 // CloseOrder closes an order
