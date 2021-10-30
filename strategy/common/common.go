@@ -9,16 +9,6 @@ import (
 	t "github.com/tonkla/autotp/types"
 )
 
-// IsUp returns true when the Close price is higher than the Open price
-func IsUp(p t.HistoricalPrice) bool {
-	return p.Close > p.Open
-}
-
-// IsDown returns true when the Close price is lower than the Open price
-func IsDown(p t.HistoricalPrice) bool {
-	return p.Close < p.Open
-}
-
 // IsUpperMA returns true if the price is upper than the current WMA price
 func IsUpperMA(price float64, prices []t.HistoricalPrice, period int64, gap float64) bool {
 	cwma := talib.WMA(GetCloses(prices), int(period))
@@ -258,6 +248,27 @@ func GetCloses(prices []t.HistoricalPrice) []float64 {
 		c = append(c, p.Close)
 	}
 	return c
+}
+
+// GetHighsLows returns HIGH,LOW prices of the historical prices
+func GetHighsLows(prices []t.HistoricalPrice) ([]float64, []float64) {
+	var h, l []float64
+	for _, p := range prices {
+		h = append(h, p.High)
+		l = append(l, p.Low)
+	}
+	return h, l
+}
+
+// GetHighsLowsCloses returns HIGH,LOW,CLOSE prices of the historical prices
+func GetHighsLowsCloses(prices []t.HistoricalPrice) ([]float64, []float64, []float64) {
+	var h, l, c []float64
+	for _, p := range prices {
+		h = append(h, p.High)
+		l = append(l, p.Low)
+		c = append(l, p.Close)
+	}
+	return h, l, c
 }
 
 // SLLong creates SL orders of active LONG orders

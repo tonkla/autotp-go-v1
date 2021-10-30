@@ -9,9 +9,10 @@ const (
 	ProductSpot    = "SPOT"
 	ProductFutures = "FUTURES"
 
-	StrategyDaily = "DAILY"
-	StrategyGrid  = "GRID"
-	StrategyTrend = "TREND"
+	StrategyDaily    = "DAILY"
+	StrategyGrid     = "GRID"
+	StrategyScalping = "SCALPING"
+	StrategyTrend    = "TREND"
 
 	OrderStatusNew      = "NEW"
 	OrderStatusFilled   = "FILLED"
