@@ -1,12 +1,11 @@
 package daily
 
 import (
-	"math"
-
 	"github.com/tonkla/autotp/exchange"
 	h "github.com/tonkla/autotp/helper"
 	"github.com/tonkla/autotp/rdb"
 	"github.com/tonkla/autotp/strategy/common"
+	"github.com/tonkla/autotp/talib"
 	t "github.com/tonkla/autotp/types"
 )
 
@@ -39,7 +38,10 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	h_1 := p_1.High
 	l_1 := p_1.Low
 
-	trend := common.GetTrend(prices, int(s.BP.MAPeriod))
+	cma := talib.WMA(common.GetCloses(prices), int(s.BP.MAPeriod))
+	cma_0 := cma[len(cma)-1]
+	cma_1 := cma[len(cma)-2]
+
 	atr := common.GetATR(prices, int(s.BP.MAPeriod))
 	mos := (h_1 - l_1) * s.BP.MoS // The Margin of Safety
 
@@ -67,68 +69,56 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		closeOrders = append(closeOrders, common.TPShort(s.DB, s.BP, qo, ticker, atr)...)
 	}
 
-	const maxOpenOrders = 3
-
 	// Uptrend -------------------------------------------------------------------
-	if trend >= t.TrendUp1 {
-		// Open a new limit order, when no active BUY order
+	if cma_1 < cma_0 {
 		if (s.BP.View == t.ViewLong || s.BP.View == t.ViewNeutral) && ticker.Price < h_1-mos && ticker.Price < c_1 {
+			openPrice := h.CalcStopLowerTicker(ticker.Price, openLimit, s.BP.PriceDigits)
+			qo.OpenPrice = openPrice
 			qo.Side = t.OrderSideBuy
-			activeOrders := s.DB.GetLimitOrders(qo)
-			if len(activeOrders) < maxOpenOrders {
-				openPrice := h.CalcStopLowerTicker(ticker.Price, openLimit, s.BP.PriceDigits)
-				qo.OpenPrice = openPrice
-				norder := s.DB.GetNearestOrder(qo)
-				if norder == nil || math.Abs(norder.OpenPrice-openPrice) >= s.BP.OrderGap {
-					// Open a new limit order with safe minimum price gap
-					o := t.Order{
-						ID:        h.GenID(),
-						BotID:     s.BP.BotID,
-						Exchange:  qo.Exchange,
-						Symbol:    qo.Symbol,
-						Side:      t.OrderSideBuy,
-						Type:      t.OrderTypeLimit,
-						Status:    t.OrderStatusNew,
-						Qty:       qo.Qty,
-						OpenPrice: openPrice,
-					}
-					if isFutures {
-						o.PosSide = t.OrderPosSideLong
-					}
-					openOrders = append(openOrders, o)
+			norder := s.DB.GetNearestOrder(qo)
+			if norder == nil || norder.OpenPrice-openPrice >= s.BP.OrderGap {
+				o := t.Order{
+					ID:        h.GenID(),
+					BotID:     s.BP.BotID,
+					Exchange:  qo.Exchange,
+					Symbol:    qo.Symbol,
+					Side:      t.OrderSideBuy,
+					Type:      t.OrderTypeLimit,
+					Status:    t.OrderStatusNew,
+					Qty:       qo.Qty,
+					OpenPrice: openPrice,
 				}
+				if isFutures {
+					o.PosSide = t.OrderPosSideLong
+				}
+				openOrders = append(openOrders, o)
 			}
 		}
 	}
 
 	// Downtrend -----------------------------------------------------------------
-	if trend <= t.TrendDown1 {
-		// Open a new limit order, when no active SELL order
+	if cma_1 > cma_0 {
 		if (s.BP.View == t.ViewShort || s.BP.View == t.ViewNeutral) && ticker.Price > l_1+mos && ticker.Price > c_1 {
+			openPrice := h.CalcStopUpperTicker(ticker.Price, openLimit, s.BP.PriceDigits)
+			qo.OpenPrice = openPrice
 			qo.Side = t.OrderSideSell
-			activeOrders := s.DB.GetLimitOrders(qo)
-			if len(activeOrders) < maxOpenOrders {
-				openPrice := h.CalcStopUpperTicker(ticker.Price, openLimit, s.BP.PriceDigits)
-				qo.OpenPrice = openPrice
-				norder := s.DB.GetNearestOrder(qo)
-				if norder == nil || math.Abs(norder.OpenPrice-openPrice) >= s.BP.OrderGap {
-					// Open a new limit order with safe minimum price gap
-					o := t.Order{
-						ID:        h.GenID(),
-						BotID:     s.BP.BotID,
-						Exchange:  qo.Exchange,
-						Symbol:    qo.Symbol,
-						Side:      t.OrderSideSell,
-						Type:      t.OrderTypeLimit,
-						Status:    t.OrderStatusNew,
-						Qty:       qo.Qty,
-						OpenPrice: openPrice,
-					}
-					if isFutures {
-						o.PosSide = t.OrderPosSideShort
-					}
-					openOrders = append(openOrders, o)
+			norder := s.DB.GetNearestOrder(qo)
+			if norder == nil || openPrice-norder.OpenPrice >= s.BP.OrderGap {
+				o := t.Order{
+					ID:        h.GenID(),
+					BotID:     s.BP.BotID,
+					Exchange:  qo.Exchange,
+					Symbol:    qo.Symbol,
+					Side:      t.OrderSideSell,
+					Type:      t.OrderTypeLimit,
+					Status:    t.OrderStatusNew,
+					Qty:       qo.Qty,
+					OpenPrice: openPrice,
 				}
+				if isFutures {
+					o.PosSide = t.OrderPosSideShort
+				}
+				openOrders = append(openOrders, o)
 			}
 		}
 	}

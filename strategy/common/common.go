@@ -474,3 +474,115 @@ func TPShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr 
 
 	return closeOrders
 }
+
+// SLLongNow creates a SL order of the LONG order from the ticker price
+func SLLongNow(db *rdb.DB, bp *t.BotParams, ticker t.Ticker, o t.Order) *t.Order {
+	if db.GetSLOrder(o.ID) != nil {
+		return nil
+	}
+
+	openPrice := h.CalcStopUpperTicker(ticker.Price, 100, bp.PriceDigits)
+	stopPrice := h.CalcSLStop(o.Side, openPrice, 50, bp.PriceDigits)
+	slo := t.Order{
+		ID:          h.GenID(),
+		BotID:       bp.BotID,
+		Exchange:    bp.Exchange,
+		Symbol:      bp.Symbol,
+		Side:        t.OrderSideSell,
+		Type:        t.OrderTypeSL,
+		Status:      t.OrderStatusNew,
+		Qty:         h.NormalizeDouble(o.Qty, bp.QtyDigits),
+		StopPrice:   stopPrice,
+		OpenPrice:   openPrice,
+		OpenOrderID: o.ID,
+	}
+	if bp.Product == t.ProductFutures {
+		slo.Type = t.OrderTypeFSL
+		slo.PosSide = o.PosSide
+	}
+	return &slo
+}
+
+// SLShortNow creates a SL order of the SHORT order from the ticker price
+func SLShortNow(db *rdb.DB, bp *t.BotParams, ticker t.Ticker, o t.Order) *t.Order {
+	if db.GetSLOrder(o.ID) != nil {
+		return nil
+	}
+
+	openPrice := h.CalcStopLowerTicker(ticker.Price, 100, bp.PriceDigits)
+	stopPrice := h.CalcSLStop(o.Side, openPrice, 50, bp.PriceDigits)
+	slo := t.Order{
+		ID:          h.GenID(),
+		BotID:       bp.BotID,
+		Exchange:    bp.Exchange,
+		Symbol:      bp.Symbol,
+		Side:        t.OrderSideBuy,
+		Type:        t.OrderTypeSL,
+		Status:      t.OrderStatusNew,
+		Qty:         h.NormalizeDouble(o.Qty, bp.QtyDigits),
+		StopPrice:   stopPrice,
+		OpenPrice:   openPrice,
+		OpenOrderID: o.ID,
+	}
+	if bp.Product == t.ProductFutures {
+		slo.Type = t.OrderTypeFSL
+		slo.PosSide = o.PosSide
+	}
+	return &slo
+}
+
+// TPLongNow creates a TP order of the LONG order from the ticker price
+func TPLongNow(db *rdb.DB, bp *t.BotParams, ticker t.Ticker, o t.Order) *t.Order {
+	if db.GetTPOrder(o.ID) != nil {
+		return nil
+	}
+
+	openPrice := h.CalcStopUpperTicker(ticker.Price, 100, bp.PriceDigits)
+	stopPrice := h.CalcTPStop(o.Side, openPrice, 50, bp.PriceDigits)
+	tpo := t.Order{
+		ID:          h.GenID(),
+		BotID:       bp.BotID,
+		Exchange:    bp.Exchange,
+		Symbol:      bp.Symbol,
+		Side:        t.OrderSideSell,
+		Type:        t.OrderTypeTP,
+		Status:      t.OrderStatusNew,
+		Qty:         h.NormalizeDouble(o.Qty, bp.QtyDigits),
+		StopPrice:   stopPrice,
+		OpenPrice:   openPrice,
+		OpenOrderID: o.ID,
+	}
+	if bp.Product == t.ProductFutures {
+		tpo.Type = t.OrderTypeFTP
+		tpo.PosSide = o.PosSide
+	}
+	return &tpo
+}
+
+// TPShortNow creates a TP order of the SHORT order from the ticker price
+func TPShortNow(db *rdb.DB, bp *t.BotParams, ticker t.Ticker, o t.Order) *t.Order {
+	if db.GetTPOrder(o.ID) != nil {
+		return nil
+	}
+
+	openPrice := h.CalcStopLowerTicker(ticker.Price, 100, bp.PriceDigits)
+	stopPrice := h.CalcTPStop(o.Side, openPrice, 50, bp.PriceDigits)
+	tpo := t.Order{
+		ID:          h.GenID(),
+		BotID:       bp.BotID,
+		Exchange:    bp.Exchange,
+		Symbol:      bp.Symbol,
+		Side:        t.OrderSideBuy,
+		Type:        t.OrderTypeTP,
+		Status:      t.OrderStatusNew,
+		Qty:         h.NormalizeDouble(o.Qty, bp.QtyDigits),
+		StopPrice:   stopPrice,
+		OpenPrice:   openPrice,
+		OpenOrderID: o.ID,
+	}
+	if bp.Product == t.ProductFutures {
+		tpo.Type = t.OrderTypeFTP
+		tpo.PosSide = o.PosSide
+	}
+	return &tpo
+}

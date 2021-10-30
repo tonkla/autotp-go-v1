@@ -91,9 +91,15 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	if shouldCloseLong {
 		for _, o := range s.DB.GetFilledLimitLongOrders(qo) {
 			if ticker.Price > o.OpenPrice && s.BP.AutoTP {
-				closeOrders = append(closeOrders, common.TPLong(s.DB, s.BP, qo, ticker, 0)...)
+				tpo := common.TPLongNow(s.DB, s.BP, ticker, o)
+				if tpo != nil {
+					closeOrders = append(closeOrders, *tpo)
+				}
 			} else if s.BP.AutoSL {
-				closeOrders = append(closeOrders, common.SLLong(s.DB, s.BP, qo, ticker, 0)...)
+				slo := common.SLLongNow(s.DB, s.BP, ticker, o)
+				if slo != nil {
+					closeOrders = append(closeOrders, *slo)
+				}
 			}
 		}
 	}
@@ -101,9 +107,15 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	if shouldCloseShort {
 		for _, o := range s.DB.GetFilledLimitShortOrders(qo) {
 			if ticker.Price < o.OpenPrice && s.BP.AutoTP {
-				closeOrders = append(closeOrders, common.TPShort(s.DB, s.BP, qo, ticker, 0)...)
+				tpo := common.TPShortNow(s.DB, s.BP, ticker, o)
+				if tpo != nil {
+					closeOrders = append(closeOrders, *tpo)
+				}
 			} else if s.BP.AutoSL {
-				closeOrders = append(closeOrders, common.SLShort(s.DB, s.BP, qo, ticker, 0)...)
+				slo := common.SLShortNow(s.DB, s.BP, ticker, o)
+				if slo != nil {
+					closeOrders = append(closeOrders, *slo)
+				}
 			}
 		}
 	}
