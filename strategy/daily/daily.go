@@ -29,10 +29,10 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	const numberOfBars = 50
 	prices := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATimeframe, numberOfBars)
 
-	p_0 := prices[len(prices)-1]
-	if p_0.Open == 0 || p_0.High == 0 || p_0.Low == 0 || p_0.Close == 0 {
+	if len(prices) == 0 || prices[len(prices)-1].Open == 0 {
 		return nil
 	}
+
 	p_1 := prices[len(prices)-2]
 	c_1 := p_1.Close
 	h_1 := p_1.High
