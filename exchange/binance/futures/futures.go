@@ -153,7 +153,7 @@ func (c Client) OpenStopOrder(o t.Order) (*t.Order, error) {
 	}
 
 	o.RefID = r.Get("orderId").String()
-	o.OpenTime = r.Get("transactTime").Int()
+	o.OpenTime = r.Get("updateTime").Int()
 	return &o, nil
 }
 
