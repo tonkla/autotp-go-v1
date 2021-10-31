@@ -148,7 +148,7 @@ func (c Client) OpenStopOrder(o t.Order) (*t.Order, error) {
 	r := gjson.ParseBytes(data)
 
 	if r.Get("code").Int() < 0 {
-		h.Log("PlaceStopOrder", r)
+		h.Log("OpenStopOrder", r)
 		return nil, errors.New(r.Get("msg").String())
 	}
 
