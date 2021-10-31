@@ -240,7 +240,7 @@ func syncStatus(o t.Order, p *app.AppParams) {
 }
 
 func syncSLLong(slo t.Order, p *app.AppParams) {
-	if !(p.TK.Price < slo.OpenPrice && slo.CloseTime == 0) {
+	if !(p.TK.Price < slo.OpenPrice && slo.CloseTime == 0 && slo.Status == t.OrderStatusFilled) {
 		return
 	}
 
@@ -275,7 +275,7 @@ func syncSLLong(slo t.Order, p *app.AppParams) {
 }
 
 func syncSLShort(slo t.Order, p *app.AppParams) {
-	if !(p.TK.Price > slo.OpenPrice && slo.CloseTime == 0) {
+	if !(p.TK.Price > slo.OpenPrice && slo.CloseTime == 0 && slo.Status == t.OrderStatusFilled) {
 		return
 	}
 
@@ -310,7 +310,7 @@ func syncSLShort(slo t.Order, p *app.AppParams) {
 }
 
 func syncTPLong(tpo t.Order, p *app.AppParams) {
-	if !(p.TK.Price > tpo.OpenPrice && tpo.CloseTime == 0) {
+	if !(p.TK.Price > tpo.OpenPrice && tpo.CloseTime == 0 && tpo.Status == t.OrderStatusFilled) {
 		return
 	}
 
@@ -349,7 +349,7 @@ func syncTPLong(tpo t.Order, p *app.AppParams) {
 }
 
 func syncTPShort(tpo t.Order, p *app.AppParams) {
-	if !(p.TK.Price < tpo.OpenPrice && tpo.CloseTime == 0) {
+	if !(p.TK.Price < tpo.OpenPrice && tpo.CloseTime == 0 && tpo.Status == t.OrderStatusFilled) {
 		return
 	}
 
