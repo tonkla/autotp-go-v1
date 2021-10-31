@@ -38,7 +38,11 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	cma_0 := cma[len(cma)-1]
 	cma_1 := cma[len(cma)-2]
 
-	atr := common.GetATR(prices, int(s.BP.MAPeriod))
+	_atr := common.GetATR(prices, int(s.BP.MAPeriod))
+	if _atr == nil {
+		return nil
+	}
+	atr := *_atr
 
 	qo := t.QueryOrder{
 		BotID:    s.BP.BotID,

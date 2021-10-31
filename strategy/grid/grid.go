@@ -41,12 +41,12 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		const numberOfBars = 50
 		prices4h := s.EX.Get4hHistoricalPrices(s.BP.Symbol, numberOfBars)
 		atr4h := common.GetATR(prices4h, int(s.BP.MAPeriod))
-		if !common.IsLowerMA(ticker.Price, prices4h, s.BP.MAPeriod, 0.4*atr4h) {
+		if atr4h != nil && !common.IsLowerMA(ticker.Price, prices4h, s.BP.MAPeriod, 0.4**atr4h) {
 			return nil
 		}
 		prices1h := s.EX.Get1hHistoricalPrices(s.BP.Symbol, numberOfBars)
 		atr1h := common.GetATR(prices1h, int(s.BP.MAPeriod))
-		if !common.IsLowerMA(ticker.Price, prices1h, s.BP.MAPeriod, 0.4*atr1h) {
+		if atr1h != nil && !common.IsLowerMA(ticker.Price, prices1h, s.BP.MAPeriod, 0.4**atr1h) {
 			return nil
 		}
 	}
