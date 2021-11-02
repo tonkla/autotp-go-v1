@@ -69,8 +69,6 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		atr = *_atr
 	}
 
-	mos := (h_1 - l_1) * s.BP.MoS // The Margin of Safety
-
 	qo.Qty = h.NormalizeDouble(s.BP.BaseQty, s.BP.QtyDigits)
 	qty := h.NormalizeDouble(s.BP.QuoteQty/ticker.Price, s.BP.QtyDigits)
 	if qty > qo.Qty {
@@ -90,9 +88,11 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		closeOrders = append(closeOrders, common.TPShort(s.DB, s.BP, qo, ticker, atr)...)
 	}
 
+	mos := (h_1 - l_1) * s.BP.MoS // The Margin of Safety
+
 	// Uptrend -------------------------------------------------------------------
 	if cma_1 < cma_0 {
-		if (s.BP.View == t.ViewLong || s.BP.View == t.ViewNeutral) && ticker.Price < h_1-mos && ticker.Price < c_1 {
+		if (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewLong) && ticker.Price < h_1-mos && ticker.Price < c_1 {
 			openPrice := h.CalcStopLowerTicker(ticker.Price, openLimit, s.BP.PriceDigits)
 			qo.OpenPrice = openPrice
 			qo.Side = t.OrderSideBuy
@@ -119,7 +119,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 
 	// Downtrend -----------------------------------------------------------------
 	if cma_1 > cma_0 {
-		if (s.BP.View == t.ViewShort || s.BP.View == t.ViewNeutral) && ticker.Price > l_1+mos && ticker.Price > c_1 {
+		if (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewShort) && ticker.Price > l_1+mos && ticker.Price > c_1 {
 			openPrice := h.CalcStopUpperTicker(ticker.Price, openLimit, s.BP.PriceDigits)
 			qo.OpenPrice = openPrice
 			qo.Side = t.OrderSideSell
