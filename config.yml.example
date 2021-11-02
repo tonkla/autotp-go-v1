@@ -119,3 +119,9 @@ slLimit: 200
 tpStop: 100
 tpLimit: 200
 openLimit: 200
+
+# Force close all LONG orders NOW
+closeLong: false
+
+# Force close all SHORT orders NOW
+closeShort: false

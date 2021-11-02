@@ -30,11 +30,18 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		BotID:    s.BP.BotID,
 		Exchange: ticker.Exchange,
 		Symbol:   ticker.Symbol,
-		Qty:      h.NormalizeDouble(s.BP.BaseQty, s.BP.QtyDigits),
 	}
-	qty := h.NormalizeDouble(s.BP.QuoteQty/ticker.Price, s.BP.QtyDigits)
-	if qty > qo.Qty {
-		qo.Qty = qty
+
+	if s.BP.CloseLong || s.BP.CloseShort {
+		if s.BP.CloseLong {
+			closeOrders = append(closeOrders, common.CloseLong(s.DB, s.BP, qo, ticker)...)
+		}
+		if s.BP.CloseShort {
+			closeOrders = append(closeOrders, common.CloseShort(s.DB, s.BP, qo, ticker)...)
+		}
+		return &t.TradeOrders{
+			CloseOrders: closeOrders,
+		}
 	}
 
 	if s.BP.AutoSL {
@@ -118,6 +125,12 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 				}
 			}
 		}
+	}
+
+	qo.Qty = h.NormalizeDouble(s.BP.BaseQty, s.BP.QtyDigits)
+	qty := h.NormalizeDouble(s.BP.QuoteQty/ticker.Price, s.BP.QtyDigits)
+	if qty > qo.Qty {
+		qo.Qty = qty
 	}
 
 	if isUp {

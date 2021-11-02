@@ -210,6 +210,9 @@ type BotParams struct {
 	AtrSL   float64
 	AtrTP   float64
 
+	CloseLong  bool
+	CloseShort bool
+
 	SLim StopLimit
 }
 

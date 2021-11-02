@@ -26,6 +26,24 @@ func New(db *rdb.DB, bp *t.BotParams, ex exchange.Repository) Strategy {
 func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	var openOrders, closeOrders []t.Order
 
+	qo := t.QueryOrder{
+		BotID:    s.BP.BotID,
+		Exchange: ticker.Exchange,
+		Symbol:   ticker.Symbol,
+	}
+
+	if s.BP.CloseLong || s.BP.CloseShort {
+		if s.BP.CloseLong {
+			closeOrders = append(closeOrders, common.CloseLong(s.DB, s.BP, qo, ticker)...)
+		}
+		if s.BP.CloseShort {
+			closeOrders = append(closeOrders, common.CloseShort(s.DB, s.BP, qo, ticker)...)
+		}
+		return &t.TradeOrders{
+			CloseOrders: closeOrders,
+		}
+	}
+
 	const numberOfBars = 50
 	prices := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATf1st, numberOfBars)
 
@@ -37,25 +55,20 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	cma_0 := cma[len(cma)-1]
 	cma_1 := cma[len(cma)-2]
 
-	_atr := common.GetATR(prices, int(s.BP.MAPeriod1st))
-	if _atr == nil {
-		return nil
+	atr := 0.0
+	if s.BP.AtrSL > 0 || s.BP.AtrTP > 0 {
+		_atr := common.GetATR(prices, int(s.BP.MAPeriod1st))
+		if _atr == nil {
+			return nil
+		}
+		atr = *_atr
 	}
-	atr := *_atr
 
-	qo := t.QueryOrder{
-		BotID:    s.BP.BotID,
-		Exchange: ticker.Exchange,
-		Symbol:   ticker.Symbol,
-		Qty:      h.NormalizeDouble(s.BP.BaseQty, s.BP.QtyDigits),
-	}
+	qo.Qty = h.NormalizeDouble(s.BP.BaseQty, s.BP.QtyDigits)
 	qty := h.NormalizeDouble(s.BP.QuoteQty/ticker.Price, s.BP.QtyDigits)
 	if qty > qo.Qty {
 		qo.Qty = qty
 	}
-
-	openLimit := float64(s.BP.SLim.OpenLimit)
-	isFutures := s.BP.Product == t.ProductFutures
 
 	if s.BP.AutoSL {
 		closeOrders = append(closeOrders, common.SLLong(s.DB, s.BP, qo, ticker, atr)...)
@@ -66,6 +79,9 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		closeOrders = append(closeOrders, common.TPLong(s.DB, s.BP, qo, ticker, atr)...)
 		closeOrders = append(closeOrders, common.TPShort(s.DB, s.BP, qo, ticker, atr)...)
 	}
+
+	openLimit := float64(s.BP.SLim.OpenLimit)
+	isFutures := s.BP.Product == t.ProductFutures
 
 	// Uptrend: Open Long --------------------------------------------------------
 	if cma_1 < cma_0 {

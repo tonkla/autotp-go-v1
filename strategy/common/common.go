@@ -480,6 +480,44 @@ func TPShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr 
 	return closeOrders
 }
 
+// CloseLong closes all LONG orders at the ticker price
+func CloseLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.Order {
+	var orders []t.Order
+	for _, o := range db.GetFilledLimitLongOrders(qo) {
+		if ticker.Price > o.OpenPrice {
+			order := TPLongNow(db, bp, ticker, o)
+			if order != nil {
+				orders = append(orders, *order)
+			}
+		} else if ticker.Price < o.OpenPrice {
+			order := SLLongNow(db, bp, ticker, o)
+			if order != nil {
+				orders = append(orders, *order)
+			}
+		}
+	}
+	return orders
+}
+
+// CloseShort closes all SHORT orders at the ticker price
+func CloseShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.Order {
+	var orders []t.Order
+	for _, o := range db.GetFilledLimitShortOrders(qo) {
+		if ticker.Price < o.OpenPrice {
+			order := TPShortNow(db, bp, ticker, o)
+			if order != nil {
+				orders = append(orders, *order)
+			}
+		} else if ticker.Price > o.OpenPrice {
+			order := SLShortNow(db, bp, ticker, o)
+			if order != nil {
+				orders = append(orders, *order)
+			}
+		}
+	}
+	return orders
+}
+
 // SLLongNow creates a SL order of the LONG order from the ticker price
 func SLLongNow(db *rdb.DB, bp *t.BotParams, ticker t.Ticker, o t.Order) *t.Order {
 	if db.GetSLOrder(o.ID) != nil {

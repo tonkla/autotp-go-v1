@@ -97,3 +97,11 @@ func TestGetGridZones(t *testing.T) {
 		t.Error("555-556-560")
 	}
 }
+
+func TestGetHighsLows(t *testing.T) {
+	client := binance.NewSpotClient("", "")
+	prices := client.GetHistoricalPrices(symbol, timeframe, 20)
+	h, l := GetHighsLows(prices)
+	fmt.Printf("H0=%f, L0=%f", h[len(h)-1], l[len(l)-1])
+	t.Error("Skip")
+}

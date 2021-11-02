@@ -96,6 +96,9 @@ func main() {
 		AtrSL:   viper.GetFloat64("atrSL"),
 		AtrTP:   viper.GetFloat64("atrTP"),
 
+		CloseLong:  viper.GetBool("closeLong"),
+		CloseShort: viper.GetBool("closeShort"),
+
 		SLim: t.StopLimit{
 			SLStop:    viper.GetInt64("slStop"),
 			SLLimit:   viper.GetInt64("slLimit"),
