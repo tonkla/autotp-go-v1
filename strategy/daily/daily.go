@@ -27,7 +27,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	var openOrders, closeOrders []t.Order
 
 	const numberOfBars = 50
-	prices := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATimeframe, numberOfBars)
+	prices := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATf1st, numberOfBars)
 
 	if len(prices) == 0 || prices[len(prices)-1].Open == 0 {
 		return nil
@@ -38,11 +38,11 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	h_1 := p_1.High
 	l_1 := p_1.Low
 
-	cma := talib.WMA(common.GetCloses(prices), int(s.BP.MAPeriod))
+	cma := talib.WMA(common.GetCloses(prices), int(s.BP.MAPeriod1st))
 	cma_0 := cma[len(cma)-1]
 	cma_1 := cma[len(cma)-2]
 
-	_atr := common.GetATR(prices, int(s.BP.MAPeriod))
+	_atr := common.GetATR(prices, int(s.BP.MAPeriod1st))
 	if _atr == nil {
 		return nil
 	}

@@ -1,13 +1,14 @@
 # AutoTP
 
-AutoTP aims to be an automated trading platform that supports multiple exchanges. Inspired by MetaTrader and [MQL4](https://docs.mql4.com/).
+AutoTP aims to be an automated trading platform that supports various exchanges. Inspired by MetaTrader and [MQL4](https://docs.mql4.com/).
 
 ## Usage
 
-1. Craft your trading robot inside `robot/`
-2. Compile it with `go build -o autotp robot/binance/spot/grid/main.go`
-3. Copy `config.yml.example` to `config.yml`, configure your preferred parameters
-4. Run `./autotp -c config.yml`, or `./monit` for infinite running until the world ends
+1. Craft your trading strategy, put it inside `strategy/`
+2. Add the strategy into `strategy/strategy.go`
+3. Compile it with `go build -o autotp main.go`
+4. Copy `config.yml.example` to `config.yml`, configure your preferred parameters
+5. Run `./autotp -c config.yml`, or `./monit` for infinite running until the world ends
 
 ### (Work-in-Progress) Supported Exchanges
 

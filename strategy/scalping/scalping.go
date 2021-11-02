@@ -52,41 +52,41 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	openLimit := float64(s.BP.SLim.OpenLimit)
 	isFutures := s.BP.Product == t.ProductFutures
 
-	prices1h := s.EX.Get1hHistoricalPrices(s.BP.Symbol, numberOfBars)
-	prices15m := s.EX.Get15mHistoricalPrices(s.BP.Symbol, numberOfBars)
+	prices2nd := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATf2nd, numberOfBars)
+	prices3rd := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATf3rd, numberOfBars)
 
-	if len(prices1h) == 0 || prices1h[0].Close == 0 ||
-		len(prices15m) == 0 || prices15m[0].Close == 0 {
+	if len(prices2nd) == 0 || prices2nd[0].Close == 0 ||
+		len(prices3rd) == 0 || prices3rd[0].Close == 0 {
 		return nil
 	}
 
-	p1h_0 := prices1h[len(prices1h)-1]
-	p1h_1 := prices1h[len(prices1h)-2]
-	p15m_0 := prices15m[len(prices15m)-1]
-	p15m_1 := prices15m[len(prices15m)-2]
+	p2nd_0 := prices2nd[len(prices2nd)-1]
+	p2nd_1 := prices2nd[len(prices2nd)-2]
+	p3rd_0 := prices3rd[len(prices3rd)-1]
+	p3rd_1 := prices3rd[len(prices3rd)-2]
 
-	closes1h := common.GetCloses(prices1h)
-	closes15m := common.GetCloses(prices15m)
+	closes2nd := common.GetCloses(prices2nd)
+	closes3rd := common.GetCloses(prices3rd)
 
-	period := int(s.BP.MAPeriod)
-	macl1h := talib.WMA(closes1h, period)
-	macl15m := talib.WMA(closes15m, period)
+	period := int(s.BP.MAPeriod1st)
+	macl2nd := talib.WMA(closes2nd, period)
+	macl3rd := talib.WMA(closes3rd, period)
 
-	isUp := macl1h[len(macl1h)-2] < macl1h[len(macl1h)-1] &&
-		macl15m[len(macl15m)-2] < macl15m[len(macl15m)-1] &&
-		p1h_1.High < p1h_0.High &&
-		p15m_1.High < p15m_0.High
+	isUp := macl2nd[len(macl2nd)-2] < macl2nd[len(macl2nd)-1] &&
+		macl3rd[len(macl3rd)-2] < macl3rd[len(macl3rd)-1] &&
+		p2nd_1.High < p2nd_0.High &&
+		p3rd_1.High < p3rd_0.High
 
-	isDown := macl1h[len(macl1h)-2] > macl1h[len(macl1h)-1] &&
-		macl15m[len(macl15m)-2] > macl15m[len(macl15m)-1] &&
-		p1h_1.Low > p1h_0.Low &&
-		p15m_1.Low > p15m_0.Low
+	isDown := macl2nd[len(macl2nd)-2] > macl2nd[len(macl2nd)-1] &&
+		macl3rd[len(macl3rd)-2] > macl3rd[len(macl3rd)-1] &&
+		p2nd_1.Low > p2nd_0.Low &&
+		p3rd_1.Low > p3rd_0.Low
 
-	shouldCloseLong := macl15m[len(macl15m)-2] > macl15m[len(macl15m)-1] &&
-		p15m_1.Low > p15m_0.Low
+	shouldCloseLong := macl3rd[len(macl3rd)-2] > macl3rd[len(macl3rd)-1] &&
+		p3rd_1.Low > p3rd_0.Low
 
-	shouldCloseShort := macl15m[len(macl15m)-2] < macl15m[len(macl15m)-1] &&
-		p15m_1.High < p15m_0.High
+	shouldCloseShort := macl3rd[len(macl3rd)-2] < macl3rd[len(macl3rd)-1] &&
+		p3rd_1.High < p3rd_0.High
 
 	if shouldCloseLong {
 		for _, o := range s.DB.GetFilledLimitLongOrders(qo) {

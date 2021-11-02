@@ -68,11 +68,23 @@ applyTA: false
 # For LIMIT order, slippage is normally 0
 slippage: 0
 
-# The timeframe that use to calculate a Moving Average
-maTimeframe: 1h
+# The slowest timeframe that use to calculate a Moving Average
+maTf1st: 1w
 
-# The period that use to calculate a Moving Average
-maPeriod: 20
+# The period that use to calculate a Moving Average along with the maTf1st
+maPeriod1st: 20
+
+# The medium timeframe that use to calculate a Moving Average
+maTf2nd: 1h
+
+# The period that use to calculate a Moving Average along with maTf2nd
+maPeriod2nd: 20
+
+# The fastest timeframe that use to calculate a Moving Average
+maTf3rd: 5m
+
+# The period that use to calculate a Moving Average along with maTf3rd
+maPeriod3rd: 20
 
 # The minimum price gap between two orders (values in a base currency)
 orderGap: 10

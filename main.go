@@ -80,8 +80,12 @@ func main() {
 		ApplyTA:    viper.GetBool("applyTA"),
 		Slippage:   viper.GetFloat64("slippage"),
 
-		MATimeframe: viper.GetString("maTimeframe"),
-		MAPeriod:    viper.GetInt64("maPeriod"),
+		MATf1st:     viper.GetString("maTf1st"),
+		MAPeriod1st: viper.GetInt64("maPeriod1st"),
+		MATf2nd:     viper.GetString("maTf2nd"),
+		MAPeriod2nd: viper.GetInt64("maPeriod2nd"),
+		MATf3rd:     viper.GetString("maTf3rd"),
+		MAPeriod3rd: viper.GetInt64("maPeriod3rd"),
 		OrderGap:    viper.GetFloat64("orderGap"),
 		MoS:         viper.GetFloat64("mos"),
 

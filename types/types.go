@@ -194,8 +194,12 @@ type BotParams struct {
 	ApplyTA    bool
 	Slippage   float64
 
-	MATimeframe string
-	MAPeriod    int64
+	MATf1st     string
+	MAPeriod1st int64
+	MATf2nd     string
+	MAPeriod2nd int64
+	MATf3rd     string
+	MAPeriod3rd int64
 	OrderGap    float64
 	MoS         float64
 
