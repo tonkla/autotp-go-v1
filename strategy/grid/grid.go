@@ -59,9 +59,9 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		if s.BP.GridTP > 0 {
 			o := s.DB.GetLowestFilledBuyOrder(qo)
 			if o != nil && s.DB.GetTPOrder(o.ID) == nil {
-				_tp := h.NormalizeDouble(o.ZonePrice+gridWidth*s.BP.GridTP, s.BP.PriceDigits)
-				_stop := h.CalcTPStop(t.OrderSideBuy, _tp, float64(s.BP.SLim.TPStop), s.BP.PriceDigits)
-				if ticker.Price+(_tp-_stop) > _stop {
+				tpPrice := h.NormalizeDouble(o.ZonePrice+gridWidth*s.BP.GridTP, s.BP.PriceDigits)
+				stopPrice := h.CalcTPStop(o.Side, tpPrice, float64(s.BP.SLim.TPStop), s.BP.PriceDigits)
+				if ticker.Price+(tpPrice-stopPrice) > stopPrice {
 					tpo := t.Order{
 						ID:          h.GenID(),
 						Exchange:    s.BP.Exchange,
@@ -72,8 +72,8 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 						Status:      t.OrderStatusNew,
 						Qty:         o.Qty,
 						OpenOrderID: o.ID,
-						OpenPrice:   _tp,
-						StopPrice:   _stop,
+						OpenPrice:   tpPrice,
+						StopPrice:   stopPrice,
 					}
 					closeOrders = append(closeOrders, tpo)
 				}
@@ -100,6 +100,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 
 		var count int64 = 0
 
+		openPrice := h.NormalizeDouble(lowerPrice, s.BP.PriceDigits)
 		zones, _ := common.GetGridZones(ticker.Price, s.BP.LowerPrice, s.BP.UpperPrice, s.BP.GridSize)
 		for _, zone := range zones {
 			zonePrice := h.NormalizeDouble(zone, s.BP.PriceDigits)
@@ -115,12 +116,12 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 					Status:    t.OrderStatusNew,
 					Type:      t.OrderTypeLimit,
 					Side:      t.OrderSideBuy,
-					OpenPrice: h.NormalizeDouble(lowerPrice, s.BP.PriceDigits),
+					OpenPrice: openPrice,
 					ZonePrice: zonePrice,
 				}
-				_qty := h.NormalizeDouble(s.BP.QuoteQty/o.OpenPrice, s.BP.QtyDigits)
-				if _qty > o.Qty {
-					o.Qty = _qty
+				qty := h.NormalizeDouble(s.BP.QuoteQty/o.OpenPrice, s.BP.QtyDigits)
+				if qty > o.Qty {
+					o.Qty = qty
 				}
 				openOrders = append(openOrders, o)
 			}

@@ -299,11 +299,7 @@ func SLLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr f
 
 		slPrice = h.NormalizeDouble(slPrice, bp.PriceDigits)
 		stopPrice := h.CalcSLStop(o.Side, slPrice, slStop, bp.PriceDigits)
-		if ticker.Price-(stopPrice-slPrice) < stopPrice {
-			if ticker.Price < stopPrice {
-				slPrice = h.CalcStopUpperTicker(ticker.Price, 100, bp.PriceDigits)
-				stopPrice = h.CalcSLStop(o.Side, slPrice, 50, bp.PriceDigits)
-			}
+		if ticker.Price-((stopPrice-slPrice)*2) < stopPrice {
 			slo := t.Order{
 				ID:          h.GenID(),
 				BotID:       bp.BotID,
@@ -355,11 +351,7 @@ func SLShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr 
 
 		slPrice = h.NormalizeDouble(slPrice, bp.PriceDigits)
 		stopPrice := h.CalcSLStop(o.Side, slPrice, slStop, bp.PriceDigits)
-		if ticker.Price+(slPrice-stopPrice) > stopPrice {
-			if ticker.Price > stopPrice {
-				slPrice = h.CalcStopLowerTicker(ticker.Price, 100, bp.PriceDigits)
-				stopPrice = h.CalcSLStop(o.Side, slPrice, 50, bp.PriceDigits)
-			}
+		if ticker.Price+((slPrice-stopPrice)*2) > stopPrice {
 			slo := t.Order{
 				ID:          h.GenID(),
 				BotID:       bp.BotID,
@@ -411,11 +403,7 @@ func TPLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr f
 
 		tpPrice = h.NormalizeDouble(tpPrice, bp.PriceDigits)
 		stopPrice := h.CalcTPStop(o.Side, tpPrice, tpStop, bp.PriceDigits)
-		if ticker.Price+(tpPrice-stopPrice) > stopPrice {
-			if ticker.Price > stopPrice {
-				tpPrice = h.CalcStopUpperTicker(ticker.Price, 100, bp.PriceDigits)
-				stopPrice = h.CalcTPStop(o.Side, tpPrice, 50, bp.PriceDigits)
-			}
+		if ticker.Price+((tpPrice-stopPrice)*2) > stopPrice {
 			tpo := t.Order{
 				ID:          h.GenID(),
 				BotID:       bp.BotID,
@@ -467,11 +455,7 @@ func TPShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr 
 
 		tpPrice = h.NormalizeDouble(tpPrice, bp.PriceDigits)
 		stopPrice := h.CalcTPStop(o.Side, tpPrice, tpStop, bp.PriceDigits)
-		if ticker.Price-(stopPrice-tpPrice) < stopPrice {
-			if ticker.Price < stopPrice {
-				tpPrice = h.CalcStopLowerTicker(ticker.Price, 100, bp.PriceDigits)
-				stopPrice = h.CalcTPStop(o.Side, tpPrice, 50, bp.PriceDigits)
-			}
+		if ticker.Price-((stopPrice-tpPrice)*2) < stopPrice {
 			tpo := t.Order{
 				ID:          h.GenID(),
 				BotID:       bp.BotID,
@@ -502,7 +486,7 @@ func SLLongNow(db *rdb.DB, bp *t.BotParams, ticker t.Ticker, o t.Order) *t.Order
 		return nil
 	}
 
-	slPrice := h.CalcStopUpperTicker(ticker.Price, 100, bp.PriceDigits)
+	slPrice := h.CalcStopLowerTicker(ticker.Price, 100, bp.PriceDigits)
 	stopPrice := h.CalcSLStop(o.Side, slPrice, 50, bp.PriceDigits)
 	slo := t.Order{
 		ID:          h.GenID(),
@@ -530,7 +514,7 @@ func SLShortNow(db *rdb.DB, bp *t.BotParams, ticker t.Ticker, o t.Order) *t.Orde
 		return nil
 	}
 
-	slPrice := h.CalcStopLowerTicker(ticker.Price, 100, bp.PriceDigits)
+	slPrice := h.CalcStopUpperTicker(ticker.Price, 100, bp.PriceDigits)
 	stopPrice := h.CalcSLStop(o.Side, slPrice, 50, bp.PriceDigits)
 	slo := t.Order{
 		ID:          h.GenID(),
