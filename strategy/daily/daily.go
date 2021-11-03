@@ -113,24 +113,24 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	if l_2 < ll {
 		ll = l_2
 	}
-	shouldCloseLong := ticker.Price < hh-atr*0.5
-	shouldCloseShort := ticker.Price > ll+atr*0.5
-
-	if shouldCloseLong {
-		cancelOrders = append(cancelOrders, s.DB.GetNewLimitLongOrders(qo)...)
-		closeOrders = append(closeOrders, common.CloseLong(s.DB, s.BP, qo, ticker)...)
-	}
-
-	if shouldCloseShort {
-		cancelOrders = append(cancelOrders, s.DB.GetNewLimitShortOrders(qo)...)
-		closeOrders = append(closeOrders, common.CloseShort(s.DB, s.BP, qo, ticker)...)
-	}
+	shouldCloseLong := ticker.Price < hh-atr*0.75
+	shouldCloseShort := ticker.Price > ll+atr*0.75
 
 	isUp := cma_1 < cma_0 && o_1 < c_1 && h_1-c_1 < c_1-l_1
 	isDown := cma_1 > cma_0 && o_1 > c_1 && h_1-c_1 > c_1-l_1
 
 	shouldOpenLong := isUp && ticker.Price < c_1 && atr > 0 && ticker.Price < hma_0+atr*0.5
 	shouldOpenShort := isDown && ticker.Price > c_1 && atr > 0 && ticker.Price > lma_0-atr*0.5
+
+	if shouldCloseLong && !shouldOpenLong {
+		cancelOrders = append(cancelOrders, s.DB.GetNewLimitLongOrders(qo)...)
+		closeOrders = append(closeOrders, common.CloseLong(s.DB, s.BP, qo, ticker)...)
+	}
+
+	if shouldCloseShort && !shouldOpenShort {
+		cancelOrders = append(cancelOrders, s.DB.GetNewLimitShortOrders(qo)...)
+		closeOrders = append(closeOrders, common.CloseShort(s.DB, s.BP, qo, ticker)...)
+	}
 
 	if shouldOpenLong && !shouldCloseLong && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewLong) {
 		openPrice := h.CalcStopLowerTicker(ticker.Price, openLimit, s.BP.PriceDigits)
