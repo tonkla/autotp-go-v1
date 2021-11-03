@@ -244,46 +244,30 @@ func (d DB) GetTPOrder(openOrderID string) *t.Order {
 	return &order
 }
 
-// GetSLOrders returns the STOP_LOSS_LIMIT orders that are not canceled
-func (d DB) GetSLOrders(o t.QueryOrder) []t.Order {
-	var orders []t.Order
-	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND status <> ? AND close_time = 0",
-		o.BotID, o.Exchange, o.Symbol, t.OrderTypeSL, t.OrderStatusCanceled).Order("open_price asc").Find(&orders)
-	return orders
-}
-
 // GetTPOrders returns the TAKE_PROFIT_LIMIT orders that are not canceled
 func (d DB) GetTPOrders(o t.QueryOrder) []t.Order {
 	var orders []t.Order
 	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND status <> ? AND close_time = 0",
-		o.BotID, o.Exchange, o.Symbol, t.OrderTypeTP, t.OrderStatusCanceled).Order("open_price desc").Find(&orders)
+		o.BotID, o.Exchange, o.Symbol, t.OrderTypeTP, t.OrderStatusCanceled).Order("open_price asc").Find(&orders)
 	return orders
-}
-
-// GetHighestSLOrder returns the highest price SL order that is active
-func (d DB) GetHighestSLOrder(o t.QueryOrder) *t.Order {
-	var orders []t.Order
-	d.db.Where(
-		`bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND status <> ? AND close_time = 0`,
-		o.BotID, o.Exchange, o.Symbol, t.OrderTypeSL, t.OrderStatusCanceled).
-		Order("open_price desc").Limit(1).Find(&orders)
-	if len(orders) == 0 {
-		return nil
-	}
-	return &orders[0]
 }
 
 // GetLowestTPOrder returns the lowest price TP order that is active
 func (d DB) GetLowestTPOrder(o t.QueryOrder) *t.Order {
-	var orders []t.Order
-	d.db.Where(
-		`bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND status <> ? AND close_time = 0`,
-		o.BotID, o.Exchange, o.Symbol, t.OrderTypeTP, t.OrderStatusCanceled).
-		Order("open_price asc").Limit(1).Find(&orders)
+	orders := d.GetTPOrders(o)
 	if len(orders) == 0 {
 		return nil
 	}
 	return &orders[0]
+}
+
+// GetHighestTPOrder returns the highest price TP order that is active
+func (d DB) GetHighestTPOrder(o t.QueryOrder) *t.Order {
+	orders := d.GetTPOrders(o)
+	if len(orders) == 0 {
+		return nil
+	}
+	return &orders[len(orders)-1]
 }
 
 // GetHighestSLLongOrder returns the highest price SL LONG order that is active

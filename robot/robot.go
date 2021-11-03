@@ -17,6 +17,7 @@ func Trade(ap *app.AppParams) {
 }
 
 func placeAsMaker(p *app.AppParams) {
+	cancelOrders(p)
 	closeOrders(p)
 	openLimitOrders(p)
 	if p.BP.Product == t.ProductSpot {
@@ -34,6 +35,31 @@ func placeAsMaker(p *app.AppParams) {
 
 func placeAsTaker(p *app.AppParams) {
 	openMarketOrders(p)
+}
+
+func cancelOrders(p *app.AppParams) {
+	for _, o := range p.TO.CancelOrders {
+		exo, err := p.EX.CancelOrder(o)
+		if err != nil || exo == nil {
+			h.Log(err)
+			os.Exit(1)
+		}
+
+		o.Status = exo.Status
+		o.UpdateTime = exo.UpdateTime
+		o.CloseTime = h.Now13()
+		err = p.DB.UpdateOrder(o)
+		if err != nil {
+			h.Log(err)
+			continue
+		}
+
+		if o.PosSide != "" {
+			h.LogCanceledF(o)
+		} else {
+			h.LogCanceled(o)
+		}
+	}
 }
 
 func closeOrders(p *app.AppParams) {

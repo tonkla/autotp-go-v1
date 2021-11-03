@@ -149,8 +149,9 @@ type LogCloseFOrder struct {
 }
 
 type TradeOrders struct {
-	OpenOrders  []Order
-	CloseOrders []Order
+	OpenOrders   []Order
+	CloseOrders  []Order
+	CancelOrders []Order
 }
 
 type ExOrder struct {
