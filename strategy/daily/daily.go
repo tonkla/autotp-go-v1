@@ -99,64 +99,6 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	h_2 := p_2.High
 	l_2 := p_2.Low
 
-	isUp := cma_1 < cma_0 && o_1 < c_1 && h_1-c_1 < c_1-l_1
-	isDown := cma_1 > cma_0 && o_1 > c_1 && h_1-c_1 > c_1-l_1
-
-	shouldOpenLong := isUp && ticker.Price < c_1 && atr > 0 && ticker.Price < hma_0+atr*0.5
-	shouldOpenShort := isDown && ticker.Price > c_1 && atr > 0 && ticker.Price > lma_0-atr*0.5
-
-	if shouldOpenLong && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewLong) {
-		openPrice := h.CalcStopLowerTicker(ticker.Price, openLimit, s.BP.PriceDigits)
-		qo.OpenPrice = openPrice
-		qo.Side = t.OrderSideBuy
-		norder := s.DB.GetNearestOrder(qo)
-		if norder == nil {
-			o := t.Order{
-				ID:        h.GenID(),
-				BotID:     s.BP.BotID,
-				Exchange:  qo.Exchange,
-				Symbol:    qo.Symbol,
-				Side:      t.OrderSideBuy,
-				Type:      t.OrderTypeLimit,
-				Status:    t.OrderStatusNew,
-				Qty:       qo.Qty,
-				OpenPrice: openPrice,
-			}
-			if isFutures {
-				o.PosSide = t.OrderPosSideLong
-			}
-			openOrders = append(openOrders, o)
-		} else if norder.Status == t.OrderStatusNew && norder.OpenTime < t_0 {
-			cancelOrders = append(cancelOrders, *norder)
-		}
-	}
-
-	if shouldOpenShort && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewShort) {
-		openPrice := h.CalcStopUpperTicker(ticker.Price, openLimit, s.BP.PriceDigits)
-		qo.OpenPrice = openPrice
-		qo.Side = t.OrderSideSell
-		norder := s.DB.GetNearestOrder(qo)
-		if norder == nil {
-			o := t.Order{
-				ID:        h.GenID(),
-				BotID:     s.BP.BotID,
-				Exchange:  qo.Exchange,
-				Symbol:    qo.Symbol,
-				Side:      t.OrderSideSell,
-				Type:      t.OrderTypeLimit,
-				Status:    t.OrderStatusNew,
-				Qty:       qo.Qty,
-				OpenPrice: openPrice,
-			}
-			if isFutures {
-				o.PosSide = t.OrderPosSideShort
-			}
-			openOrders = append(openOrders, o)
-		} else if norder.Status == t.OrderStatusNew && norder.OpenTime < t_0 {
-			cancelOrders = append(cancelOrders, *norder)
-		}
-	}
-
 	hh := h_0
 	if h_1 > hh {
 		hh = h_1
@@ -182,6 +124,64 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	if shouldCloseShort {
 		cancelOrders = append(cancelOrders, s.DB.GetNewLimitShortOrders(qo)...)
 		closeOrders = append(closeOrders, common.CloseShort(s.DB, s.BP, qo, ticker)...)
+	}
+
+	isUp := cma_1 < cma_0 && o_1 < c_1 && h_1-c_1 < c_1-l_1
+	isDown := cma_1 > cma_0 && o_1 > c_1 && h_1-c_1 > c_1-l_1
+
+	shouldOpenLong := isUp && ticker.Price < c_1 && atr > 0 && ticker.Price < hma_0+atr*0.5
+	shouldOpenShort := isDown && ticker.Price > c_1 && atr > 0 && ticker.Price > lma_0-atr*0.5
+
+	if shouldOpenLong && !shouldCloseLong && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewLong) {
+		openPrice := h.CalcStopLowerTicker(ticker.Price, openLimit, s.BP.PriceDigits)
+		qo.OpenPrice = openPrice
+		qo.Side = t.OrderSideBuy
+		norder := s.DB.GetNearestOrder(qo)
+		if norder == nil {
+			o := t.Order{
+				ID:        h.GenID(),
+				BotID:     s.BP.BotID,
+				Exchange:  qo.Exchange,
+				Symbol:    qo.Symbol,
+				Side:      t.OrderSideBuy,
+				Type:      t.OrderTypeLimit,
+				Status:    t.OrderStatusNew,
+				Qty:       qo.Qty,
+				OpenPrice: openPrice,
+			}
+			if isFutures {
+				o.PosSide = t.OrderPosSideLong
+			}
+			openOrders = append(openOrders, o)
+		} else if norder.Status == t.OrderStatusNew && norder.OpenTime < t_0 {
+			cancelOrders = append(cancelOrders, *norder)
+		}
+	}
+
+	if shouldOpenShort && !shouldCloseShort && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewShort) {
+		openPrice := h.CalcStopUpperTicker(ticker.Price, openLimit, s.BP.PriceDigits)
+		qo.OpenPrice = openPrice
+		qo.Side = t.OrderSideSell
+		norder := s.DB.GetNearestOrder(qo)
+		if norder == nil {
+			o := t.Order{
+				ID:        h.GenID(),
+				BotID:     s.BP.BotID,
+				Exchange:  qo.Exchange,
+				Symbol:    qo.Symbol,
+				Side:      t.OrderSideSell,
+				Type:      t.OrderTypeLimit,
+				Status:    t.OrderStatusNew,
+				Qty:       qo.Qty,
+				OpenPrice: openPrice,
+			}
+			if isFutures {
+				o.PosSide = t.OrderPosSideShort
+			}
+			openOrders = append(openOrders, o)
+		} else if norder.Status == t.OrderStatusNew && norder.OpenTime < t_0 {
+			cancelOrders = append(cancelOrders, *norder)
+		}
 	}
 
 	return &t.TradeOrders{
