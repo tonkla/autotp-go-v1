@@ -28,8 +28,8 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 
 	qo := t.QueryOrder{
 		BotID:    s.BP.BotID,
-		Exchange: ticker.Exchange,
-		Symbol:   ticker.Symbol,
+		Exchange: s.BP.Exchange,
+		Symbol:   s.BP.Symbol,
 	}
 
 	if s.BP.CloseLong || s.BP.CloseShort {
@@ -47,36 +47,29 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	const numberOfBars = 50
 	prices := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATf1st, numberOfBars)
 
-	if len(prices) == 0 || prices[len(prices)-1].Open == 0 {
+	if len(prices) < numberOfBars || prices[len(prices)-1].Open == 0 || prices[len(prices)-2].Open == 0 {
 		return nil
 	}
 
-	p_1 := prices[len(prices)-2]
-	c_1 := p_1.Close
-	h_1 := p_1.High
-	l_1 := p_1.Low
+	highs, lows, closes := common.GetHighsLowsCloses(prices)
 
-	cma := talib.WMA(common.GetCloses(prices), int(s.BP.MAPeriod1st))
+	cma := talib.WMA(closes, int(s.BP.MAPeriod1st))
 	cma_0 := cma[len(cma)-1]
 	cma_1 := cma[len(cma)-2]
 
-	atr := 0.0
-	if s.BP.AtrSL > 0 || s.BP.AtrTP > 0 {
-		_atr := common.GetATR(prices, int(s.BP.MAPeriod1st))
-		if _atr == nil {
-			return nil
-		}
-		atr = *_atr
-	}
+	hma := talib.WMA(highs, int(s.BP.MAPeriod1st))
+	hma_0 := hma[len(hma)-1]
+
+	lma := talib.WMA(lows, int(s.BP.MAPeriod1st))
+	lma_0 := lma[len(lma)-1]
+
+	atr := hma_0 - lma_0
 
 	qo.Qty = h.NormalizeDouble(s.BP.BaseQty, s.BP.QtyDigits)
 	qty := h.NormalizeDouble(s.BP.QuoteQty/ticker.Price, s.BP.QtyDigits)
 	if qty > qo.Qty {
 		qo.Qty = qty
 	}
-
-	openLimit := float64(s.BP.SLim.OpenLimit)
-	isFutures := s.BP.Product == t.ProductFutures
 
 	if s.BP.AutoSL {
 		closeOrders = append(closeOrders, common.SLLong(s.DB, s.BP, qo, ticker, atr)...)
@@ -88,59 +81,66 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		closeOrders = append(closeOrders, common.TPShort(s.DB, s.BP, qo, ticker, atr)...)
 	}
 
-	mos := (h_1 - l_1) * s.BP.MoS // The Margin of Safety
+	openLimit := float64(s.BP.SLim.OpenLimit)
+	isFutures := s.BP.Product == t.ProductFutures
 
-	// Uptrend -------------------------------------------------------------------
-	if cma_1 < cma_0 {
-		if (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewLong) && ticker.Price < h_1-mos && ticker.Price < c_1 {
-			openPrice := h.CalcStopLowerTicker(ticker.Price, openLimit, s.BP.PriceDigits)
-			qo.OpenPrice = openPrice
-			qo.Side = t.OrderSideBuy
-			norder := s.DB.GetNearestOrder(qo)
-			if norder == nil || norder.OpenPrice-openPrice >= s.BP.OrderGap {
-				o := t.Order{
-					ID:        h.GenID(),
-					BotID:     s.BP.BotID,
-					Exchange:  qo.Exchange,
-					Symbol:    qo.Symbol,
-					Side:      t.OrderSideBuy,
-					Type:      t.OrderTypeLimit,
-					Status:    t.OrderStatusNew,
-					Qty:       qo.Qty,
-					OpenPrice: openPrice,
-				}
-				if isFutures {
-					o.PosSide = t.OrderPosSideLong
-				}
-				openOrders = append(openOrders, o)
+	p_1 := prices[len(prices)-2]
+	o_1 := p_1.Open
+	c_1 := p_1.Close
+	h_1 := p_1.High
+	l_1 := p_1.Low
+
+	isUp := cma_1 < cma_0 && o_1 < c_1 && h_1-c_1 < c_1-l_1
+	isDown := cma_1 > cma_0 && o_1 > c_1 && h_1-c_1 > c_1-l_1
+
+	shouldLong := isUp && ticker.Price < c_1 && atr > 0 && ticker.Price < hma_0+0.5*atr
+	shouldShort := isDown && ticker.Price > c_1 && atr > 0 && ticker.Price > lma_0-0.5*atr
+
+	if shouldLong && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewLong) {
+		openPrice := h.CalcStopLowerTicker(ticker.Price, openLimit, s.BP.PriceDigits)
+		qo.OpenPrice = openPrice
+		qo.Side = t.OrderSideBuy
+		norder := s.DB.GetNearestOrder(qo)
+		if norder == nil || norder.OpenPrice-openPrice >= s.BP.OrderGap {
+			o := t.Order{
+				ID:        h.GenID(),
+				BotID:     s.BP.BotID,
+				Exchange:  qo.Exchange,
+				Symbol:    qo.Symbol,
+				Side:      t.OrderSideBuy,
+				Type:      t.OrderTypeLimit,
+				Status:    t.OrderStatusNew,
+				Qty:       qo.Qty,
+				OpenPrice: openPrice,
 			}
+			if isFutures {
+				o.PosSide = t.OrderPosSideLong
+			}
+			openOrders = append(openOrders, o)
 		}
 	}
 
-	// Downtrend -----------------------------------------------------------------
-	if cma_1 > cma_0 {
-		if (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewShort) && ticker.Price > l_1+mos && ticker.Price > c_1 {
-			openPrice := h.CalcStopUpperTicker(ticker.Price, openLimit, s.BP.PriceDigits)
-			qo.OpenPrice = openPrice
-			qo.Side = t.OrderSideSell
-			norder := s.DB.GetNearestOrder(qo)
-			if norder == nil || openPrice-norder.OpenPrice >= s.BP.OrderGap {
-				o := t.Order{
-					ID:        h.GenID(),
-					BotID:     s.BP.BotID,
-					Exchange:  qo.Exchange,
-					Symbol:    qo.Symbol,
-					Side:      t.OrderSideSell,
-					Type:      t.OrderTypeLimit,
-					Status:    t.OrderStatusNew,
-					Qty:       qo.Qty,
-					OpenPrice: openPrice,
-				}
-				if isFutures {
-					o.PosSide = t.OrderPosSideShort
-				}
-				openOrders = append(openOrders, o)
+	if shouldShort && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewShort) {
+		openPrice := h.CalcStopUpperTicker(ticker.Price, openLimit, s.BP.PriceDigits)
+		qo.OpenPrice = openPrice
+		qo.Side = t.OrderSideSell
+		norder := s.DB.GetNearestOrder(qo)
+		if norder == nil || openPrice-norder.OpenPrice >= s.BP.OrderGap {
+			o := t.Order{
+				ID:        h.GenID(),
+				BotID:     s.BP.BotID,
+				Exchange:  qo.Exchange,
+				Symbol:    qo.Symbol,
+				Side:      t.OrderSideSell,
+				Type:      t.OrderTypeLimit,
+				Status:    t.OrderStatusNew,
+				Qty:       qo.Qty,
+				OpenPrice: openPrice,
 			}
+			if isFutures {
+				o.PosSide = t.OrderPosSideShort
+			}
+			openOrders = append(openOrders, o)
 		}
 	}
 

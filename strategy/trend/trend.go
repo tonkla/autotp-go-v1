@@ -28,8 +28,8 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 
 	qo := t.QueryOrder{
 		BotID:    s.BP.BotID,
-		Exchange: ticker.Exchange,
-		Symbol:   ticker.Symbol,
+		Exchange: s.BP.Exchange,
+		Symbol:   s.BP.Symbol,
 	}
 
 	if s.BP.CloseLong || s.BP.CloseShort {
