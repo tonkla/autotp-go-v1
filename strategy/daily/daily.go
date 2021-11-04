@@ -34,10 +34,12 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 
 	if s.BP.CloseLong || s.BP.CloseShort {
 		if s.BP.CloseLong {
+			cancelOrders = append(cancelOrders, s.DB.GetNewStopLongOrders(qo)...)
 			cancelOrders = append(cancelOrders, s.DB.GetNewLimitLongOrders(qo)...)
 			closeOrders = append(closeOrders, common.CloseLong(s.DB, s.BP, qo, ticker)...)
 		}
 		if s.BP.CloseShort {
+			cancelOrders = append(cancelOrders, s.DB.GetNewStopShortOrders(qo)...)
 			cancelOrders = append(cancelOrders, s.DB.GetNewLimitShortOrders(qo)...)
 			closeOrders = append(closeOrders, common.CloseShort(s.DB, s.BP, qo, ticker)...)
 		}
@@ -50,11 +52,11 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	closeOrders = append(closeOrders, common.CloseOpposite(s.DB, s.BP, qo, ticker)...)
 	if len(closeOrders) > 0 {
 		if closeOrders[0].Side == t.OrderSideBuy {
-			cancelOrders = append(cancelOrders, s.DB.GetNewLimitLongOrders(qo)...)
 			cancelOrders = append(cancelOrders, s.DB.GetNewStopLongOrders(qo)...)
+			cancelOrders = append(cancelOrders, s.DB.GetNewLimitLongOrders(qo)...)
 		} else {
-			cancelOrders = append(cancelOrders, s.DB.GetNewLimitShortOrders(qo)...)
 			cancelOrders = append(cancelOrders, s.DB.GetNewStopShortOrders(qo)...)
+			cancelOrders = append(cancelOrders, s.DB.GetNewLimitShortOrders(qo)...)
 		}
 		return &t.TradeOrders{
 			CloseOrders:  closeOrders,
