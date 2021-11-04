@@ -158,7 +158,8 @@ func (d DB) GetFilledLimitBuyOrders(o t.QueryOrder) []t.Order {
 	var orders []t.Order
 	d.db.Where(
 		`bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND side = ? AND status = ? AND close_time = 0`,
-		o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderSideBuy, t.OrderStatusFilled).Find(&orders)
+		o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderSideBuy, t.OrderStatusFilled).
+		Order("open_time desc").Find(&orders)
 	return orders
 }
 
@@ -167,7 +168,8 @@ func (d DB) GetFilledLimitLongOrders(o t.QueryOrder) []t.Order {
 	var orders []t.Order
 	d.db.Where(
 		`bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND pos_side = ? AND status = ? AND close_time = 0`,
-		o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderPosSideLong, t.OrderStatusFilled).Find(&orders)
+		o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderPosSideLong, t.OrderStatusFilled).
+		Order("open_time desc").Find(&orders)
 	return orders
 }
 
@@ -176,7 +178,8 @@ func (d DB) GetFilledLimitShortOrders(o t.QueryOrder) []t.Order {
 	var orders []t.Order
 	d.db.Where(
 		`bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND pos_side = ? AND status = ? AND close_time = 0`,
-		o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderPosSideShort, t.OrderStatusFilled).Find(&orders)
+		o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderPosSideShort, t.OrderStatusFilled).
+		Order("open_time desc").Find(&orders)
 	return orders
 }
 
@@ -185,7 +188,8 @@ func (d DB) GetNewLimitLongOrders(o t.QueryOrder) []t.Order {
 	var orders []t.Order
 	d.db.Where(
 		`bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND pos_side = ? AND status = ? AND close_time = 0`,
-		o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderPosSideLong, t.OrderStatusNew).Find(&orders)
+		o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderPosSideLong, t.OrderStatusNew).
+		Order("open_time desc").Find(&orders)
 	return orders
 }
 
@@ -194,7 +198,28 @@ func (d DB) GetNewLimitShortOrders(o t.QueryOrder) []t.Order {
 	var orders []t.Order
 	d.db.Where(
 		`bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND pos_side = ? AND status = ? AND close_time = 0`,
-		o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderPosSideShort, t.OrderStatusNew).Find(&orders)
+		o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderPosSideShort, t.OrderStatusNew).
+		Order("open_time desc").Find(&orders)
+	return orders
+}
+
+// GetNewStopLongOrders returns the STOP LONG orders that their status is NEW
+func (d DB) GetNewStopLongOrders(o t.QueryOrder) []t.Order {
+	var orders []t.Order
+	d.db.Where(
+		`bot_id = ? AND exchange = ? AND symbol = ? AND (type = ? OR type = ?) AND pos_side = ? AND status = ? AND close_time = 0`,
+		o.BotID, o.Exchange, o.Symbol, t.OrderTypeFSL, t.OrderTypeFTP, t.OrderPosSideLong, t.OrderStatusNew).
+		Order("open_time desc").Find(&orders)
+	return orders
+}
+
+// GetNewStopShortOrders returns the STOP SHORT orders that their status is NEW
+func (d DB) GetNewStopShortOrders(o t.QueryOrder) []t.Order {
+	var orders []t.Order
+	d.db.Where(
+		`bot_id = ? AND exchange = ? AND symbol = ? AND (type = ? OR type = ?) AND pos_side = ? AND status = ? AND close_time = 0`,
+		o.BotID, o.Exchange, o.Symbol, t.OrderTypeFSL, t.OrderTypeFTP, t.OrderPosSideShort, t.OrderStatusNew).
+		Order("open_time desc").Find(&orders)
 	return orders
 }
 
@@ -202,7 +227,7 @@ func (d DB) GetNewLimitShortOrders(o t.QueryOrder) []t.Order {
 func (d DB) GetNewOrders(o t.QueryOrder) []t.Order {
 	var orders []t.Order
 	d.db.Where("bot_id = ? AND exchange = ? AND symbol = ? AND status = ?",
-		o.BotID, o.Exchange, o.Symbol, t.OrderStatusNew).Find(&orders)
+		o.BotID, o.Exchange, o.Symbol, t.OrderStatusNew).Order("open_time desc").Find(&orders)
 	return orders
 }
 
