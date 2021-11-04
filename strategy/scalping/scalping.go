@@ -56,6 +56,10 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 			cancelOrders = append(cancelOrders, s.DB.GetNewLimitShortOrders(qo)...)
 			cancelOrders = append(cancelOrders, s.DB.GetNewStopShortOrders(qo)...)
 		}
+		return &t.TradeOrders{
+			CloseOrders:  closeOrders,
+			CancelOrders: cancelOrders,
+		}
 	}
 
 	const numberOfBars = 50

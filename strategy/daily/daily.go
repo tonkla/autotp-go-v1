@@ -56,6 +56,10 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 			cancelOrders = append(cancelOrders, s.DB.GetNewLimitShortOrders(qo)...)
 			cancelOrders = append(cancelOrders, s.DB.GetNewStopShortOrders(qo)...)
 		}
+		return &t.TradeOrders{
+			CloseOrders:  closeOrders,
+			CancelOrders: cancelOrders,
+		}
 	}
 
 	const numberOfBars = 50
@@ -110,8 +114,8 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	isUp := cma_1 < cma_0 && o_1 < c_1 && h_1-c_1 < c_1-l_1
 	isDown := cma_1 > cma_0 && o_1 > c_1 && h_1-c_1 > c_1-l_1
 
-	shouldOpenLong := isUp && ticker.Price < c_1 && atr > 0 && ticker.Price < hma_0+atr*0.5
-	shouldOpenShort := isDown && ticker.Price > c_1 && atr > 0 && ticker.Price > lma_0-atr*0.5
+	shouldOpenLong := isUp && ticker.Price < c_1 && atr > 0 && ticker.Price < hma_0+atr*s.BP.MoS
+	shouldOpenShort := isDown && ticker.Price > c_1 && atr > 0 && ticker.Price > lma_0-atr*s.BP.MoS
 
 	if shouldOpenLong && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewLong) {
 		openPrice := h.CalcStopLowerTicker(ticker.Price, openLimit, s.BP.PriceDigits)
