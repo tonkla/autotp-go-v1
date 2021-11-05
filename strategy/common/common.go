@@ -267,7 +267,7 @@ func GetHighsLowsCloses(prices []t.HistoricalPrice) ([]float64, []float64, []flo
 	for _, p := range prices {
 		h = append(h, p.High)
 		l = append(l, p.Low)
-		c = append(l, p.Close)
+		c = append(c, p.Close)
 	}
 	return h, l, c
 }

@@ -255,7 +255,7 @@ func syncStatus(o t.Order, p *app.AppParams) {
 			}
 		}
 
-		if exo.Status == t.OrderStatusCanceled {
+		if exo.Status == t.OrderStatusCanceled || exo.Status == t.OrderStatusExpired {
 			if o.PosSide != "" {
 				h.LogCanceledF(o)
 			} else {
