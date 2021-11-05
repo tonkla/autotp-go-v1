@@ -100,7 +100,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		closeOrders = append(closeOrders, common.TPShort(s.DB, s.BP, qo, ticker, atr)...)
 	}
 
-	openLimit := float64(s.BP.SLim.OpenLimit)
+	openLimit := float64(s.BP.Gap.OpenLimit)
 	isFutures := s.BP.Product == t.ProductFutures
 
 	// Uptrend: Open Long --------------------------------------------------------

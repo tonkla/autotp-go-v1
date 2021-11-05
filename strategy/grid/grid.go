@@ -60,7 +60,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 			o := s.DB.GetLowestFilledBuyOrder(qo)
 			if o != nil && s.DB.GetTPOrder(o.ID) == nil {
 				tpPrice := h.NormalizeDouble(o.ZonePrice+gridWidth*s.BP.GridTP, s.BP.PriceDigits)
-				stopPrice := h.CalcTPStop(o.Side, tpPrice, float64(s.BP.SLim.TPStop), s.BP.PriceDigits)
+				stopPrice := h.CalcTPStop(o.Side, tpPrice, float64(s.BP.Gap.TPStop), s.BP.PriceDigits)
 				if ticker.Price+(tpPrice-stopPrice) > stopPrice {
 					_tpo := s.DB.GetHighestTPOrder(qo)
 					if _tpo != nil {

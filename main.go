@@ -99,7 +99,7 @@ func main() {
 		CloseLong:  viper.GetBool("closeLong"),
 		CloseShort: viper.GetBool("closeShort"),
 
-		SLim: t.StopLimit{
+		Gap: t.StopLimit{
 			SLStop:    viper.GetInt64("slStop"),
 			SLLimit:   viper.GetInt64("slLimit"),
 			TPStop:    viper.GetInt64("tpStop"),

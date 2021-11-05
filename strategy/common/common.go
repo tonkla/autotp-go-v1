@@ -276,9 +276,6 @@ func GetHighsLowsCloses(prices []t.HistoricalPrice) ([]float64, []float64, []flo
 func SLLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr float64) []t.Order {
 	var closeOrders []t.Order
 
-	slStop := float64(bp.SLim.SLStop)
-	isFutures := bp.Product == t.ProductFutures
-
 	for _, o := range db.GetFilledLimitLongOrders(qo) {
 		if db.GetSLOrder(o.ID) != nil {
 			continue
@@ -288,7 +285,7 @@ func SLLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr f
 		if bp.QuoteSL > 0 {
 			// SL by a value of the quote currency
 			slPrice = o.OpenPrice - bp.QuoteSL/o.Qty
-		} else if bp.AtrSL > 0 {
+		} else if bp.AtrSL > 0 && atr > 0 {
 			// SL by a volatility
 			slPrice = o.OpenPrice - bp.AtrSL*atr
 		}
@@ -297,9 +294,10 @@ func SLLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr f
 			continue
 		}
 
-		slPrice = h.NormalizeDouble(slPrice, bp.PriceDigits)
-		stopPrice := h.CalcSLStop(o.Side, slPrice, slStop, bp.PriceDigits)
+		stopPrice := h.CalcSLStop(o.Side, slPrice, float64(bp.Gap.SLStop), bp.PriceDigits)
 		if ticker.Price-(stopPrice-slPrice) < stopPrice {
+			slPrice = h.CalcStopLowerTicker(ticker.Price, float64(bp.Gap.SLLimit), bp.PriceDigits)
+			stopPrice = h.CalcStopLowerTicker(ticker.Price, float64(bp.Gap.SLStop), bp.PriceDigits)
 			slo := t.Order{
 				ID:          h.GenID(),
 				BotID:       bp.BotID,
@@ -313,7 +311,7 @@ func SLLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr f
 				OpenPrice:   slPrice,
 				OpenOrderID: o.ID,
 			}
-			if isFutures {
+			if bp.Product == t.ProductFutures {
 				slo.Type = t.OrderTypeFSL
 				slo.PosSide = o.PosSide
 			}
@@ -328,9 +326,6 @@ func SLLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr f
 func SLShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr float64) []t.Order {
 	var closeOrders []t.Order
 
-	slStop := float64(bp.SLim.SLStop)
-	isFutures := bp.Product == t.ProductFutures
-
 	for _, o := range db.GetFilledLimitShortOrders(qo) {
 		if db.GetSLOrder(o.ID) != nil {
 			continue
@@ -340,7 +335,7 @@ func SLShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr 
 		if bp.QuoteSL > 0 {
 			// SL by a value of the quote currency
 			slPrice = o.OpenPrice + bp.QuoteSL/o.Qty
-		} else if bp.AtrSL > 0 {
+		} else if bp.AtrSL > 0 && atr > 0 {
 			// SL by a volatility
 			slPrice = o.OpenPrice + bp.AtrSL*atr
 		}
@@ -349,9 +344,10 @@ func SLShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr 
 			continue
 		}
 
-		slPrice = h.NormalizeDouble(slPrice, bp.PriceDigits)
-		stopPrice := h.CalcSLStop(o.Side, slPrice, slStop, bp.PriceDigits)
+		stopPrice := h.CalcSLStop(o.Side, slPrice, float64(bp.Gap.SLStop), bp.PriceDigits)
 		if ticker.Price+(slPrice-stopPrice) > stopPrice {
+			slPrice = h.CalcStopUpperTicker(ticker.Price, float64(bp.Gap.SLLimit), bp.PriceDigits)
+			stopPrice = h.CalcStopUpperTicker(ticker.Price, float64(bp.Gap.SLStop), bp.PriceDigits)
 			slo := t.Order{
 				ID:          h.GenID(),
 				BotID:       bp.BotID,
@@ -365,7 +361,7 @@ func SLShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr 
 				OpenPrice:   slPrice,
 				OpenOrderID: o.ID,
 			}
-			if isFutures {
+			if bp.Product == t.ProductFutures {
 				slo.Type = t.OrderTypeFSL
 				slo.PosSide = o.PosSide
 			}
@@ -380,9 +376,6 @@ func SLShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr 
 func TPLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr float64) []t.Order {
 	var closeOrders []t.Order
 
-	tpStop := float64(bp.SLim.TPStop)
-	isFutures := bp.Product == t.ProductFutures
-
 	for _, o := range db.GetFilledLimitLongOrders(qo) {
 		if db.GetTPOrder(o.ID) != nil {
 			continue
@@ -392,7 +385,7 @@ func TPLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr f
 		if bp.QuoteTP > 0 {
 			// TP by a value of the quote currency
 			tpPrice = o.OpenPrice + bp.QuoteTP/o.Qty
-		} else if bp.AtrTP > 0 {
+		} else if bp.AtrTP > 0 && atr > 0 {
 			// TP by a volatility
 			tpPrice = o.OpenPrice + bp.AtrTP*atr
 		}
@@ -401,9 +394,10 @@ func TPLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr f
 			continue
 		}
 
-		tpPrice = h.NormalizeDouble(tpPrice, bp.PriceDigits)
-		stopPrice := h.CalcTPStop(o.Side, tpPrice, tpStop, bp.PriceDigits)
+		stopPrice := h.CalcTPStop(o.Side, tpPrice, float64(bp.Gap.TPStop), bp.PriceDigits)
 		if ticker.Price+(tpPrice-stopPrice) > stopPrice {
+			tpPrice = h.CalcStopUpperTicker(ticker.Price, float64(bp.Gap.TPLimit), bp.PriceDigits)
+			stopPrice = h.CalcStopUpperTicker(ticker.Price, float64(bp.Gap.TPStop), bp.PriceDigits)
 			tpo := t.Order{
 				ID:          h.GenID(),
 				BotID:       bp.BotID,
@@ -417,7 +411,7 @@ func TPLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr f
 				OpenPrice:   tpPrice,
 				OpenOrderID: o.ID,
 			}
-			if isFutures {
+			if bp.Product == t.ProductFutures {
 				tpo.Type = t.OrderTypeFTP
 				tpo.PosSide = o.PosSide
 			}
@@ -432,9 +426,6 @@ func TPLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr f
 func TPShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr float64) []t.Order {
 	var closeOrders []t.Order
 
-	tpStop := float64(bp.SLim.TPStop)
-	isFutures := bp.Product == t.ProductFutures
-
 	for _, o := range db.GetFilledLimitShortOrders(qo) {
 		if db.GetTPOrder(o.ID) != nil {
 			continue
@@ -444,7 +435,7 @@ func TPShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr 
 		if bp.QuoteTP > 0 {
 			// TP by a value of the quote currency
 			tpPrice = o.OpenPrice - bp.QuoteTP/o.Qty
-		} else if bp.AtrTP > 0 {
+		} else if bp.AtrTP > 0 && atr > 0 {
 			// TP by a volatility
 			tpPrice = o.OpenPrice - bp.AtrTP*atr
 		}
@@ -453,9 +444,10 @@ func TPShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr 
 			continue
 		}
 
-		tpPrice = h.NormalizeDouble(tpPrice, bp.PriceDigits)
-		stopPrice := h.CalcTPStop(o.Side, tpPrice, tpStop, bp.PriceDigits)
+		stopPrice := h.CalcTPStop(o.Side, tpPrice, float64(bp.Gap.TPStop), bp.PriceDigits)
 		if ticker.Price-(stopPrice-tpPrice) < stopPrice {
+			tpPrice = h.CalcStopLowerTicker(ticker.Price, float64(bp.Gap.TPLimit), bp.PriceDigits)
+			stopPrice = h.CalcStopLowerTicker(ticker.Price, float64(bp.Gap.TPStop), bp.PriceDigits)
 			tpo := t.Order{
 				ID:          h.GenID(),
 				BotID:       bp.BotID,
@@ -469,7 +461,7 @@ func TPShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr 
 				OpenPrice:   tpPrice,
 				OpenOrderID: o.ID,
 			}
-			if isFutures {
+			if bp.Product == t.ProductFutures {
 				tpo.Type = t.OrderTypeFTP
 				tpo.PosSide = o.PosSide
 			}
@@ -540,8 +532,8 @@ func SLLongNow(db *rdb.DB, bp *t.BotParams, ticker t.Ticker, o t.Order) *t.Order
 		return nil
 	}
 
-	slPrice := h.CalcStopLowerTicker(ticker.Price, float64(bp.SLim.SLLimit), bp.PriceDigits)
-	stopPrice := h.CalcSLStop(o.Side, slPrice, float64(bp.SLim.SLStop), bp.PriceDigits)
+	slPrice := h.CalcStopLowerTicker(ticker.Price, float64(bp.Gap.SLLimit), bp.PriceDigits)
+	stopPrice := h.CalcStopLowerTicker(ticker.Price, float64(bp.Gap.SLStop), bp.PriceDigits)
 	slo := t.Order{
 		ID:          h.GenID(),
 		BotID:       bp.BotID,
@@ -568,8 +560,8 @@ func SLShortNow(db *rdb.DB, bp *t.BotParams, ticker t.Ticker, o t.Order) *t.Orde
 		return nil
 	}
 
-	slPrice := h.CalcStopUpperTicker(ticker.Price, float64(bp.SLim.SLLimit), bp.PriceDigits)
-	stopPrice := h.CalcSLStop(o.Side, slPrice, float64(bp.SLim.SLStop), bp.PriceDigits)
+	slPrice := h.CalcStopUpperTicker(ticker.Price, float64(bp.Gap.SLLimit), bp.PriceDigits)
+	stopPrice := h.CalcStopUpperTicker(ticker.Price, float64(bp.Gap.SLStop), bp.PriceDigits)
 	slo := t.Order{
 		ID:          h.GenID(),
 		BotID:       bp.BotID,
@@ -596,8 +588,8 @@ func TPLongNow(db *rdb.DB, bp *t.BotParams, ticker t.Ticker, o t.Order) *t.Order
 		return nil
 	}
 
-	tpPrice := h.CalcStopUpperTicker(ticker.Price, float64(bp.SLim.TPLimit), bp.PriceDigits)
-	stopPrice := h.CalcTPStop(o.Side, tpPrice, float64(bp.SLim.TPStop), bp.PriceDigits)
+	tpPrice := h.CalcStopUpperTicker(ticker.Price, float64(bp.Gap.TPLimit), bp.PriceDigits)
+	stopPrice := h.CalcStopUpperTicker(ticker.Price, float64(bp.Gap.TPStop), bp.PriceDigits)
 	tpo := t.Order{
 		ID:          h.GenID(),
 		BotID:       bp.BotID,
@@ -624,8 +616,8 @@ func TPShortNow(db *rdb.DB, bp *t.BotParams, ticker t.Ticker, o t.Order) *t.Orde
 		return nil
 	}
 
-	tpPrice := h.CalcStopLowerTicker(ticker.Price, float64(bp.SLim.TPLimit), bp.PriceDigits)
-	stopPrice := h.CalcTPStop(o.Side, tpPrice, float64(bp.SLim.TPStop), bp.PriceDigits)
+	tpPrice := h.CalcStopLowerTicker(ticker.Price, float64(bp.Gap.TPLimit), bp.PriceDigits)
+	stopPrice := h.CalcStopLowerTicker(ticker.Price, float64(bp.Gap.TPStop), bp.PriceDigits)
 	tpo := t.Order{
 		ID:          h.GenID(),
 		BotID:       bp.BotID,

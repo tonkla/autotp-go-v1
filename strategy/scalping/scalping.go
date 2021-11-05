@@ -71,7 +71,11 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		return nil
 	}
 
-	highs, lows := common.GetHighsLows(prices)
+	highs, lows, closes := common.GetHighsLowsCloses(prices)
+
+	cma := talib.WMA(closes, int(s.BP.MAPeriod1st))
+	cma_0 := cma[len(cma)-1]
+	cma_1 := cma[len(cma)-2]
 
 	hma := talib.WMA(highs, int(s.BP.MAPeriod1st))
 	hma_0 := hma[len(hma)-1]
@@ -97,9 +101,6 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		closeOrders = append(closeOrders, common.TPShort(s.DB, s.BP, qo, ticker, atr)...)
 	}
 
-	openLimit := float64(s.BP.SLim.OpenLimit)
-	isFutures := s.BP.Product == t.ProductFutures
-
 	p_0 := prices[len(prices)-1]
 	t_0 := p_0.Time
 	h_0 := p_0.High
@@ -109,43 +110,33 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	h_1 := p_1.High
 	l_1 := p_1.Low
 
-	p_2 := prices[len(prices)-3]
-	h_2 := p_2.High
-	l_2 := p_2.Low
-
 	hh := h_0
 	if h_1 > hh {
 		hh = h_1
-	}
-	if h_2 > hh {
-		hh = h_2
 	}
 
 	ll := l_0
 	if l_1 < ll {
 		ll = l_1
 	}
-	if l_2 < ll {
-		ll = l_2
-	}
 
-	shouldOpenLong := ticker.Price > ll+atr*s.BP.MoS
-	shouldOpenShort := ticker.Price < hh-atr*s.BP.MoS
+	isDivergent := ticker.Price > ll+atr*s.BP.MoS || ticker.Price < hh-atr*s.BP.MoS
+	shouldOpenLong := cma_1 < cma_0 && isDivergent
+	shouldOpenShort := cma_1 > cma_0 && isDivergent
 
 	if shouldOpenLong && shouldOpenShort {
 		return &t.TradeOrders{
-			OpenOrders:   openOrders,
 			CloseOrders:  closeOrders,
 			CancelOrders: cancelOrders,
 		}
 	}
 
 	if shouldOpenLong && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewLong) {
-		openPrice := h.CalcStopLowerTicker(ticker.Price, openLimit, s.BP.PriceDigits)
+		openPrice := h.CalcStopLowerTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
 		qo.OpenPrice = openPrice
 		qo.Side = t.OrderSideBuy
 		norder := s.DB.GetNearestOrder(qo)
-		if norder == nil {
+		if norder == nil || norder.OpenPrice-openPrice >= s.BP.OrderGap {
 			o := t.Order{
 				ID:        h.GenID(),
 				BotID:     s.BP.BotID,
@@ -157,7 +148,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 				Qty:       qo.Qty,
 				OpenPrice: openPrice,
 			}
-			if isFutures {
+			if s.BP.Product == t.ProductFutures {
 				o.PosSide = t.OrderPosSideLong
 			}
 			openOrders = append(openOrders, o)
@@ -167,11 +158,11 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	}
 
 	if shouldOpenShort && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewShort) {
-		openPrice := h.CalcStopUpperTicker(ticker.Price, openLimit, s.BP.PriceDigits)
+		openPrice := h.CalcStopUpperTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
 		qo.OpenPrice = openPrice
 		qo.Side = t.OrderSideSell
 		norder := s.DB.GetNearestOrder(qo)
-		if norder == nil {
+		if norder == nil || openPrice-norder.OpenPrice >= s.BP.OrderGap {
 			o := t.Order{
 				ID:        h.GenID(),
 				BotID:     s.BP.BotID,
@@ -183,7 +174,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 				Qty:       qo.Qty,
 				OpenPrice: openPrice,
 			}
-			if isFutures {
+			if s.BP.Product == t.ProductFutures {
 				o.PosSide = t.OrderPosSideShort
 			}
 			openOrders = append(openOrders, o)

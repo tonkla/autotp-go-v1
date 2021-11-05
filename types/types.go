@@ -214,7 +214,7 @@ type BotParams struct {
 	CloseLong  bool
 	CloseShort bool
 
-	SLim StopLimit
+	Gap StopLimit
 }
 
 type StopLimit struct {
