@@ -34,9 +34,9 @@ func CalcSLStop(side string, sl float64, gap float64, digits int64) float64 {
 	}
 	pow := math.Pow(10, float64(digits))
 	if side == t.OrderSideBuy {
-		return round((sl*pow+gap)/pow, pow)
+		return Round((sl*pow+gap)/pow, pow)
 	}
-	return round((sl*pow-gap)/pow, pow)
+	return Round((sl*pow-gap)/pow, pow)
 }
 
 // CalcTPStop calculates a stop price of the take profit price
@@ -46,9 +46,9 @@ func CalcTPStop(side string, tp float64, gap float64, digits int64) float64 {
 	}
 	pow := math.Pow(10, float64(digits))
 	if side == t.OrderSideBuy {
-		return round((tp*pow-gap)/pow, pow)
+		return Round((tp*pow-gap)/pow, pow)
 	}
-	return round((tp*pow+gap)/pow, pow)
+	return Round((tp*pow+gap)/pow, pow)
 }
 
 // CalcStopUpperTicker calculates a stop price upper than the ticker price
@@ -75,6 +75,15 @@ func NormalizeDouble(number float64, digits int64) float64 {
 	return math.Round(number*pow) / pow
 }
 
-func round(number float64, pow float64) float64 {
+func Round(number float64, pow float64) float64 {
 	return math.Round(number*pow) / pow
+}
+
+func ContainsString(sl []string, v string) bool {
+	for _, vv := range sl {
+		if vv == v {
+			return true
+		}
+	}
+	return false
 }

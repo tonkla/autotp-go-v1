@@ -18,6 +18,7 @@ const (
 	OrderStatusFilled   = "FILLED"
 	OrderStatusCanceled = "CANCELED"
 	OrderStatusExpired  = "EXPIRED"
+	OrderStatusRejected = "REJECTED"
 
 	OrderSideBuy  = "BUY"
 	OrderSideSell = "SELL"

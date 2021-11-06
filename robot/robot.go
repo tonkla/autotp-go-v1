@@ -17,9 +17,6 @@ func Trade(ap *app.AppParams) {
 }
 
 func placeAsMaker(p *app.AppParams) {
-	cancelOrders(p)
-	closeOrders(p)
-	openLimitOrders(p)
 	if p.BP.Product == t.ProductSpot {
 		syncLimitOrder(p)
 		syncTPOrder(p)
@@ -31,6 +28,9 @@ func placeAsMaker(p *app.AppParams) {
 		syncTPLongOrder(p)
 		syncTPShortOrder(p)
 	}
+	cancelOrders(p)
+	closeOrders(p)
+	openLimitOrders(p)
 }
 
 func placeAsTaker(p *app.AppParams) {
@@ -39,7 +39,25 @@ func placeAsTaker(p *app.AppParams) {
 
 func cancelOrders(p *app.AppParams) {
 	for _, o := range p.TO.CancelOrders {
-		exo, err := p.EX.CancelOrder(o)
+		exo, err := p.EX.GetOrder(o)
+		if err != nil || exo == nil {
+			h.Log(err)
+			continue
+		}
+		if exo.Status != t.OrderStatusNew {
+			o.Status = exo.Status
+			o.UpdateTime = exo.UpdateTime
+			if exo.Status != t.OrderStatusFilled {
+				o.CloseTime = h.Now13()
+			}
+			err = p.DB.UpdateOrder(o)
+			if err != nil {
+				h.Log(err)
+			}
+			continue
+		}
+
+		exo, err = p.EX.CancelOrder(o)
 		if err != nil || exo == nil {
 			h.Log(err)
 			os.Exit(1)
@@ -234,6 +252,15 @@ func syncStatus(o t.Order, p *app.AppParams) {
 		o.Status = exo.Status
 		o.UpdateTime = exo.UpdateTime
 
+		canceledStatuses := []string{
+			t.OrderStatusCanceled,
+			t.OrderStatusExpired,
+			t.OrderStatusRejected,
+		}
+		if h.ContainsString(canceledStatuses, exo.Status) {
+			o.CloseTime = h.Now13()
+		}
+
 		if exo.Status == t.OrderStatusFilled {
 			commission := p.EX.GetCommission(p.BP.Symbol, o.RefID)
 			if commission != nil {
@@ -255,7 +282,7 @@ func syncStatus(o t.Order, p *app.AppParams) {
 			}
 		}
 
-		if exo.Status == t.OrderStatusCanceled || exo.Status == t.OrderStatusExpired {
+		if h.ContainsString(canceledStatuses, exo.Status) {
 			if o.PosSide != "" {
 				h.LogCanceledF(o)
 			} else {
