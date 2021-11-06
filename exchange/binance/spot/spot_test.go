@@ -8,13 +8,6 @@ const ssymbol = "BNBBUSD"
 
 var sc = NewSpotClient("", "")
 
-func TestSpotGetExchangeInfo(t *testing.T) {
-	err := sc.GetExchangeInfo(ssymbol)
-	if err != nil {
-		t.Error(err)
-	}
-}
-
 func TestSpotGetTicker(t *testing.T) {
 	ticker := sc.GetTicker(ssymbol)
 	if ticker == nil || ticker.Price <= 0 {

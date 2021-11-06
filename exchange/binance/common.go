@@ -4,7 +4,6 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -142,8 +141,7 @@ func GetOrderByID(c Client, symbol string, ID string, refID string) (*t.Order, e
 	r := gjson.ParseBytes(data)
 
 	if r.Get("code").Int() < 0 {
-		h.Log("GetOrderByID", r)
-		return nil, errors.New(r.Get("msg").String())
+		return nil, fmt.Errorf("GetOrderByID: %s", r.Get("msg").String())
 	}
 
 	return &t.Order{

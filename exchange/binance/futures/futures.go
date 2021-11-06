@@ -107,8 +107,7 @@ func (c Client) OpenLimitOrder(o t.Order) (*t.Order, error) {
 	r := gjson.ParseBytes(data)
 
 	if r.Get("code").Int() < 0 {
-		h.Log("OpenLimitOrder", r)
-		return nil, errors.New(r.Get("msg").String())
+		return nil, fmt.Errorf("OpenLimitOrder: %s", r.Get("msg").String())
 	}
 
 	status := r.Get("status").String()
@@ -148,8 +147,7 @@ func (c Client) OpenStopOrder(o t.Order) (*t.Order, error) {
 	r := gjson.ParseBytes(data)
 
 	if r.Get("code").Int() < 0 {
-		h.Log("OpenStopOrder", r)
-		return nil, errors.New(r.Get("msg").String())
+		return nil, fmt.Errorf("OpenStopOrder: %s", r.Get("msg").String())
 	}
 
 	o.RefID = r.Get("orderId").String()
@@ -416,7 +414,7 @@ func (c Client) CloseOrder(o t.Order) (*t.Order, error) {
 	return nil, nil
 }
 
-// CancelOrder cancels an order on the Binance Spot & Futures
+// CancelOrder cancels an order on the Binance Futures
 func (c Client) CancelOrder(o t.Order) (*t.Order, error) {
 	var payload, url strings.Builder
 
@@ -434,8 +432,7 @@ func (c Client) CancelOrder(o t.Order) (*t.Order, error) {
 	r := gjson.ParseBytes(data)
 
 	if r.Get("code").Int() < 0 {
-		h.Log("CancelOrder", r)
-		return nil, errors.New(r.Get("msg").String())
+		return nil, fmt.Errorf("CancelOrder: %s", r.Get("msg").String())
 	}
 
 	status := r.Get("status").String()

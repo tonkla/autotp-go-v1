@@ -55,22 +55,6 @@ func (c Client) GetOrderBook(symbol string, limit int) *t.OrderBook {
 	return b.GetOrderBook(c.baseURL, symbol, limit)
 }
 
-// GetExchangeInfo returns the exchange information of the specified symbol
-func (c Client) GetExchangeInfo(symbol string) error {
-	var url strings.Builder
-
-	fmt.Fprintf(&url, "%s/exchangeInfo?symbol=%s", c.baseURL, symbol)
-	data, err := h.Get(url.String())
-	if err != nil {
-		return err
-	}
-	r := gjson.ParseBytes(data)
-	if r.Get("code").Int() < 0 {
-		return errors.New("")
-	}
-	return nil
-}
-
 // GetHistoricalPrices returns historical prices in a format of k-lines/candlesticks
 func (c Client) GetHistoricalPrices(symbol string, timeframe string, limit int) []t.HistoricalPrice {
 	return b.GetHistoricalPrices(c.baseURL, symbol, timeframe, limit)
@@ -329,8 +313,7 @@ func (c Client) OpenLimitOrder(o t.Order) (*t.Order, error) {
 	r := gjson.ParseBytes(data)
 
 	if r.Get("code").Int() < 0 {
-		h.Log("OpenLimitOrder", r)
-		return nil, errors.New(r.Get("msg").String())
+		return nil, fmt.Errorf("OpenLimitOrder: %s", r.Get("msg").String())
 	}
 
 	status := r.Get("status").String()
@@ -367,8 +350,7 @@ func (c Client) OpenStopOrder(o t.Order) (*t.Order, error) {
 	r := gjson.ParseBytes(data)
 
 	if r.Get("code").Int() < 0 {
-		h.Log("OpenStopOrder", r)
-		return nil, errors.New(r.Get("msg").String())
+		return nil, fmt.Errorf("OpenStopOrder: %s", r.Get("msg").String())
 	}
 
 	o.RefID = r.Get("orderId").String()
@@ -399,8 +381,7 @@ func (c Client) OpenMarketOrder(o t.Order) (*t.Order, error) {
 	r := gjson.ParseBytes(data)
 
 	if r.Get("code").Int() < 0 {
-		h.Log("OpenMarketOrder", r)
-		return nil, errors.New(r.Get("msg").String())
+		return nil, fmt.Errorf("OpenMarketOrder: %s", r.Get("msg").String())
 	}
 
 	o.RefID = r.Get("orderId").String()
@@ -417,7 +398,7 @@ func (c Client) OpenMarketOrder(o t.Order) (*t.Order, error) {
 	return &o, nil
 }
 
-// CancelOrder cancels an order on the Binance Spot & Futures
+// CancelOrder cancels an order on the Binance Spot
 func (c Client) CancelOrder(o t.Order) (*t.Order, error) {
 	var payload, url strings.Builder
 
@@ -435,8 +416,7 @@ func (c Client) CancelOrder(o t.Order) (*t.Order, error) {
 	r := gjson.ParseBytes(data)
 
 	if r.Get("code").Int() < 0 {
-		h.Log("CancelOrder", r)
-		return nil, errors.New(r.Get("msg").String())
+		return nil, fmt.Errorf("CancelOrder: %s", r.Get("msg").String())
 	}
 
 	status := r.Get("status").String()
