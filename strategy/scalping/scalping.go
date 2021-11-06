@@ -71,17 +71,15 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		return nil
 	}
 
-	highs, lows, closes := common.GetHighsLowsCloses(prices)
-
-	cma := talib.WMA(closes, int(s.BP.MAPeriod1st))
-	cma_0 := cma[len(cma)-1]
-	cma_1 := cma[len(cma)-2]
+	highs, lows := common.GetHighsLows(prices)
 
 	hma := talib.WMA(highs, int(s.BP.MAPeriod1st))
 	hma_0 := hma[len(hma)-1]
+	hma_1 := hma[len(hma)-2]
 
 	lma := talib.WMA(lows, int(s.BP.MAPeriod1st))
 	lma_0 := lma[len(lma)-1]
+	lma_1 := lma[len(lma)-2]
 
 	atr := hma_0 - lma_0
 
@@ -103,26 +101,14 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 
 	p_0 := prices[len(prices)-1]
 	t_0 := p_0.Time
-	h_0 := p_0.High
-	l_0 := p_0.Low
 
-	p_1 := prices[len(prices)-2]
-	h_1 := p_1.High
-	l_1 := p_1.Low
-
-	hh := h_0
-	if h_1 > hh {
-		hh = h_1
+	percent := common.GetPercentHL(prices, ticker)
+	if percent == nil {
+		return nil
 	}
 
-	ll := l_0
-	if l_1 < ll {
-		ll = l_1
-	}
-
-	isDivergent := ticker.Price > ll+atr*s.BP.MoS || ticker.Price < hh-atr*s.BP.MoS
-	shouldOpenLong := cma_1 < cma_0 && isDivergent
-	shouldOpenShort := cma_1 > cma_0 && isDivergent
+	shouldOpenLong := lma_1 < lma_0 && *percent < 0.11 && ticker.Price < hma_0
+	shouldOpenShort := hma_1 > hma_0 && *percent > 0.89 && ticker.Price > lma_0
 
 	if shouldOpenLong && shouldOpenShort {
 		return &t.TradeOrders{

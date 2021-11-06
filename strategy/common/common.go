@@ -272,6 +272,39 @@ func GetHighsLowsCloses(prices []t.HistoricalPrice) ([]float64, []float64, []flo
 	return h, l, c
 }
 
+// GetPercentHL returns a percentage of the ticker price between the High-Low (High=1<-ticker->0=Low)
+func GetPercentHL(prices []t.HistoricalPrice, ticker t.Ticker) *float64 {
+	if ticker.Price == 0 || len(prices) == 0 || prices[len(prices)-1].Open == 0 || prices[len(prices)-2].Open == 0 {
+		return nil
+	}
+
+	p_0 := prices[len(prices)-1]
+	p_1 := prices[len(prices)-2]
+	h_0 := p_0.High
+	l_0 := p_0.Low
+	h_1 := p_1.High
+	l_1 := p_1.Low
+	hh := ticker.Price
+	ll := ticker.Price
+
+	if h_0 > hh {
+		hh = h_0
+	}
+	if h_1 > hh {
+		hh = h_1
+	}
+
+	if l_0 < ll {
+		ll = l_0
+	}
+	if l_1 < ll {
+		ll = l_1
+	}
+
+	percent := (ticker.Price - ll) / (hh - ll)
+	return &percent
+}
+
 // SLLong creates SL orders of active LONG orders
 func SLLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr float64) []t.Order {
 	var closeOrders []t.Order

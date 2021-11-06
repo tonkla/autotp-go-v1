@@ -1,11 +1,11 @@
 package common
 
 import (
-	"fmt"
 	"testing"
 
 	binance "github.com/tonkla/autotp/exchange/binance/spot"
 	"github.com/tonkla/autotp/talib"
+	"github.com/tonkla/autotp/types"
 )
 
 const (
@@ -18,8 +18,7 @@ func TestGetTrend(t *testing.T) {
 	client := binance.NewSpotClient("", "")
 	bars := client.GetHistoricalPrices(symbol, timeframe, 20)
 	trend := GetTrend(bars, period)
-	fmt.Println(trend)
-	t.Error("Skip")
+	t.Error(trend)
 }
 
 func TestGetATR(t *testing.T) {
@@ -35,10 +34,10 @@ func TestGetATR(t *testing.T) {
 
 	r := talib.ATR(h, l, c, period)
 	atr1 := r[len(r)-1]
-	fmt.Println("TALib ATR:\t", atr1)
+	t.Error("TALib ATR:\t", atr1)
 
 	atr2 := GetATR(bars, period)
-	fmt.Println("Custom ATR:\t", atr2)
+	t.Error("Custom ATR:\t", atr2)
 
 	t.Error("Skip")
 }
@@ -98,10 +97,64 @@ func TestGetGridZones(t *testing.T) {
 	}
 }
 
+func TestGetPercentHL(t *testing.T) {
+	type expect struct {
+		i types.Ticker
+		o float64
+	}
+
+	prices := []types.HistoricalPrice{
+		{Open: 50, High: 110, Low: 10},
+		{Open: 50, High: 110, Low: 10},
+	}
+
+	data := []expect{
+		{i: types.Ticker{Price: 10}, o: 0},
+		{i: types.Ticker{Price: 50}, o: 0.4},
+		{i: types.Ticker{Price: 60}, o: 0.5},
+		{i: types.Ticker{Price: 108.5}, o: 0.985},
+		{i: types.Ticker{Price: 109}, o: 0.99},
+		{i: types.Ticker{Price: 110}, o: 1},
+	}
+
+	for _, d := range data {
+		r := GetPercentHL(prices, d.i)
+		if r == nil {
+			t.Error()
+		} else {
+			if d.o != *r {
+				t.Errorf("Expect: %f, Got: %f", d.o, *r)
+			}
+		}
+	}
+}
+
+func TestGetPercentHLTicker(t *testing.T) {
+	client := binance.NewSpotClient("", "")
+	prices4h := client.GetHistoricalPrices(symbol, "4h", 8)
+	prices1h := client.GetHistoricalPrices(symbol, "1h", 8)
+	prices15m := client.GetHistoricalPrices(symbol, "15m", 8)
+	ticker := client.GetTicker(symbol)
+	if ticker == nil {
+		return
+	}
+	p4h := GetPercentHL(prices4h, *ticker)
+	if p4h != nil {
+		t.Errorf(" 4H: %f", *p4h)
+	}
+	p1h := GetPercentHL(prices1h, *ticker)
+	if p1h != nil {
+		t.Errorf(" 1H: %f", *p1h)
+	}
+	p15m := GetPercentHL(prices15m, *ticker)
+	if p15m != nil {
+		t.Errorf("15M: %f", *p15m)
+	}
+}
+
 func TestGetHighsLows(t *testing.T) {
 	client := binance.NewSpotClient("", "")
 	prices := client.GetHistoricalPrices(symbol, timeframe, 20)
 	h, l := GetHighsLows(prices)
-	fmt.Printf("H0=%f, L0=%f", h[len(h)-1], l[len(l)-1])
-	t.Error("Skip")
+	t.Errorf("H0=%f, L0=%f", h[len(h)-1], l[len(l)-1])
 }
