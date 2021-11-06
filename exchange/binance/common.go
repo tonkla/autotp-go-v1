@@ -115,8 +115,8 @@ func GetHistoricalPrices(baseURL string, symbol string, timeframe string, limit 
 	return hPrices
 }
 
-// GetOrderByIDs returns the order by its IDs
-func GetOrderByIDs(c Client, symbol string, ID string, refID string) (*t.Order, error) {
+// GetOrderByID returns the order by its ID
+func GetOrderByID(c Client, symbol string, ID string, refID string) (*t.Order, error) {
 	if symbol == "" || (ID == "" && refID == "") {
 		return nil, nil
 	}
@@ -142,7 +142,7 @@ func GetOrderByIDs(c Client, symbol string, ID string, refID string) (*t.Order, 
 	r := gjson.ParseBytes(data)
 
 	if r.Get("code").Int() < 0 {
-		h.Log("GetOrderByIDs", r)
+		h.Log("GetOrderByID", r)
 		return nil, errors.New(r.Get("msg").String())
 	}
 
@@ -157,7 +157,7 @@ func GetOrderByIDs(c Client, symbol string, ID string, refID string) (*t.Order, 
 
 // GetOrder returns the order by its IDs
 func GetOrder(c Client, o t.Order) (*t.Order, error) {
-	exo, err := GetOrderByIDs(c, o.Symbol, o.ID, o.RefID)
+	exo, err := GetOrderByID(c, o.Symbol, o.ID, o.RefID)
 	if err != nil {
 		return nil, err
 	}

@@ -1,8 +1,6 @@
 package robot
 
 import (
-	"os"
-
 	"github.com/tonkla/autotp/app"
 	h "github.com/tonkla/autotp/helper"
 	t "github.com/tonkla/autotp/types"
@@ -60,7 +58,7 @@ func cancelOrders(p *app.AppParams) {
 		exo, err = p.EX.CancelOrder(o)
 		if err != nil || exo == nil {
 			h.Log(err)
-			os.Exit(1)
+			continue
 		}
 
 		o.Status = exo.Status
@@ -85,7 +83,7 @@ func closeOrders(p *app.AppParams) {
 		exo, err := p.EX.OpenStopOrder(o)
 		if err != nil || exo == nil {
 			h.Log(err)
-			os.Exit(1)
+			continue
 		}
 
 		o.RefID = exo.RefID
@@ -109,7 +107,7 @@ func openLimitOrders(p *app.AppParams) {
 		exo, err := p.EX.OpenLimitOrder(o)
 		if err != nil || exo == nil {
 			h.Log(err)
-			os.Exit(1)
+			continue
 		}
 
 		o.RefID = exo.RefID
@@ -139,7 +137,7 @@ func openMarketOrders(p *app.AppParams) {
 		exo, err := p.EX.OpenMarketOrder(o)
 		if err != nil || exo == nil {
 			h.Log(err)
-			os.Exit(1)
+			continue
 		}
 
 		o.RefID = exo.RefID
@@ -150,6 +148,7 @@ func openMarketOrders(p *app.AppParams) {
 		o.Commission = exo.Commission
 		err = p.DB.CreateOrder(o)
 		if err != nil {
+			h.Log(err)
 			continue
 		}
 
@@ -242,7 +241,7 @@ func syncStatus(o t.Order, p *app.AppParams) {
 	exo, err := p.EX.GetOrder(o)
 	if err != nil || exo == nil {
 		h.Log(err)
-		os.Exit(1)
+		return
 	}
 	if exo.Status == t.OrderStatusNew {
 		return
