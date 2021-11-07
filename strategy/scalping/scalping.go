@@ -65,19 +65,29 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	}
 
 	const numberOfBars = 50
-	prices := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATf1st, numberOfBars)
 
+	prices2nd := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATf2nd, numberOfBars)
+	if len(prices2nd) < numberOfBars || prices2nd[len(prices2nd)-1].Open == 0 || prices2nd[len(prices2nd)-2].Open == 0 {
+		return nil
+	}
+
+	closes2nd := common.GetCloses(prices2nd)
+	cma2nd := talib.WMA(closes2nd, int(s.BP.MAPeriod2nd))
+	cma2nd_0 := cma2nd[len(cma2nd)-1]
+	cma2nd_1 := cma2nd[len(cma2nd)-2]
+
+	prices := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATf3rd, numberOfBars)
 	if len(prices) < numberOfBars || prices[len(prices)-1].Open == 0 || prices[len(prices)-2].Open == 0 {
 		return nil
 	}
 
 	highs, lows := common.GetHighsLows(prices)
 
-	hma := talib.WMA(highs, int(s.BP.MAPeriod1st))
+	hma := talib.WMA(highs, int(s.BP.MAPeriod3rd))
 	hma_0 := hma[len(hma)-1]
 	hma_1 := hma[len(hma)-2]
 
-	lma := talib.WMA(lows, int(s.BP.MAPeriod1st))
+	lma := talib.WMA(lows, int(s.BP.MAPeriod3rd))
 	lma_0 := lma[len(lma)-1]
 	lma_1 := lma[len(lma)-2]
 
@@ -107,8 +117,30 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		return nil
 	}
 
-	shouldOpenLong := lma_1 < lma_0 && *percent < 0.11 && ticker.Price < hma_0
-	shouldOpenShort := hma_1 > hma_0 && *percent > 0.89 && ticker.Price > lma_0
+	shouldCloseLong := cma2nd_1 > cma2nd_0
+	shouldCloseShort := cma2nd_1 < cma2nd_0
+
+	if shouldCloseLong || shouldCloseShort {
+		if shouldCloseLong {
+			cancelOrders = append(cancelOrders, s.DB.GetNewStopLongOrders(qo)...)
+			cancelOrders = append(cancelOrders, s.DB.GetNewLimitLongOrders(qo)...)
+			closeOrders = append(closeOrders, common.CloseLong(s.DB, s.BP, qo, ticker)...)
+		}
+		if shouldCloseShort {
+			cancelOrders = append(cancelOrders, s.DB.GetNewStopShortOrders(qo)...)
+			cancelOrders = append(cancelOrders, s.DB.GetNewLimitShortOrders(qo)...)
+			closeOrders = append(closeOrders, common.CloseShort(s.DB, s.BP, qo, ticker)...)
+		}
+		if len(cancelOrders) > 0 || len(closeOrders) > 0 {
+			return &t.TradeOrders{
+				CloseOrders:  closeOrders,
+				CancelOrders: cancelOrders,
+			}
+		}
+	}
+
+	shouldOpenLong := cma2nd_1 < cma2nd_0 && lma_1 < lma_0 && *percent < 0.2 && ticker.Price < hma_0
+	shouldOpenShort := cma2nd_1 > cma2nd_0 && hma_1 > hma_0 && *percent > 0.8 && ticker.Price > lma_0
 
 	if shouldOpenLong && shouldOpenShort {
 		return &t.TradeOrders{
