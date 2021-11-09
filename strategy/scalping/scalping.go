@@ -120,12 +120,10 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 
 	if shouldCloseLong || shouldCloseShort {
 		if shouldCloseLong {
-			cancelOrders = append(cancelOrders, s.DB.GetNewStopLongOrders(qo)...)
 			cancelOrders = append(cancelOrders, s.DB.GetNewLimitLongOrders(qo)...)
 			closeOrders = append(closeOrders, common.CloseLong(s.DB, s.BP, qo, ticker)...)
 		}
 		if shouldCloseShort {
-			cancelOrders = append(cancelOrders, s.DB.GetNewStopShortOrders(qo)...)
 			cancelOrders = append(cancelOrders, s.DB.GetNewLimitShortOrders(qo)...)
 			closeOrders = append(closeOrders, common.CloseShort(s.DB, s.BP, qo, ticker)...)
 		}
