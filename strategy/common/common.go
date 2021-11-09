@@ -350,7 +350,7 @@ func CloseOpposite(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker
 	lorders := db.GetFilledLimitLongOrders(qo)
 	sorders := db.GetFilledLimitShortOrders(qo)
 	if len(lorders) > 0 && len(sorders) > 0 {
-		if lorders[0].OpenTime < sorders[0].OpenTime {
+		if lorders[0].UpdateTime < sorders[0].UpdateTime {
 			orders = CloseLong(db, bp, qo, ticker)
 		} else {
 			orders = CloseShort(db, bp, qo, ticker)
@@ -368,7 +368,7 @@ func TimeSL(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.O
 			continue
 		}
 
-		if ticker.Price < o.OpenPrice && bp.TimeSecSL > 0 && (h.Now13()-o.OpenTime)/1000.0 > bp.TimeSecSL {
+		if ticker.Price < o.OpenPrice && bp.TimeSecSL > 0 && (h.Now13()-o.UpdateTime)/1000.0 > bp.TimeSecSL {
 			_o := SLLongNow(db, bp, ticker, o)
 			if _o != nil {
 				closeOrders = append(closeOrders, *_o)
@@ -381,7 +381,7 @@ func TimeSL(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.O
 			continue
 		}
 
-		if ticker.Price > o.OpenPrice && bp.TimeSecSL > 0 && (h.Now13()-o.OpenTime)/1000.0 > bp.TimeSecSL {
+		if ticker.Price > o.OpenPrice && bp.TimeSecSL > 0 && (h.Now13()-o.UpdateTime)/1000.0 > bp.TimeSecSL {
 			_o := SLShortNow(db, bp, ticker, o)
 			if _o != nil {
 				closeOrders = append(closeOrders, *_o)
@@ -401,7 +401,7 @@ func TimeTP(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.O
 			continue
 		}
 
-		if ticker.Price > o.OpenPrice && bp.TimeSecTP > 0 && (h.Now13()-o.OpenTime)/1000.0 > bp.TimeSecTP {
+		if ticker.Price > o.OpenPrice && bp.TimeSecTP > 0 && (h.Now13()-o.UpdateTime)/1000.0 > bp.TimeSecTP {
 			_o := TPLongNow(db, bp, ticker, o)
 			if _o != nil {
 				closeOrders = append(closeOrders, *_o)
@@ -414,7 +414,7 @@ func TimeTP(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.O
 			continue
 		}
 
-		if ticker.Price < o.OpenPrice && bp.TimeSecTP > 0 && (h.Now13()-o.OpenTime)/1000.0 > bp.TimeSecTP {
+		if ticker.Price < o.OpenPrice && bp.TimeSecTP > 0 && (h.Now13()-o.UpdateTime)/1000.0 > bp.TimeSecTP {
 			_o := TPShortNow(db, bp, ticker, o)
 			if _o != nil {
 				closeOrders = append(closeOrders, *_o)
