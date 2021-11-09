@@ -206,12 +206,14 @@ type BotParams struct {
 	OrderGap    float64
 	MoS         float64
 
-	AutoSL  bool
-	AutoTP  bool
-	QuoteSL float64
-	QuoteTP float64
-	AtrSL   float64
-	AtrTP   float64
+	AutoSL    bool
+	AutoTP    bool
+	QuoteSL   float64
+	QuoteTP   float64
+	AtrSL     float64
+	AtrTP     float64
+	TimeSecSL int64 // Seconds
+	TimeSecTP int64 // Seconds
 
 	CloseLong  bool
 	CloseShort bool

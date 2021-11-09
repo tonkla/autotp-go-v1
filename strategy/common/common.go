@@ -305,6 +305,126 @@ func GetPercentHL(prices []t.HistoricalPrice, ticker t.Ticker) *float64 {
 	return &percent
 }
 
+// CloseLong creates STOP orders for active LONG orders at the ticker price
+func CloseLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.Order {
+	var orders []t.Order
+	for _, o := range db.GetFilledLimitLongOrders(qo) {
+		if ticker.Price > o.OpenPrice {
+			order := TPLongNow(db, bp, ticker, o)
+			if order != nil {
+				orders = append(orders, *order)
+			}
+		} else if ticker.Price < o.OpenPrice {
+			order := SLLongNow(db, bp, ticker, o)
+			if order != nil {
+				orders = append(orders, *order)
+			}
+		}
+	}
+	return orders
+}
+
+// CloseShort creates STOP orders for active SHORT orders at the ticker price
+func CloseShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.Order {
+	var orders []t.Order
+	for _, o := range db.GetFilledLimitShortOrders(qo) {
+		if ticker.Price < o.OpenPrice {
+			order := TPShortNow(db, bp, ticker, o)
+			if order != nil {
+				orders = append(orders, *order)
+			}
+		} else if ticker.Price > o.OpenPrice {
+			order := SLShortNow(db, bp, ticker, o)
+			if order != nil {
+				orders = append(orders, *order)
+			}
+		}
+	}
+	return orders
+}
+
+// CloseOpposite creates STOP orders for the older opposite order
+// when LONG/SHORT orders have been openned at the same time
+func CloseOpposite(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.Order {
+	var orders []t.Order
+	lorders := db.GetFilledLimitLongOrders(qo)
+	sorders := db.GetFilledLimitShortOrders(qo)
+	if len(lorders) > 0 && len(sorders) > 0 {
+		if lorders[0].OpenTime < sorders[0].OpenTime {
+			orders = CloseLong(db, bp, qo, ticker)
+		} else {
+			orders = CloseShort(db, bp, qo, ticker)
+		}
+	}
+	return orders
+}
+
+// TimeSL creates SL orders based on the order open time
+func TimeSL(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.Order {
+	var closeOrders []t.Order
+
+	for _, o := range db.GetFilledLimitLongOrders(qo) {
+		if db.GetSLOrder(o.ID) != nil {
+			continue
+		}
+
+		if ticker.Price < o.OpenPrice && bp.TimeSecSL > 0 && (h.Now13()-o.OpenTime)/1000.0 > bp.TimeSecSL {
+			_o := SLLongNow(db, bp, ticker, o)
+			if _o != nil {
+				closeOrders = append(closeOrders, *_o)
+			}
+		}
+	}
+
+	for _, o := range db.GetFilledLimitShortOrders(qo) {
+		if db.GetSLOrder(o.ID) != nil {
+			continue
+		}
+
+		if ticker.Price > o.OpenPrice && bp.TimeSecSL > 0 && (h.Now13()-o.OpenTime)/1000.0 > bp.TimeSecSL {
+			_o := SLShortNow(db, bp, ticker, o)
+			if _o != nil {
+				closeOrders = append(closeOrders, *_o)
+			}
+		}
+	}
+
+	return closeOrders
+}
+
+// TimeTP creates TP orders based on the order open time
+func TimeTP(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.Order {
+	var closeOrders []t.Order
+
+	for _, o := range db.GetFilledLimitLongOrders(qo) {
+		if db.GetTPOrder(o.ID) != nil {
+			continue
+		}
+
+		if ticker.Price > o.OpenPrice && bp.TimeSecTP > 0 && (h.Now13()-o.OpenTime)/1000.0 > bp.TimeSecTP {
+			_o := TPLongNow(db, bp, ticker, o)
+			if _o != nil {
+				closeOrders = append(closeOrders, *_o)
+			}
+		}
+	}
+
+	for _, o := range db.GetFilledLimitShortOrders(qo) {
+		if db.GetTPOrder(o.ID) != nil {
+			continue
+		}
+
+		if ticker.Price < o.OpenPrice && bp.TimeSecTP > 0 && (h.Now13()-o.OpenTime)/1000.0 > bp.TimeSecTP {
+			_o := TPShortNow(db, bp, ticker, o)
+			if _o != nil {
+				closeOrders = append(closeOrders, *_o)
+			}
+		}
+	}
+
+	return closeOrders
+}
+
 // SLLong creates SL orders of active LONG orders
 func SLLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr float64) []t.Order {
 	var closeOrders []t.Order
@@ -503,60 +623,6 @@ func TPShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr 
 	}
 
 	return closeOrders
-}
-
-// CloseLong creates STOP orders for active LONG orders at the ticker price
-func CloseLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.Order {
-	var orders []t.Order
-	for _, o := range db.GetFilledLimitLongOrders(qo) {
-		if ticker.Price > o.OpenPrice {
-			order := TPLongNow(db, bp, ticker, o)
-			if order != nil {
-				orders = append(orders, *order)
-			}
-		} else if ticker.Price < o.OpenPrice {
-			order := SLLongNow(db, bp, ticker, o)
-			if order != nil {
-				orders = append(orders, *order)
-			}
-		}
-	}
-	return orders
-}
-
-// CloseShort creates STOP orders for active SHORT orders at the ticker price
-func CloseShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.Order {
-	var orders []t.Order
-	for _, o := range db.GetFilledLimitShortOrders(qo) {
-		if ticker.Price < o.OpenPrice {
-			order := TPShortNow(db, bp, ticker, o)
-			if order != nil {
-				orders = append(orders, *order)
-			}
-		} else if ticker.Price > o.OpenPrice {
-			order := SLShortNow(db, bp, ticker, o)
-			if order != nil {
-				orders = append(orders, *order)
-			}
-		}
-	}
-	return orders
-}
-
-// CloseOpposite creates STOP orders for the older opposite order
-// when LONG/SHORT orders have been openned at the same time
-func CloseOpposite(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.Order {
-	var orders []t.Order
-	lorders := db.GetFilledLimitLongOrders(qo)
-	sorders := db.GetFilledLimitShortOrders(qo)
-	if len(lorders) > 0 && len(sorders) > 0 {
-		if lorders[0].OpenTime < sorders[0].OpenTime {
-			orders = CloseLong(db, bp, qo, ticker)
-		} else {
-			orders = CloseShort(db, bp, qo, ticker)
-		}
-	}
-	return orders
 }
 
 // SLLongNow creates a SL order of the LONG order from the ticker price
