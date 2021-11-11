@@ -95,8 +95,8 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 
 	const timeGap = 5 * 60 * 1000 // min * sec * milisec
 
-	shouldOpenLong := r30m > 0.9 && r20m > 0.9 && r10m > 0.9 && r5m > 0.9
-	shouldOpenShort := r30m < 0.1 && r20m < 0.1 && r10m < 0.1 && r5m < 0.1
+	shouldOpenLong := r30m > 0.8 && r20m > 0.8 && r10m > 0.8 && r5m > 0.8
+	shouldOpenShort := r30m < 0.2 && r20m < 0.2 && r10m < 0.2 && r5m < 0.2
 
 	if shouldOpenLong && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewLong) {
 		openPrice := h.CalcStopLowerTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
