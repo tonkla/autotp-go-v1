@@ -112,19 +112,14 @@ func GetTrend(hprices []t.HistoricalPrice, period int) int {
 	return trend
 }
 
-// GetATR returns @tonkla's ATR, that is not the "J. Welles Wilder Jr."'s ATR :-P
-func GetATR(prices []t.HistoricalPrice, period int) *float64 {
-	if len(prices) == 0 || len(prices) <= period {
-		return nil
-	}
-
+// GetSimpleATR returns a simple ATR, not the J. Welles Wilder Jr.'s ATR
+func GetSimpleATR(prices []t.HistoricalPrice, period int) float64 {
 	var h, l = GetHighsLows(prices)
 	hwma := talib.WMA(h, period)
 	hma_0 := hwma[len(hwma)-1]
 	lwma := talib.WMA(l, period)
 	lma_0 := lwma[len(lwma)-1]
-	atr := hma_0 - lma_0
-	return &atr
+	return hma_0 - lma_0
 }
 
 // GetGridRange returns the lower number and the upper number that closed to the target number

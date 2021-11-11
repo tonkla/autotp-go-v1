@@ -36,7 +36,7 @@ func TestGetATR(t *testing.T) {
 	atr1 := r[len(r)-1]
 	t.Error("TALib ATR:\t", atr1)
 
-	atr2 := GetATR(bars, period)
+	atr2 := GetSimpleATR(bars, period)
 	t.Error("Custom ATR:\t", atr2)
 
 	t.Error("Skip")

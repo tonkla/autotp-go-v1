@@ -88,15 +88,25 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		if s.BP.ApplyTA {
 			const numberOfBars = 50
 			prices2nd := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATf2nd, numberOfBars)
-			atr2nd := common.GetATR(prices2nd, int(s.BP.MAPeriod2nd))
-			if atr2nd == nil || !common.IsLowerMA(ticker.Price, prices2nd, s.BP.MAPeriod2nd, 0.4**atr2nd) {
+			if len(prices2nd) < numberOfBars {
+				return &t.TradeOrders{
+					CloseOrders: closeOrders,
+				}
+			}
+			atr2nd := common.GetSimpleATR(prices2nd, int(s.BP.MAPeriod2nd))
+			if !common.IsLowerMA(ticker.Price, prices2nd, s.BP.MAPeriod2nd, 0.4*atr2nd) {
 				return &t.TradeOrders{
 					CloseOrders: closeOrders,
 				}
 			}
 			prices3rd := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATf3rd, numberOfBars)
-			atr3rd := common.GetATR(prices3rd, int(s.BP.MAPeriod3rd))
-			if atr3rd == nil || !common.IsLowerMA(ticker.Price, prices3rd, s.BP.MAPeriod3rd, 0.4**atr3rd) {
+			if len(prices3rd) < numberOfBars {
+				return &t.TradeOrders{
+					CloseOrders: closeOrders,
+				}
+			}
+			atr3rd := common.GetSimpleATR(prices3rd, int(s.BP.MAPeriod3rd))
+			if !common.IsLowerMA(ticker.Price, prices3rd, s.BP.MAPeriod3rd, 0.4*atr3rd) {
 				return &t.TradeOrders{
 					CloseOrders: closeOrders,
 				}

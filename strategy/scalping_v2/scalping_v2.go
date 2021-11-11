@@ -99,7 +99,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	shouldOpenShort := r30m < 0.2 && r20m < 0.2 && r10m < 0.2 && r5m < 0.2
 
 	if shouldOpenLong && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewLong) {
-		openPrice := h.CalcStopLowerTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
+		openPrice := h.CalcStopUpperTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
 		qo.OpenPrice = openPrice
 		qo.Side = t.OrderSideBuy
 		norder := s.DB.GetNearestOrder(qo)
@@ -125,7 +125,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	}
 
 	if shouldOpenShort && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewShort) {
-		openPrice := h.CalcStopUpperTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
+		openPrice := h.CalcStopLowerTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
 		qo.OpenPrice = openPrice
 		qo.Side = t.OrderSideSell
 		norder := s.DB.GetNearestOrder(qo)
