@@ -105,8 +105,8 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	p_0 := prices[len(prices)-1]
 	t_0 := p_0.Time
 
-	shouldOpenLong := *percent < 0.2
-	shouldOpenShort := *percent > 0.8
+	shouldOpenLong := *percent > 0.9
+	shouldOpenShort := *percent < 0.1
 
 	if shouldOpenLong && shouldOpenShort {
 		return &t.TradeOrders{
