@@ -323,7 +323,7 @@ func GetHL(prices []t.HistoricalPrice) (float64, float64) {
 		if p.High > h {
 			h = p.High
 		}
-		if p.Low < l {
+		if l == 0 || p.Low < l {
 			l = p.Low
 		}
 	}
