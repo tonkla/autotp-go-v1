@@ -64,15 +64,20 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		}
 	}
 
-	numberOfBars := h.ConvertTfString(s.BP.MATf3rd)
-
-	prices := s.EX.GetHistoricalPrices(s.BP.Symbol, "1m", numberOfBars)
-	if len(prices) < numberOfBars || prices[len(prices)-1].Open == 0 {
+	numberOfBars := h.ConvertTfString(s.BP.MATf2nd)
+	prices2nd := s.EX.GetHistoricalPrices(s.BP.Symbol, "1m", numberOfBars)
+	if len(prices2nd) < numberOfBars || prices2nd[len(prices2nd)-1].Open == 0 {
 		return nil
 	}
 
-	percent := common.GetTruePercentHL(prices, ticker)
+	percent := common.GetTruePercentHL(prices2nd, ticker)
 	if percent == nil {
+		return nil
+	}
+
+	numberOfBars = 50
+	prices := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATf3rd, numberOfBars)
+	if len(prices) < numberOfBars || prices[len(prices)-1].Open == 0 {
 		return nil
 	}
 
