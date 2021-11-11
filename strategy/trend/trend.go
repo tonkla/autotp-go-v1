@@ -88,6 +88,13 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	shouldOpenLong := lma_1 < lma_0 && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewLong)
 	shouldOpenShort := hma_1 > hma_0 && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewShort)
 
+	if shouldOpenLong && shouldOpenShort {
+		return &t.TradeOrders{
+			CloseOrders:  closeOrders,
+			CancelOrders: cancelOrders,
+		}
+	}
+
 	if shouldOpenLong {
 		openPrice := h.CalcStopLowerTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
 		if openPrice < hma_0 {
