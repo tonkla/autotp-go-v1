@@ -272,52 +272,8 @@ func GetHighsLowsCloses(prices []t.HistoricalPrice) ([]float64, []float64, []flo
 	return h, l, c
 }
 
-// GetPercentHL returns a percentage of the ticker price between the High-Low (High=1<-ticker->0=Low)
-func GetPercentHL(prices []t.HistoricalPrice, ticker t.Ticker) *float64 {
-	if ticker.Price == 0 || len(prices) == 0 || prices[len(prices)-1].Open == 0 || prices[len(prices)-2].Open == 0 {
-		return nil
-	}
-
-	p_0 := prices[len(prices)-1]
-	p_1 := prices[len(prices)-2]
-	h_0 := p_0.High
-	l_0 := p_0.Low
-	h_1 := p_1.High
-	l_1 := p_1.Low
-	hh := ticker.Price
-	ll := ticker.Price
-
-	if h_0 > hh {
-		hh = h_0
-	}
-	if h_1 > hh {
-		hh = h_1
-	}
-
-	if l_0 < ll {
-		ll = l_0
-	}
-	if l_1 < ll {
-		ll = l_1
-	}
-
-	percent := (ticker.Price - ll) / (hh - ll)
-	return &percent
-}
-
-// GetTruePercentHL returns a percentage of the ticker price between the 1min-based High-Low
-func GetTruePercentHL(prices []t.HistoricalPrice, ticker t.Ticker) *float64 {
-	if ticker.Price == 0 || len(prices) == 0 {
-		return nil
-	}
-
-	hh, ll := GetHL(prices)
-	percent := (ticker.Price - ll) / (hh - ll)
-	return &percent
-}
-
-// GetHL finds the hightest value and the lowest value of the serie
-func GetHL(prices []t.HistoricalPrice) (float64, float64) {
+// GetHLRatio returns a ratio of the ticker price compared to the previous Highest<->Lowest
+func GetHLRatio(prices []t.HistoricalPrice, ticker t.Ticker) float64 {
 	var h, l float64
 	for _, p := range prices {
 		if p.High > h {
@@ -327,7 +283,7 @@ func GetHL(prices []t.HistoricalPrice) (float64, float64) {
 			l = p.Low
 		}
 	}
-	return h, l
+	return (ticker.Price - l) / (h - l)
 }
 
 // CloseLong creates STOP orders for active LONG orders at the ticker price

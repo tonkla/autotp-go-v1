@@ -97,7 +97,7 @@ func TestGetGridZones(t *testing.T) {
 	}
 }
 
-func TestGetPercentHL(t *testing.T) {
+func TestGetHLRatio(t *testing.T) {
 	type expect struct {
 		i types.Ticker
 		o float64
@@ -118,13 +118,9 @@ func TestGetPercentHL(t *testing.T) {
 	}
 
 	for _, d := range data {
-		r := GetPercentHL(prices, d.i)
-		if r == nil {
-			t.Error()
-		} else {
-			if d.o != *r {
-				t.Errorf("Expect: %f, Got: %f", d.o, *r)
-			}
+		r := GetHLRatio(prices, d.i)
+		if d.o != r {
+			t.Errorf("Expect: %f, Got: %f", d.o, r)
 		}
 	}
 }
@@ -138,18 +134,12 @@ func TestGetPercentHLTicker(t *testing.T) {
 	if ticker == nil {
 		return
 	}
-	p4h := GetPercentHL(prices4h, *ticker)
-	if p4h != nil {
-		t.Errorf(" 4H: %f", *p4h)
-	}
-	p1h := GetPercentHL(prices1h, *ticker)
-	if p1h != nil {
-		t.Errorf(" 1H: %f", *p1h)
-	}
-	p15m := GetPercentHL(prices15m, *ticker)
-	if p15m != nil {
-		t.Errorf("15M: %f", *p15m)
-	}
+	p4h := GetHLRatio(prices4h, *ticker)
+	t.Errorf(" 4H: %f", p4h)
+	p1h := GetHLRatio(prices1h, *ticker)
+	t.Errorf(" 1H: %f", p1h)
+	p15m := GetHLRatio(prices15m, *ticker)
+	t.Errorf("15M: %f", p15m)
 }
 
 func TestGetHighsLows(t *testing.T) {

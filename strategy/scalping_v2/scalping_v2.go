@@ -5,7 +5,6 @@ import (
 	h "github.com/tonkla/autotp/helper"
 	"github.com/tonkla/autotp/rdb"
 	"github.com/tonkla/autotp/strategy/common"
-	"github.com/tonkla/autotp/talib"
 	t "github.com/tonkla/autotp/types"
 )
 
@@ -64,30 +63,12 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		}
 	}
 
-	numberOfBars := h.ConvertTfString(s.BP.MATf2nd)
-	prices2nd := s.EX.GetHistoricalPrices(s.BP.Symbol, "1m", numberOfBars)
-	if len(prices2nd) < numberOfBars || prices2nd[len(prices2nd)-1].Open == 0 {
+	const numberOfBars = 30
+
+	prices1min := s.EX.GetHistoricalPrices(s.BP.Symbol, "1m", numberOfBars)
+	if len(prices1min) < numberOfBars || prices1min[len(prices1min)-1].Open == 0 {
 		return nil
 	}
-
-	percent := common.GetTruePercentHL(prices2nd, ticker)
-	if percent == nil {
-		return nil
-	}
-
-	numberOfBars = 50
-	prices := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATf3rd, numberOfBars)
-	if len(prices) < numberOfBars || prices[len(prices)-1].Open == 0 {
-		return nil
-	}
-
-	highs, lows := common.GetHighsLows(prices)
-	hma := talib.WMA(highs, int(s.BP.MAPeriod3rd))
-	hma_0 := hma[len(hma)-1]
-	lma := talib.WMA(lows, int(s.BP.MAPeriod3rd))
-	lma_0 := lma[len(lma)-1]
-
-	atr := hma_0 - lma_0
 
 	qo.Qty = h.NormalizeDouble(s.BP.BaseQty, s.BP.QtyDigits)
 	qty := h.NormalizeDouble(s.BP.QuoteQty/ticker.Price, s.BP.QtyDigits)
@@ -96,29 +77,26 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	}
 
 	if s.BP.AutoSL {
-		closeOrders = append(closeOrders, common.SLLong(s.DB, s.BP, qo, ticker, atr)...)
-		closeOrders = append(closeOrders, common.SLShort(s.DB, s.BP, qo, ticker, atr)...)
+		closeOrders = append(closeOrders, common.SLLong(s.DB, s.BP, qo, ticker, 0)...)
+		closeOrders = append(closeOrders, common.SLShort(s.DB, s.BP, qo, ticker, 0)...)
 		closeOrders = append(closeOrders, common.TimeSL(s.DB, s.BP, qo, ticker)...)
 	}
 
 	if s.BP.AutoTP {
-		closeOrders = append(closeOrders, common.TPLong(s.DB, s.BP, qo, ticker, atr)...)
-		closeOrders = append(closeOrders, common.TPShort(s.DB, s.BP, qo, ticker, atr)...)
+		closeOrders = append(closeOrders, common.TPLong(s.DB, s.BP, qo, ticker, 0)...)
+		closeOrders = append(closeOrders, common.TPShort(s.DB, s.BP, qo, ticker, 0)...)
 		closeOrders = append(closeOrders, common.TimeTP(s.DB, s.BP, qo, ticker)...)
 	}
 
-	p_0 := prices[len(prices)-1]
-	t_0 := p_0.Time
+	r30m := common.GetHLRatio(prices1min[len(prices1min)-30:], ticker)
+	r20m := common.GetHLRatio(prices1min[len(prices1min)-20:], ticker)
+	r10m := common.GetHLRatio(prices1min[len(prices1min)-10:], ticker)
+	r5m := common.GetHLRatio(prices1min[len(prices1min)-5:], ticker)
 
-	shouldOpenLong := *percent > 0.9
-	shouldOpenShort := *percent < 0.1
+	const timeGap = 5 * 60 * 1000 // min * sec * milisec
 
-	if shouldOpenLong && shouldOpenShort {
-		return &t.TradeOrders{
-			CloseOrders:  closeOrders,
-			CancelOrders: cancelOrders,
-		}
-	}
+	shouldOpenLong := r30m > 0.9 && r20m > 0.9 && r10m > 0.9 && r5m > 0.9
+	shouldOpenShort := r30m < 0.1 && r20m < 0.1 && r10m < 0.1 && r5m < 0.1
 
 	if shouldOpenLong && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewLong) {
 		openPrice := h.CalcStopLowerTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
@@ -141,7 +119,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 				o.PosSide = t.OrderPosSideLong
 			}
 			openOrders = append(openOrders, o)
-		} else if norder.Status == t.OrderStatusNew && norder.OpenTime < t_0 {
+		} else if norder.Status == t.OrderStatusNew && h.Now13()-norder.OpenTime > timeGap {
 			cancelOrders = append(cancelOrders, *norder)
 		}
 	}
@@ -167,7 +145,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 				o.PosSide = t.OrderPosSideShort
 			}
 			openOrders = append(openOrders, o)
-		} else if norder.Status == t.OrderStatusNew && norder.OpenTime < t_0 {
+		} else if norder.Status == t.OrderStatusNew && h.Now13()-norder.OpenTime > timeGap {
 			cancelOrders = append(cancelOrders, *norder)
 		}
 	}

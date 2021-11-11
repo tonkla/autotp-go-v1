@@ -107,10 +107,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	p_0 := prices[len(prices)-1]
 	t_0 := p_0.Time
 
-	percent := common.GetPercentHL(prices, ticker)
-	if percent == nil {
-		return nil
-	}
+	percent := common.GetHLRatio(prices, ticker)
 
 	closes2nd := common.GetCloses(prices2nd)
 	cma2nd := talib.WMA(closes2nd, int(s.BP.MAPeriod2nd))
@@ -137,8 +134,8 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		}
 	}
 
-	shouldOpenLong := cma2nd_1 < cma2nd_0 && lma_1 < lma_0 && *percent < 0.2 && ticker.Price < hma_0
-	shouldOpenShort := cma2nd_1 > cma2nd_0 && hma_1 > hma_0 && *percent > 0.8 && ticker.Price > lma_0
+	shouldOpenLong := cma2nd_1 < cma2nd_0 && lma_1 < lma_0 && percent < 0.2 && ticker.Price < hma_0
+	shouldOpenShort := cma2nd_1 > cma2nd_0 && hma_1 > hma_0 && percent > 0.8 && ticker.Price > lma_0
 
 	if shouldOpenLong && shouldOpenShort {
 		return &t.TradeOrders{
