@@ -75,10 +75,12 @@ func NormalizeDouble(number float64, digits int64) float64 {
 	return math.Round(number*pow) / pow
 }
 
+// Round extends math.Round for special usecase
 func Round(number float64, pow float64) float64 {
 	return math.Round(number*pow) / pow
 }
 
+// ContainsString checks the string is in the string slice
 func ContainsString(sl []string, v string) bool {
 	for _, vv := range sl {
 		if vv == v {
@@ -86,4 +88,26 @@ func ContainsString(sl []string, v string) bool {
 		}
 	}
 	return false
+}
+
+// ConvertTfString converts a timeframe string to a minute integer
+func ConvertTfString(timeframe string) int {
+	switch timeframe {
+	case "5m":
+		return 5
+	case "10m":
+		return 10
+	case "15m":
+		return 15
+	case "30m":
+		return 30
+	case "1h":
+		return 60
+	case "4h":
+		return 240
+	case "1d":
+		return 1440
+	default:
+		return 1
+	}
 }

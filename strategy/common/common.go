@@ -305,6 +305,31 @@ func GetPercentHL(prices []t.HistoricalPrice, ticker t.Ticker) *float64 {
 	return &percent
 }
 
+// GetTruePercentHL returns a percentage of the ticker price between the 1min-based High-Low
+func GetTruePercentHL(prices []t.HistoricalPrice, ticker t.Ticker) *float64 {
+	if ticker.Price == 0 || len(prices) == 0 {
+		return nil
+	}
+
+	hh, ll := GetHL(prices)
+	percent := (ticker.Price - ll) / (hh - ll)
+	return &percent
+}
+
+// GetHL finds the hightest value and the lowest value of the serie
+func GetHL(prices []t.HistoricalPrice) (float64, float64) {
+	var h, l float64
+	for _, p := range prices {
+		if p.High > h {
+			h = p.High
+		}
+		if p.Low < l {
+			l = p.Low
+		}
+	}
+	return h, l
+}
+
 // CloseLong creates STOP orders for active LONG orders at the ticker price
 func CloseLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.Order {
 	var orders []t.Order
