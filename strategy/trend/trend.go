@@ -1,6 +1,8 @@
 package trend
 
 import (
+	"math"
+
 	"github.com/tonkla/autotp/exchange"
 	h "github.com/tonkla/autotp/helper"
 	"github.com/tonkla/autotp/rdb"
@@ -127,7 +129,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 			_qo.Side = t.OrderSideBuy
 			_qo.OpenPrice = openPrice
 			norder := s.DB.GetNearestOrder(_qo)
-			if norder == nil || norder.OpenPrice-openPrice >= s.BP.OrderGap {
+			if norder == nil || math.Abs(norder.OpenPrice-openPrice) >= s.BP.OrderGap {
 				o := t.Order{
 					ID:        h.GenID(),
 					BotID:     s.BP.BotID,
@@ -154,7 +156,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 			_qo.Side = t.OrderSideSell
 			_qo.OpenPrice = openPrice
 			norder := s.DB.GetNearestOrder(_qo)
-			if norder == nil || openPrice-norder.OpenPrice >= s.BP.OrderGap {
+			if norder == nil || math.Abs(openPrice-norder.OpenPrice) >= s.BP.OrderGap {
 				o := t.Order{
 					ID:        h.GenID(),
 					BotID:     s.BP.BotID,
