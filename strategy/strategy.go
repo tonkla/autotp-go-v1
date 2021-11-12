@@ -7,7 +7,7 @@ import (
 	"github.com/tonkla/autotp/rdb"
 	"github.com/tonkla/autotp/strategy/daily"
 	"github.com/tonkla/autotp/strategy/grid"
-	scalping "github.com/tonkla/autotp/strategy/scalping_v2"
+	"github.com/tonkla/autotp/strategy/scalping"
 	"github.com/tonkla/autotp/strategy/trend"
 	t "github.com/tonkla/autotp/types"
 )

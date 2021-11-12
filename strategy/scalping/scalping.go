@@ -64,13 +64,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		}
 	}
 
-	const numberOfBars = 50
-
-	prices2nd := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATf2nd, numberOfBars)
-	if len(prices2nd) < numberOfBars || prices2nd[len(prices2nd)-1].Open == 0 || prices2nd[len(prices2nd)-2].Open == 0 {
-		return nil
-	}
-
+	numberOfBars := 50
 	prices := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATf3rd, numberOfBars)
 	if len(prices) < numberOfBars || prices[len(prices)-1].Open == 0 || prices[len(prices)-2].Open == 0 {
 		return nil
@@ -104,45 +98,29 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		closeOrders = append(closeOrders, common.TimeTP(s.DB, s.BP, qo, ticker)...)
 	}
 
-	p_0 := prices[len(prices)-1]
-	t_0 := p_0.Time
-
-	percent := common.GetHLRatio(prices, ticker)
-
-	closes2nd := common.GetCloses(prices2nd)
-	cma2nd := talib.WMA(closes2nd, int(s.BP.MAPeriod2nd))
-	cma2nd_0 := cma2nd[len(cma2nd)-1]
-	cma2nd_1 := cma2nd[len(cma2nd)-2]
-
-	shouldCloseLong := cma2nd_1 > cma2nd_0 && hma_1 > hma_0
-	shouldCloseShort := cma2nd_1 < cma2nd_0 && lma_1 < lma_0
-
-	if shouldCloseLong || shouldCloseShort {
-		if shouldCloseLong {
-			cancelOrders = append(cancelOrders, s.DB.GetNewLimitLongOrders(qo)...)
-			closeOrders = append(closeOrders, common.CloseLong(s.DB, s.BP, qo, ticker)...)
-		}
-		if shouldCloseShort {
-			cancelOrders = append(cancelOrders, s.DB.GetNewLimitShortOrders(qo)...)
-			closeOrders = append(closeOrders, common.CloseShort(s.DB, s.BP, qo, ticker)...)
-		}
-		if len(cancelOrders) > 0 || len(closeOrders) > 0 {
-			return &t.TradeOrders{
-				CloseOrders:  closeOrders,
-				CancelOrders: cancelOrders,
-			}
+	if len(closeOrders) > 0 {
+		return &t.TradeOrders{
+			CloseOrders: closeOrders,
 		}
 	}
 
-	shouldOpenLong := cma2nd_1 < cma2nd_0 && lma_1 < lma_0 && percent < 0.2 && ticker.Price < hma_0
-	shouldOpenShort := cma2nd_1 > cma2nd_0 && hma_1 > hma_0 && percent > 0.8 && ticker.Price > lma_0
+	numberOfBars = 10
+	prices1min := s.EX.GetHistoricalPrices(s.BP.Symbol, "1m", numberOfBars)
+	if len(prices1min) < numberOfBars || prices1min[len(prices1min)-1].Open == 0 {
+		return nil
+	}
+
+	r10m := common.GetHLRatio(prices1min[len(prices1min)-10:], ticker)
+	r5m := common.GetHLRatio(prices1min[len(prices1min)-5:], ticker)
+
+	shouldOpenLong := hma_1 < hma_0 && lma_1 < lma_0 && ticker.Price < hma_0 && (r10m < 0.1 || r5m < 0.1)
+	shouldOpenShort := hma_1 > hma_0 && lma_1 > lma_0 && ticker.Price > lma_0 && (r10m > 0.9 || r5m > 0.9)
 
 	if shouldOpenLong && shouldOpenShort {
-		return &t.TradeOrders{
-			CloseOrders:  closeOrders,
-			CancelOrders: cancelOrders,
-		}
+		return nil
 	}
+
+	const timeGap = 5 * 60 * 1000 // min * sec * millisec
 
 	if shouldOpenLong && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewLong) {
 		openPrice := h.CalcStopLowerTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
@@ -165,7 +143,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 				o.PosSide = t.OrderPosSideLong
 			}
 			openOrders = append(openOrders, o)
-		} else if norder.Status == t.OrderStatusNew && norder.OpenTime < t_0 {
+		} else if norder.Status == t.OrderStatusNew && h.Now13()-norder.OpenTime > timeGap {
 			cancelOrders = append(cancelOrders, *norder)
 		}
 	}
@@ -191,14 +169,13 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 				o.PosSide = t.OrderPosSideShort
 			}
 			openOrders = append(openOrders, o)
-		} else if norder.Status == t.OrderStatusNew && norder.OpenTime < t_0 {
+		} else if norder.Status == t.OrderStatusNew && h.Now13()-norder.OpenTime > timeGap {
 			cancelOrders = append(cancelOrders, *norder)
 		}
 	}
 
 	return &t.TradeOrders{
 		OpenOrders:   openOrders,
-		CloseOrders:  closeOrders,
 		CancelOrders: cancelOrders,
 	}
 }

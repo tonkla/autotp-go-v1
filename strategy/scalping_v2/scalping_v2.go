@@ -93,13 +93,13 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	r10m := common.GetHLRatio(prices1min[len(prices1min)-10:], ticker)
 	r5m := common.GetHLRatio(prices1min[len(prices1min)-5:], ticker)
 
-	const timeGap = 5 * 60 * 1000 // min * sec * milisec
+	const timeGap = 5 * 60 * 1000 // min * sec * millisec
 
 	shouldOpenLong := r30m > 0.8 && r20m > 0.8 && r10m > 0.8 && r5m > 0.8
 	shouldOpenShort := r30m < 0.2 && r20m < 0.2 && r10m < 0.2 && r5m < 0.2
 
 	if shouldOpenLong && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewLong) {
-		openPrice := h.CalcStopUpperTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
+		openPrice := h.CalcStopLowerTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
 		qo.OpenPrice = openPrice
 		qo.Side = t.OrderSideBuy
 		norder := s.DB.GetNearestOrder(qo)
@@ -125,7 +125,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	}
 
 	if shouldOpenShort && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewShort) {
-		openPrice := h.CalcStopLowerTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
+		openPrice := h.CalcStopUpperTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
 		qo.OpenPrice = openPrice
 		qo.Side = t.OrderSideSell
 		norder := s.DB.GetNearestOrder(qo)
