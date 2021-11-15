@@ -22,7 +22,8 @@ func LogNew(o types.Order) {
 		Open:   o.OpenPrice,
 		Zone:   o.ZonePrice,
 	}
-	Logf("\n%+v\n", l)
+	Logf("\n")
+	Log(l)
 }
 
 func LogNewF(o types.Order) {
@@ -33,7 +34,8 @@ func LogNewF(o types.Order) {
 		Qty:     o.Qty,
 		Open:    o.OpenPrice,
 	}
-	Logf("\n%+v\n", l)
+	Logf("\n")
+	Log(l)
 }
 
 func LogFilled(o types.Order) {
