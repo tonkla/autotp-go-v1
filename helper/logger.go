@@ -15,11 +15,47 @@ func Logf(format string, v ...interface{}) {
 }
 
 func LogNew(o types.Order) {
-	logOpen("NEW", o)
+	l := types.LogOpenOrder{
+		Action: "NEW",
+		Type:   o.Type,
+		Qty:    o.Qty,
+		Open:   o.OpenPrice,
+		Zone:   o.ZonePrice,
+	}
+	Logf("\n%+v\n", l)
+}
+
+func LogNewF(o types.Order) {
+	l := types.LogOpenFOrder{
+		Action:  "NEW",
+		Type:    o.Type,
+		PosSide: o.PosSide,
+		Qty:     o.Qty,
+		Open:    o.OpenPrice,
+	}
+	Logf("\n%+v\n", l)
 }
 
 func LogFilled(o types.Order) {
-	logOpen("FILLED", o)
+	l := types.LogOpenOrder{
+		Action: "FILLED",
+		Type:   o.Type,
+		Qty:    o.Qty,
+		Open:   o.OpenPrice,
+		Zone:   o.ZonePrice,
+	}
+	Log(l)
+}
+
+func LogFilledF(o types.Order) {
+	l := types.LogOpenFOrder{
+		Action:  "FILLED",
+		Type:    o.Type,
+		PosSide: o.PosSide,
+		Qty:     o.Qty,
+		Open:    o.OpenPrice,
+	}
+	Log(l)
 }
 
 func LogCanceled(o types.Order) {
@@ -30,15 +66,7 @@ func LogCanceled(o types.Order) {
 		Open:   o.OpenPrice,
 		Zone:   o.ZonePrice,
 	}
-	log.Printf("%+v\n\n", l)
-}
-
-func LogNewF(o types.Order) {
-	logOpenF("NEW", o)
-}
-
-func LogFilledF(o types.Order) {
-	logOpenF("FILLED", o)
+	Log(l)
 }
 
 func LogCanceledF(o types.Order) {
@@ -49,7 +77,7 @@ func LogCanceledF(o types.Order) {
 		Qty:     o.Qty,
 		Open:    o.OpenPrice,
 	}
-	log.Printf("%+v\n\n", l)
+	Log(l)
 }
 
 func LogClosed(open types.Order, close types.Order) {
@@ -62,7 +90,7 @@ func LogClosed(open types.Order, close types.Order) {
 		Close:  open.ClosePrice,
 		Profit: open.PL,
 	}
-	log.Printf("%+v\n\n", l)
+	Log(l)
 }
 
 func LogClosedF(open types.Order, close types.Order) {
@@ -74,28 +102,6 @@ func LogClosedF(open types.Order, close types.Order) {
 		Open:    open.OpenPrice,
 		Close:   open.ClosePrice,
 		Profit:  open.PL,
-	}
-	log.Printf("%+v\n\n", l)
-}
-
-func logOpen(action string, o types.Order) {
-	l := types.LogOpenOrder{
-		Action: action,
-		Type:   o.Type,
-		Qty:    o.Qty,
-		Open:   o.OpenPrice,
-		Zone:   o.ZonePrice,
-	}
-	Log(l)
-}
-
-func logOpenF(action string, o types.Order) {
-	l := types.LogOpenFOrder{
-		Action:  action,
-		Type:    o.Type,
-		PosSide: o.PosSide,
-		Qty:     o.Qty,
-		Open:    o.OpenPrice,
 	}
 	Log(l)
 }

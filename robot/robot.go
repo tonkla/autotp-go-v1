@@ -243,7 +243,31 @@ func syncStatus(o t.Order, p *app.AppParams) {
 		h.Log(err)
 		return
 	}
+
 	if exo.Status == t.OrderStatusNew {
+		const timeGap = 10 * 60 * 1000 // min * sec * millisec
+		if h.Now13()-o.OpenTime > timeGap {
+			exo, err = p.EX.CancelOrder(o)
+			if err != nil || exo == nil {
+				h.Log(err)
+				return
+			}
+
+			o.Status = exo.Status
+			o.UpdateTime = exo.UpdateTime
+			o.CloseTime = h.Now13()
+			err = p.DB.UpdateOrder(o)
+			if err != nil {
+				h.Log(err)
+				return
+			}
+
+			if o.PosSide != "" {
+				h.LogCanceledF(o)
+			} else {
+				h.LogCanceled(o)
+			}
+		}
 		return
 	}
 
