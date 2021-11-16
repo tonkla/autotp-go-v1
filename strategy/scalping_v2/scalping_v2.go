@@ -88,6 +88,12 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		closeOrders = append(closeOrders, common.TimeTP(s.DB, s.BP, qo, ticker)...)
 	}
 
+	if len(closeOrders) > 0 {
+		return &t.TradeOrders{
+			CloseOrders: closeOrders,
+		}
+	}
+
 	r30m := common.GetHLRatio(prices1min[len(prices1min)-30:], ticker)
 	r20m := common.GetHLRatio(prices1min[len(prices1min)-20:], ticker)
 	r10m := common.GetHLRatio(prices1min[len(prices1min)-10:], ticker)
