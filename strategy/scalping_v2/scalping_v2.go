@@ -63,13 +63,6 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		}
 	}
 
-	const numberOfBars = 30
-
-	prices1min := s.EX.GetHistoricalPrices(s.BP.Symbol, "1m", numberOfBars)
-	if len(prices1min) < numberOfBars || prices1min[len(prices1min)-1].Open == 0 {
-		return nil
-	}
-
 	qo.Qty = h.NormalizeDouble(s.BP.BaseQty, s.BP.QtyDigits)
 	qty := h.NormalizeDouble(s.BP.QuoteQty/ticker.Price, s.BP.QtyDigits)
 	if qty > qo.Qty {
@@ -94,13 +87,17 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		}
 	}
 
-	r30m := common.GetHLRatio(prices1min[len(prices1min)-30:], ticker)
-	r20m := common.GetHLRatio(prices1min[len(prices1min)-20:], ticker)
-	r10m := common.GetHLRatio(prices1min[len(prices1min)-10:], ticker)
+	const numberOfBars = 10
+	prices1min := s.EX.GetHistoricalPrices(s.BP.Symbol, "1m", numberOfBars)
+	if len(prices1min) < numberOfBars || prices1min[len(prices1min)-1].Open == 0 {
+		return nil
+	}
+
+	r6m := common.GetHLRatio(prices1min[len(prices1min)-6:], ticker)
 	r5m := common.GetHLRatio(prices1min[len(prices1min)-5:], ticker)
 
-	shouldOpenLong := r30m > 0.8 && r20m > 0.8 && r10m > 0.8 && r5m > 0.8
-	shouldOpenShort := r30m < 0.2 && r20m < 0.2 && r10m < 0.2 && r5m < 0.2
+	shouldOpenLong := r6m < r5m && r5m > 0.9
+	shouldOpenShort := r6m > r5m && r5m < 0.1
 
 	if shouldOpenLong && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewLong) {
 		openPrice := h.CalcStopLowerTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
