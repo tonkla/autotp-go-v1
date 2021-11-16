@@ -204,6 +204,7 @@ type BotParams struct {
 	MATf3rd     string
 	MAPeriod3rd int64
 	OrderGap    float64
+	OrderGapATR float64
 	MoS         float64
 
 	AutoSL    bool

@@ -87,6 +87,7 @@ func main() {
 		MATf3rd:     viper.GetString("maTf3rd"),
 		MAPeriod3rd: viper.GetInt64("maPeriod3rd"),
 		OrderGap:    viper.GetFloat64("orderGap"),
+		OrderGapATR: viper.GetFloat64("orderGapATR"),
 		MoS:         viper.GetFloat64("mos"),
 
 		AutoSL:    viper.GetBool("autoSL"),

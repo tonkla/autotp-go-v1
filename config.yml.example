@@ -89,6 +89,9 @@ maPeriod3rd: 20
 # The minimum price gap between two orders (values in a base currency)
 orderGap: 10
 
+# The minimum price gap between two orders (values in %ATR)
+orderGapATR: 0.5
+
 # The Margin-of-Safety multiplier from the high/low of the previous bar
 mos: 0.5
 

@@ -66,17 +66,14 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	lma_0 := lma[len(lma)-1]
 	lma_1 := lma[len(lma)-2]
 
+	atr := hma_0 - lma_0
+
 	h_0 := highs[len(highs)-1]
 	l_0 := lows[len(lows)-1]
 	h_1 := highs[len(highs)-2]
 	l_1 := lows[len(lows)-2]
 	h_2 := highs[len(highs)-3]
 	l_2 := lows[len(lows)-3]
-
-	atr := 0.0
-	if s.BP.AtrSL > 0 || s.BP.AtrTP > 0 {
-		atr = common.GetSimpleATR(prices, int(s.BP.MAPeriod1st))
-	}
 
 	qo.Qty = h.NormalizeDouble(s.BP.BaseQty, s.BP.QtyDigits)
 	qty := h.NormalizeDouble(s.BP.QuoteQty/ticker.Price, s.BP.QtyDigits)
@@ -143,7 +140,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 			_qo.Side = t.OrderSideBuy
 			_qo.OpenPrice = openPrice
 			norder := s.DB.GetNearestOrder(_qo)
-			if norder == nil || math.Abs(norder.OpenPrice-openPrice) >= s.BP.OrderGap {
+			if norder == nil || math.Abs(norder.OpenPrice-openPrice) >= s.BP.OrderGapATR*atr {
 				o := t.Order{
 					ID:        h.GenID(),
 					BotID:     s.BP.BotID,
@@ -170,7 +167,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 			_qo.Side = t.OrderSideSell
 			_qo.OpenPrice = openPrice
 			norder := s.DB.GetNearestOrder(_qo)
-			if norder == nil || math.Abs(openPrice-norder.OpenPrice) >= s.BP.OrderGap {
+			if norder == nil || math.Abs(openPrice-norder.OpenPrice) >= s.BP.OrderGapATR*atr {
 				o := t.Order{
 					ID:        h.GenID(),
 					BotID:     s.BP.BotID,
