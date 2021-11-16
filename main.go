@@ -98,6 +98,8 @@ func main() {
 		TimeSecSL: viper.GetInt64("timeSecSL"),
 		TimeSecTP: viper.GetInt64("timeSecTP"),
 
+		TimeSecCancel: viper.GetInt64("timeSecCancel"),
+
 		CloseLong:  viper.GetBool("closeLong"),
 		CloseShort: viper.GetBool("closeShort"),
 

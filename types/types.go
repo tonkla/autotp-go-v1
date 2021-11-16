@@ -215,6 +215,8 @@ type BotParams struct {
 	TimeSecSL int64
 	TimeSecTP int64
 
+	TimeSecCancel int64
+
 	CloseLong  bool
 	CloseShort bool
 

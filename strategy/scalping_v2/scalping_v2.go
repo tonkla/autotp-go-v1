@@ -93,8 +93,6 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	r10m := common.GetHLRatio(prices1min[len(prices1min)-10:], ticker)
 	r5m := common.GetHLRatio(prices1min[len(prices1min)-5:], ticker)
 
-	const timeGap = 5 * 60 * 1000 // min * sec * millisec
-
 	shouldOpenLong := r30m > 0.8 && r20m > 0.8 && r10m > 0.8 && r5m > 0.8
 	shouldOpenShort := r30m < 0.2 && r20m < 0.2 && r10m < 0.2 && r5m < 0.2
 
@@ -119,8 +117,6 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 				o.PosSide = t.OrderPosSideLong
 			}
 			openOrders = append(openOrders, o)
-		} else if norder.Status == t.OrderStatusNew && h.Now13()-norder.OpenTime > timeGap {
-			cancelOrders = append(cancelOrders, *norder)
 		}
 	}
 
@@ -145,14 +141,10 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 				o.PosSide = t.OrderPosSideShort
 			}
 			openOrders = append(openOrders, o)
-		} else if norder.Status == t.OrderStatusNew && h.Now13()-norder.OpenTime > timeGap {
-			cancelOrders = append(cancelOrders, *norder)
 		}
 	}
 
 	return &t.TradeOrders{
-		OpenOrders:   openOrders,
-		CloseOrders:  closeOrders,
-		CancelOrders: cancelOrders,
+		OpenOrders: openOrders,
 	}
 }

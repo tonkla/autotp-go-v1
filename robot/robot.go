@@ -245,8 +245,7 @@ func syncStatus(o t.Order, p *app.AppParams) {
 	}
 
 	if exo.Status == t.OrderStatusNew {
-		const timeGap = 10 * 60 * 1000 // min * sec * millisec
-		if h.Now13()-o.OpenTime > timeGap {
+		if p.BP.TimeSecCancel > 0 && (h.Now13()-o.OpenTime)/1000 > p.BP.TimeSecCancel {
 			exo, err = p.EX.CancelOrder(o)
 			if err != nil || exo == nil {
 				h.Log(err)

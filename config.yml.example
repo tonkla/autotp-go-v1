@@ -119,6 +119,9 @@ timeSecSL: 0
 # Time-based TP after the order has been opened in seconds
 timeSecTP: 0
 
+# Time-based cancellation of the pending order in seconds
+timeSecCancel: 0
+
 # The Stop/Limit ranges from the market ticker price (integer)
 slStop: 100
 slLimit: 200
