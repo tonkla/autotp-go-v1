@@ -212,8 +212,8 @@ type BotParams struct {
 	QuoteTP   float64
 	AtrSL     float64
 	AtrTP     float64
-	TimeSecSL int64 // Seconds
-	TimeSecTP int64 // Seconds
+	TimeSecSL int64
+	TimeSecTP int64
 
 	CloseLong  bool
 	CloseShort bool

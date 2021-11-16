@@ -104,23 +104,38 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		}
 	}
 
-	numberOfBars = 10
+	h_0 := highs[len(highs)-1]
+	l_0 := lows[len(lows)-1]
+	h_1 := highs[len(highs)-2]
+	l_1 := lows[len(lows)-2]
+	h_2 := highs[len(highs)-3]
+	l_2 := lows[len(lows)-3]
+
+	hh := h_1
+	if h_2 > hh {
+		hh = h_2
+	}
+	ll := l_1
+	if l_2 < ll {
+		ll = l_2
+	}
+
+	numberOfBars = 5
 	prices1min := s.EX.GetHistoricalPrices(s.BP.Symbol, "1m", numberOfBars)
 	if len(prices1min) < numberOfBars || prices1min[len(prices1min)-1].Open == 0 {
 		return nil
 	}
+	r5m := common.GetHLRatio(prices1min, ticker)
 
-	r10m := common.GetHLRatio(prices1min[len(prices1min)-10:], ticker)
-	r5m := common.GetHLRatio(prices1min[len(prices1min)-5:], ticker)
+	shouldCloseLong := (hma_1 > hma_0 && lma_1 > lma_0) || ll > ticker.Price
+	shouldCloseShort := (hma_1 < hma_0 && lma_1 < lma_0) || hh < ticker.Price
 
-	shouldOpenLong := hma_1 < hma_0 && lma_1 < lma_0 && ticker.Price < hma_0 && (r10m < 0.1 || r5m < 0.1)
-	shouldOpenShort := hma_1 > hma_0 && lma_1 > lma_0 && ticker.Price > lma_0 && (r10m > 0.9 || r5m > 0.9)
+	shouldOpenLong := lma_1 < lma_0 && ll < l_0 && r5m < 0.1 && !shouldCloseLong
+	shouldOpenShort := hma_1 > hma_0 && hh > h_0 && r5m > 0.9 && !shouldCloseShort
 
 	if shouldOpenLong && shouldOpenShort {
 		return nil
 	}
-
-	const timeGap = 5 * 60 * 1000 // min * sec * millisec
 
 	if shouldOpenLong && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewLong) {
 		openPrice := h.CalcStopLowerTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
@@ -143,8 +158,6 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 				o.PosSide = t.OrderPosSideLong
 			}
 			openOrders = append(openOrders, o)
-		} else if norder.Status == t.OrderStatusNew && h.Now13()-norder.OpenTime > timeGap {
-			cancelOrders = append(cancelOrders, *norder)
 		}
 	}
 
@@ -169,13 +182,10 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 				o.PosSide = t.OrderPosSideShort
 			}
 			openOrders = append(openOrders, o)
-		} else if norder.Status == t.OrderStatusNew && h.Now13()-norder.OpenTime > timeGap {
-			cancelOrders = append(cancelOrders, *norder)
 		}
 	}
 
 	return &t.TradeOrders{
-		OpenOrders:   openOrders,
-		CancelOrders: cancelOrders,
+		OpenOrders: openOrders,
 	}
 }

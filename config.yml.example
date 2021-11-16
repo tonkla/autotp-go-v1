@@ -114,10 +114,10 @@ atrSL: 0.5
 atrTP: 0.5
 
 # Time-based SL after the order has been opened in seconds
-timeSL: 0
+timeSecSL: 0
 
 # Time-based TP after the order has been opened in seconds
-timeTP: 0
+timeSecTP: 0
 
 # The Stop/Limit ranges from the market ticker price (integer)
 slStop: 100

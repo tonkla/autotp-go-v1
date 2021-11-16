@@ -95,8 +95,8 @@ func main() {
 		QuoteTP:   viper.GetFloat64("quoteTP"),
 		AtrSL:     viper.GetFloat64("atrSL"),
 		AtrTP:     viper.GetFloat64("atrTP"),
-		TimeSecSL: viper.GetInt64("timeSL"),
-		TimeSecTP: viper.GetInt64("timeTP"),
+		TimeSecSL: viper.GetInt64("timeSecSL"),
+		TimeSecTP: viper.GetInt64("timeSecTP"),
 
 		CloseLong:  viper.GetBool("closeLong"),
 		CloseShort: viper.GetBool("closeShort"),
