@@ -95,6 +95,9 @@ orderGapATR: 0.5
 # The Margin-of-Safety multiplier from the high/low of the previous bar
 mos: 0.5
 
+# Will force to close all open orders when trend changed?
+forceClose: false
+
 # Will Stop Loss automatically?
 autoSL: false
 

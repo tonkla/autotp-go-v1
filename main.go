@@ -90,14 +90,15 @@ func main() {
 		OrderGapATR: viper.GetFloat64("orderGapATR"),
 		MoS:         viper.GetFloat64("mos"),
 
-		AutoSL:    viper.GetBool("autoSL"),
-		AutoTP:    viper.GetBool("autoTP"),
-		QuoteSL:   viper.GetFloat64("quoteSL"),
-		QuoteTP:   viper.GetFloat64("quoteTP"),
-		AtrSL:     viper.GetFloat64("atrSL"),
-		AtrTP:     viper.GetFloat64("atrTP"),
-		TimeSecSL: viper.GetInt64("timeSecSL"),
-		TimeSecTP: viper.GetInt64("timeSecTP"),
+		ForceClose: viper.GetBool("forceClose"),
+		AutoSL:     viper.GetBool("autoSL"),
+		AutoTP:     viper.GetBool("autoTP"),
+		QuoteSL:    viper.GetFloat64("quoteSL"),
+		QuoteTP:    viper.GetFloat64("quoteTP"),
+		AtrSL:      viper.GetFloat64("atrSL"),
+		AtrTP:      viper.GetFloat64("atrTP"),
+		TimeSecSL:  viper.GetInt64("timeSecSL"),
+		TimeSecTP:  viper.GetInt64("timeSecTP"),
 
 		TimeSecCancel: viper.GetInt64("timeSecCancel"),
 
