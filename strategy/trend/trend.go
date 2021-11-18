@@ -84,11 +84,13 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	if s.BP.AutoSL {
 		closeOrders = append(closeOrders, common.SLLong(s.DB, s.BP, qo, ticker, atr)...)
 		closeOrders = append(closeOrders, common.SLShort(s.DB, s.BP, qo, ticker, atr)...)
+		closeOrders = append(closeOrders, common.TimeSL(s.DB, s.BP, qo, ticker)...)
 	}
 
 	if s.BP.AutoTP {
 		closeOrders = append(closeOrders, common.TPLong(s.DB, s.BP, qo, ticker, atr)...)
 		closeOrders = append(closeOrders, common.TPShort(s.DB, s.BP, qo, ticker, atr)...)
+		closeOrders = append(closeOrders, common.TimeTP(s.DB, s.BP, qo, ticker)...)
 	}
 
 	if len(closeOrders) > 0 {
