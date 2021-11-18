@@ -106,15 +106,15 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		ll = l_2
 	}
 
-	shouldCloseLong := ((hma_1 > hma_0 && lma_1 > lma_0) || ticker.Price < ll) && s.BP.AutoSL
-	shouldCloseShort := ((hma_1 < hma_0 && lma_1 < lma_0) || ticker.Price > hh) && s.BP.AutoSL
+	shouldCloseLong := hma_1 > hma_0 && ll > ticker.Price
+	shouldCloseShort := lma_1 < lma_0 && hh < ticker.Price
 
-	if shouldCloseLong {
+	if shouldCloseLong && s.BP.AutoSL {
 		cancelOrders = append(cancelOrders, s.DB.GetNewLimitLongOrders(qo)...)
 		closeOrders = append(closeOrders, common.CloseLong(s.DB, s.BP, qo, ticker)...)
 	}
 
-	if shouldCloseShort {
+	if shouldCloseShort && s.BP.AutoSL {
 		cancelOrders = append(cancelOrders, s.DB.GetNewLimitShortOrders(qo)...)
 		closeOrders = append(closeOrders, common.CloseShort(s.DB, s.BP, qo, ticker)...)
 	}
@@ -126,8 +126,10 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		}
 	}
 
-	shouldOpenLong := lma_1 < lma_0 && ll < l_0 && !shouldCloseLong && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewLong)
-	shouldOpenShort := hma_1 > hma_0 && hh > h_0 && !shouldCloseShort && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewShort)
+	shouldOpenLong := lma_1 < lma_0 && ll < l_0 &&
+		!shouldCloseLong && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewLong)
+	shouldOpenShort := hma_1 > hma_0 && hh > h_0 &&
+		!shouldCloseShort && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewShort)
 
 	if shouldOpenLong && shouldOpenShort {
 		return nil
