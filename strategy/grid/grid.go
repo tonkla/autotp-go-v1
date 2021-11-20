@@ -47,8 +47,9 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 
 	lowerPrice, _, gridWidth := common.GetGridRange(ticker.Price, s.BP.LowerPrice, s.BP.UpperPrice, s.BP.GridSize)
 
-	if s.BP.OpenZones < 1 {
-		s.BP.OpenZones = 1
+	openZones := s.BP.OpenZones
+	if openZones < 1 {
+		openZones = 1
 	}
 
 	if s.BP.View == t.ViewLong || s.BP.View == t.ViewNeutral {
@@ -59,13 +60,10 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		if s.BP.GridTP > 0 {
 			o := s.DB.GetLowestFilledBuyOrder(qo)
 			if o != nil && s.DB.GetTPOrder(o.ID) == nil {
-				tpPrice := h.NormalizeDouble(o.ZonePrice+gridWidth*s.BP.GridTP, s.BP.PriceDigits)
-				stopPrice := h.CalcTPStop(o.Side, tpPrice, float64(s.BP.Gap.TPStop), s.BP.PriceDigits)
-				if ticker.Price+(tpPrice-stopPrice) > stopPrice {
-					if ticker.Price > stopPrice {
-						tpPrice = h.CalcStopUpperTicker(ticker.Price, float64(s.BP.Gap.TPLimit), s.BP.PriceDigits)
-						stopPrice = h.CalcStopUpperTicker(ticker.Price, float64(s.BP.Gap.TPStop), s.BP.PriceDigits)
-					}
+				tpPrice := o.ZonePrice + gridWidth*s.BP.GridTP
+				if ticker.Price > tpPrice {
+					stopPrice := h.CalcStopUpperTicker(ticker.Price, float64(s.BP.Gap.TPStop), s.BP.PriceDigits)
+					tpPrice = h.CalcStopUpperTicker(ticker.Price, float64(s.BP.Gap.TPLimit), s.BP.PriceDigits)
 					tpo := t.Order{
 						ID:          h.GenID(),
 						Exchange:    s.BP.Exchange,
@@ -76,8 +74,8 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 						Status:      t.OrderStatusNew,
 						Qty:         o.Qty,
 						OpenOrderID: o.ID,
-						OpenPrice:   tpPrice,
 						StopPrice:   stopPrice,
+						OpenPrice:   tpPrice,
 					}
 					closeOrders = append(closeOrders, tpo)
 				}
@@ -139,7 +137,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 				}
 				openOrders = append(openOrders, o)
 			}
-			if count++; count == s.BP.OpenZones {
+			if count++; count == openZones {
 				break
 			}
 		}
