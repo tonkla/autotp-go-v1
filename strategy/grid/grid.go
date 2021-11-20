@@ -37,7 +37,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		return nil
 	}
 
-	var openOrders, closeOrders, cancelOrders []t.Order
+	var openOrders, closeOrders []t.Order
 
 	qo := t.QueryOrder{
 		Exchange: s.BP.Exchange,
@@ -62,11 +62,10 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 				tpPrice := h.NormalizeDouble(o.ZonePrice+gridWidth*s.BP.GridTP, s.BP.PriceDigits)
 				stopPrice := h.CalcTPStop(o.Side, tpPrice, float64(s.BP.Gap.TPStop), s.BP.PriceDigits)
 				if ticker.Price+(tpPrice-stopPrice) > stopPrice {
-					_tpo := s.DB.GetHighestTPOrder(qo)
-					if _tpo != nil {
-						cancelOrders = append(cancelOrders, *_tpo)
+					if ticker.Price > stopPrice {
+						tpPrice = h.CalcStopUpperTicker(ticker.Price, float64(s.BP.Gap.TPLimit), s.BP.PriceDigits)
+						stopPrice = h.CalcStopUpperTicker(ticker.Price, float64(s.BP.Gap.TPStop), s.BP.PriceDigits)
 					}
-
 					tpo := t.Order{
 						ID:          h.GenID(),
 						Exchange:    s.BP.Exchange,
@@ -147,8 +146,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	}
 
 	return &t.TradeOrders{
-		OpenOrders:   openOrders,
-		CloseOrders:  closeOrders,
-		CancelOrders: cancelOrders,
+		OpenOrders:  openOrders,
+		CloseOrders: closeOrders,
 	}
 }
