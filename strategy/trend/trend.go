@@ -108,8 +108,8 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		ll = l_2
 	}
 
-	shouldCloseLong := hma_1 > hma_0 && ll > ticker.Price
-	shouldCloseShort := lma_1 < lma_0 && hh < ticker.Price
+	shouldCloseLong := ll > ticker.Price
+	shouldCloseShort := hh < ticker.Price
 
 	if shouldCloseLong && s.BP.ForceClose {
 		cancelOrders = append(cancelOrders, s.DB.GetNewLimitLongOrders(qo)...)
