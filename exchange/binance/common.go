@@ -101,6 +101,9 @@ func GetHistoricalPrices(baseURL string, symbol string, timeframe string, limit 
 	var hPrices []t.HistoricalPrice
 	for _, data := range gjson.ParseBytes(data).Array() {
 		d := data.Array()
+		if len(d) < 5 {
+			continue
+		}
 		p := t.HistoricalPrice{
 			Symbol: symbol,
 			Time:   d[0].Int(),
