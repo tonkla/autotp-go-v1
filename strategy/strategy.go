@@ -8,6 +8,7 @@ import (
 	"github.com/tonkla/autotp/strategy/daily"
 	"github.com/tonkla/autotp/strategy/grid"
 	"github.com/tonkla/autotp/strategy/scalping"
+	"github.com/tonkla/autotp/strategy/spot"
 	"github.com/tonkla/autotp/strategy/trend"
 	t "github.com/tonkla/autotp/types"
 )
@@ -19,6 +20,8 @@ type Repository interface {
 func New(db *rdb.DB, bp *t.BotParams, ex exchange.Repository) (Repository, error) {
 	if bp.Strategy == t.StrategyGrid {
 		return grid.New(db, bp, ex), nil
+	} else if bp.Strategy == t.StrategySpot {
+		return spot.New(db, bp, ex), nil
 	} else if bp.Strategy == t.StrategyDaily {
 		return daily.New(db, bp, ex), nil
 	} else if bp.Strategy == t.StrategyScalping {
