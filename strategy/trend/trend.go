@@ -151,13 +151,11 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 					Exchange:  s.BP.Exchange,
 					Symbol:    s.BP.Symbol,
 					Side:      t.OrderSideBuy,
+					PosSide:   t.OrderPosSideLong,
 					Type:      t.OrderTypeLimit,
 					Status:    t.OrderStatusNew,
 					Qty:       qo.Qty,
 					OpenPrice: openPrice,
-				}
-				if s.BP.Product == t.ProductFutures {
-					o.PosSide = t.OrderPosSideLong
 				}
 				openOrders = append(openOrders, o)
 			}
@@ -178,13 +176,11 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 					Exchange:  s.BP.Exchange,
 					Symbol:    s.BP.Symbol,
 					Side:      t.OrderSideSell,
+					PosSide:   t.OrderPosSideShort,
 					Type:      t.OrderTypeLimit,
 					Status:    t.OrderStatusNew,
 					Qty:       qo.Qty,
 					OpenPrice: openPrice,
-				}
-				if s.BP.Product == t.ProductFutures {
-					o.PosSide = t.OrderPosSideShort
 				}
 				openOrders = append(openOrders, o)
 			}

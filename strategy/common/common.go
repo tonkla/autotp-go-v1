@@ -246,6 +246,15 @@ func GetCloses(prices []t.HistoricalPrice) []float64 {
 	return c
 }
 
+// GetLows returns LOW prices of the historical prices
+func GetLows(prices []t.HistoricalPrice) []float64 {
+	var l []float64
+	for _, p := range prices {
+		l = append(l, p.Low)
+	}
+	return l
+}
+
 // GetHighsLows returns HIGH,LOW prices of the historical prices
 func GetHighsLows(prices []t.HistoricalPrice) ([]float64, []float64) {
 	var h, l []float64
@@ -279,6 +288,20 @@ func GetHLRatio(prices []t.HistoricalPrice, ticker t.Ticker) float64 {
 		}
 	}
 	return (ticker.Price - l) / (h - l)
+}
+
+// CloseSpot creates STOP orders for active SPOT orders at the ticker price
+func CloseSpot(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.Order {
+	var orders []t.Order
+	for _, o := range db.GetFilledLimitBuyOrders(qo) {
+		if ticker.Price > o.OpenPrice && (h.Now13()-o.UpdateTime)/1000.0 > bp.TimeSecTP {
+			order := TPLongNow(db, bp, ticker, o)
+			if order != nil {
+				orders = append(orders, *order)
+			}
+		}
+	}
+	return orders
 }
 
 // CloseLong creates STOP orders for active LONG orders at the ticker price
@@ -445,16 +468,13 @@ func SLLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr f
 				Exchange:    bp.Exchange,
 				Symbol:      bp.Symbol,
 				Side:        t.OrderSideSell,
-				Type:        t.OrderTypeSL,
+				PosSide:     t.OrderPosSideLong,
+				Type:        t.OrderTypeFSL,
 				Status:      t.OrderStatusNew,
 				Qty:         h.NormalizeDouble(o.Qty, bp.QtyDigits),
 				StopPrice:   stopPrice,
 				OpenPrice:   slPrice,
 				OpenOrderID: o.ID,
-			}
-			if bp.Product == t.ProductFutures {
-				slo.Type = t.OrderTypeFSL
-				slo.PosSide = o.PosSide
 			}
 			closeOrders = append(closeOrders, slo)
 		}
@@ -499,18 +519,65 @@ func SLShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr 
 				Exchange:    qo.Exchange,
 				Symbol:      qo.Symbol,
 				Side:        t.OrderSideBuy,
-				Type:        t.OrderTypeSL,
+				PosSide:     t.OrderPosSideShort,
+				Type:        t.OrderTypeFSL,
 				Status:      t.OrderStatusNew,
 				Qty:         h.NormalizeDouble(o.Qty, bp.QtyDigits),
 				StopPrice:   stopPrice,
 				OpenPrice:   slPrice,
 				OpenOrderID: o.ID,
 			}
-			if bp.Product == t.ProductFutures {
-				slo.Type = t.OrderTypeFSL
-				slo.PosSide = o.PosSide
-			}
 			closeOrders = append(closeOrders, slo)
+		}
+	}
+
+	return closeOrders
+}
+
+// TPSpot creates TP orders of active SPOT orders
+func TPSpot(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr float64) []t.Order {
+	if bp.QuoteTP <= 0 && bp.AtrTP <= 0 {
+		return nil
+	}
+
+	var closeOrders []t.Order
+
+	for _, o := range db.GetFilledLimitBuyOrders(qo) {
+		if db.GetTPOrder(o.ID) != nil {
+			continue
+		}
+
+		tpPrice := 0.0
+		if bp.QuoteTP > 0 {
+			// TP by a value of the quote currency
+			tpPrice = o.OpenPrice + bp.QuoteTP/o.Qty
+		} else if bp.AtrTP > 0 && atr > 0 {
+			// TP by a volatility
+			tpPrice = o.OpenPrice + bp.AtrTP*atr
+		}
+
+		if tpPrice <= 0 {
+			continue
+		}
+
+		stopPrice := h.CalcTPStop(t.OrderSideBuy, tpPrice, float64(bp.Gap.TPStop), bp.PriceDigits)
+		if ticker.Price+(tpPrice-stopPrice) > stopPrice {
+			tpPrice = h.CalcStopUpperTicker(ticker.Price, float64(bp.Gap.TPLimit), bp.PriceDigits)
+			stopPrice = h.CalcStopUpperTicker(ticker.Price, float64(bp.Gap.TPStop), bp.PriceDigits)
+			tpo := t.Order{
+				ID:          h.GenID(),
+				BotID:       bp.BotID,
+				Exchange:    qo.Exchange,
+				Symbol:      qo.Symbol,
+				Side:        t.OrderSideSell,
+				Type:        t.OrderTypeTP,
+				Status:      t.OrderStatusNew,
+				Qty:         h.NormalizeDouble(o.Qty, bp.QtyDigits),
+				StopPrice:   stopPrice,
+				OpenPrice:   tpPrice,
+				OpenOrderID: o.ID,
+			}
+			closeOrders = append(closeOrders, tpo)
 		}
 	}
 
@@ -553,16 +620,13 @@ func TPLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr f
 				Exchange:    qo.Exchange,
 				Symbol:      qo.Symbol,
 				Side:        t.OrderSideSell,
-				Type:        t.OrderTypeTP,
+				PosSide:     t.OrderPosSideLong,
+				Type:        t.OrderTypeFTP,
 				Status:      t.OrderStatusNew,
 				Qty:         h.NormalizeDouble(o.Qty, bp.QtyDigits),
 				StopPrice:   stopPrice,
 				OpenPrice:   tpPrice,
 				OpenOrderID: o.ID,
-			}
-			if bp.Product == t.ProductFutures {
-				tpo.Type = t.OrderTypeFTP
-				tpo.PosSide = o.PosSide
 			}
 			closeOrders = append(closeOrders, tpo)
 		}
@@ -607,16 +671,13 @@ func TPShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr 
 				Exchange:    qo.Exchange,
 				Symbol:      qo.Symbol,
 				Side:        t.OrderSideBuy,
-				Type:        t.OrderTypeTP,
+				PosSide:     t.OrderPosSideShort,
+				Type:        t.OrderTypeFTP,
 				Status:      t.OrderStatusNew,
 				Qty:         h.NormalizeDouble(o.Qty, bp.QtyDigits),
 				StopPrice:   stopPrice,
 				OpenPrice:   tpPrice,
 				OpenOrderID: o.ID,
-			}
-			if bp.Product == t.ProductFutures {
-				tpo.Type = t.OrderTypeFTP
-				tpo.PosSide = o.PosSide
 			}
 			closeOrders = append(closeOrders, tpo)
 		}
@@ -648,7 +709,7 @@ func SLLongNow(db *rdb.DB, bp *t.BotParams, ticker t.Ticker, o t.Order) *t.Order
 	}
 	if bp.Product == t.ProductFutures {
 		slo.Type = t.OrderTypeFSL
-		slo.PosSide = o.PosSide
+		slo.PosSide = t.OrderPosSideLong
 	}
 	return &slo
 }
@@ -667,16 +728,13 @@ func SLShortNow(db *rdb.DB, bp *t.BotParams, ticker t.Ticker, o t.Order) *t.Orde
 		Exchange:    bp.Exchange,
 		Symbol:      bp.Symbol,
 		Side:        t.OrderSideBuy,
-		Type:        t.OrderTypeSL,
+		PosSide:     t.OrderPosSideShort,
+		Type:        t.OrderTypeFSL,
 		Status:      t.OrderStatusNew,
 		Qty:         h.NormalizeDouble(o.Qty, bp.QtyDigits),
 		StopPrice:   stopPrice,
 		OpenPrice:   slPrice,
 		OpenOrderID: o.ID,
-	}
-	if bp.Product == t.ProductFutures {
-		slo.Type = t.OrderTypeFSL
-		slo.PosSide = o.PosSide
 	}
 	return &slo
 }
@@ -704,7 +762,7 @@ func TPLongNow(db *rdb.DB, bp *t.BotParams, ticker t.Ticker, o t.Order) *t.Order
 	}
 	if bp.Product == t.ProductFutures {
 		tpo.Type = t.OrderTypeFTP
-		tpo.PosSide = o.PosSide
+		tpo.PosSide = t.OrderPosSideLong
 	}
 	return &tpo
 }
@@ -723,16 +781,13 @@ func TPShortNow(db *rdb.DB, bp *t.BotParams, ticker t.Ticker, o t.Order) *t.Orde
 		Exchange:    bp.Exchange,
 		Symbol:      bp.Symbol,
 		Side:        t.OrderSideBuy,
-		Type:        t.OrderTypeTP,
+		PosSide:     t.OrderPosSideShort,
+		Type:        t.OrderTypeFTP,
 		Status:      t.OrderStatusNew,
 		Qty:         h.NormalizeDouble(o.Qty, bp.QtyDigits),
 		StopPrice:   stopPrice,
 		OpenPrice:   tpPrice,
 		OpenOrderID: o.ID,
-	}
-	if bp.Product == t.ProductFutures {
-		tpo.Type = t.OrderTypeFTP
-		tpo.PosSide = o.PosSide
 	}
 	return &tpo
 }
