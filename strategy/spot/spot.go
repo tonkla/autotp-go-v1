@@ -50,7 +50,6 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	hma_0 := hma[len(hma)-1]
 	lma := talib.WMA(lows, int(s.BP.MAPeriod2nd))
 	lma_0 := lma[len(lma)-1]
-	lma_1 := lma[len(lma)-2]
 	mma_0 := lma_0 + ((hma_0 - lma_0) / 2)
 
 	qo := t.QueryOrder{
@@ -81,7 +80,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		}
 	}
 
-	if lma1st_1 < lma1st_0 && lma_1 < lma_0 {
+	if lma1st_1 < lma1st_0 {
 		openPrice := h.CalcStopLowerTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
 		if openPrice < mma_0 {
 			_qo := qo

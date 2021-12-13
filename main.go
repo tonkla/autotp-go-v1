@@ -19,8 +19,8 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "autotp",
-	Short: "AutoTP: Auto Take Profit (Trend)",
-	Long:  "AutoTP: Auto Trading Platform (Trend)",
+	Short: "AutoTP: Auto Take Profit",
+	Long:  "AutoTP: Auto Trading Platform",
 	Run:   func(cmd *cobra.Command, args []string) {},
 }
 
