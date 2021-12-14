@@ -1,4 +1,4 @@
-package trend
+package trend_v1
 
 import (
 	"math"
@@ -46,73 +46,34 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 			closeOrders = append(closeOrders, common.CloseShort(s.DB, s.BP, qo, ticker)...)
 		}
 		return &t.TradeOrders{
-			CancelOrders: cancelOrders,
 			CloseOrders:  closeOrders,
+			CancelOrders: cancelOrders,
 		}
 	}
 
-	const numberOfBars = 30
+	const numberOfBars = 50
+	prices := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATf1st, numberOfBars)
 
-	prices1st := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATf1st, numberOfBars)
-	if len(prices1st) == 0 || prices1st[len(prices1st)-1].Open == 0 {
+	if len(prices) == 0 || prices[len(prices)-1].Open == 0 {
 		return nil
 	}
 
-	prices2nd := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATf2nd, numberOfBars)
-	if len(prices2nd) == 0 || prices2nd[len(prices2nd)-1].Open == 0 {
-		return nil
-	}
+	highs, lows := common.GetHighsLows(prices)
+	hma := talib.WMA(highs, int(s.BP.MAPeriod1st))
+	hma_0 := hma[len(hma)-1]
+	hma_1 := hma[len(hma)-2]
+	lma := talib.WMA(lows, int(s.BP.MAPeriod1st))
+	lma_0 := lma[len(lma)-1]
+	lma_1 := lma[len(lma)-2]
 
-	prices3rd := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATf3rd, numberOfBars)
-	if len(prices3rd) == 0 || prices3rd[len(prices3rd)-1].Open == 0 {
-		return nil
-	}
+	atr := hma_0 - lma_0
 
-	highs1st, lows1st := common.GetHighsLows(prices1st)
-	hma1st := talib.WMA(highs1st, int(s.BP.MAPeriod1st))
-	hma1st_0 := hma1st[len(hma1st)-1]
-	hma1st_1 := hma1st[len(hma1st)-2]
-	lma1st := talib.WMA(lows1st, int(s.BP.MAPeriod1st))
-	lma1st_0 := lma1st[len(lma1st)-1]
-	lma1st_1 := lma1st[len(lma1st)-2]
-	mma1st_0 := lma1st_0 + ((hma1st_0 - lma1st_0) / 2)
-	mma1st_1 := lma1st_1 + ((hma1st_1 - lma1st_1) / 2)
-
-	h1st_1 := highs1st[len(highs1st)-2]
-	l1st_1 := lows1st[len(lows1st)-2]
-
-	highs2nd, lows2nd := common.GetHighsLows(prices2nd)
-	hma2nd := talib.WMA(highs2nd, int(s.BP.MAPeriod2nd))
-	hma2nd_0 := hma2nd[len(hma2nd)-1]
-	hma2nd_1 := hma2nd[len(hma2nd)-2]
-	lma2nd := talib.WMA(lows2nd, int(s.BP.MAPeriod2nd))
-	lma2nd_0 := lma2nd[len(lma2nd)-1]
-	lma2nd_1 := lma2nd[len(lma2nd)-2]
-	mma2nd_0 := lma2nd_0 + ((hma2nd_0 - lma2nd_0) / 2)
-	mma2nd_1 := lma2nd_1 + ((hma2nd_1 - lma2nd_1) / 2)
-
-	h2nd_1 := highs2nd[len(highs2nd)-2]
-	l2nd_1 := lows2nd[len(lows2nd)-2]
-	h2nd_2 := highs2nd[len(highs2nd)-3]
-	l2nd_2 := lows2nd[len(lows2nd)-3]
-
-	hh2nd := h2nd_1
-	if h2nd_2 > hh2nd {
-		hh2nd = h2nd_2
-	}
-	ll2nd := l2nd_1
-	if l2nd_2 < ll2nd {
-		ll2nd = l2nd_2
-	}
-
-	highs3rd, lows3rd := common.GetHighsLows(prices3rd)
-	hma3rd := talib.WMA(highs3rd, int(s.BP.MAPeriod3rd))
-	hma3rd_0 := hma3rd[len(hma3rd)-1]
-	lma3rd := talib.WMA(lows3rd, int(s.BP.MAPeriod3rd))
-	lma3rd_0 := lma3rd[len(lma3rd)-1]
-	mma3rd_0 := lma3rd_0 + ((hma3rd_0 - lma3rd_0) / 2)
-
-	atr := hma3rd_0 - lma3rd_0
+	h_0 := highs[len(highs)-1]
+	l_0 := lows[len(lows)-1]
+	h_1 := highs[len(highs)-2]
+	l_1 := lows[len(lows)-2]
+	h_2 := highs[len(highs)-3]
+	l_2 := lows[len(lows)-3]
 
 	qo.Qty = h.NormalizeDouble(s.BP.BaseQty, s.BP.QtyDigits)
 	qty := h.NormalizeDouble(s.BP.QuoteQty/ticker.Price, s.BP.QtyDigits)
@@ -138,8 +99,17 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		}
 	}
 
-	shouldCloseLong := mma1st_1 > mma1st_0 || l1st_1 > ticker.Price
-	shouldCloseShort := mma1st_1 < mma1st_0 || h1st_1 < ticker.Price
+	hh := h_1
+	if h_2 > hh {
+		hh = h_2
+	}
+	ll := l_1
+	if l_2 < ll {
+		ll = l_2
+	}
+
+	shouldCloseLong := ll > ticker.Price
+	shouldCloseShort := hh < ticker.Price
 
 	if shouldCloseLong && s.BP.ForceClose {
 		cancelOrders = append(cancelOrders, s.DB.GetNewLimitLongOrders(qo)...)
@@ -153,14 +123,14 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 
 	if len(closeOrders) > 0 || len(cancelOrders) > 0 {
 		return &t.TradeOrders{
-			CancelOrders: cancelOrders,
 			CloseOrders:  closeOrders,
+			CancelOrders: cancelOrders,
 		}
 	}
 
-	shouldOpenLong := ll2nd < ticker.Price && mma2nd_1 < mma2nd_0 &&
+	shouldOpenLong := lma_1 < lma_0 && ll < l_0 &&
 		!shouldCloseLong && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewLong)
-	shouldOpenShort := hh2nd > ticker.Price && mma2nd_1 > mma2nd_0 &&
+	shouldOpenShort := hma_1 > hma_0 && hh > h_0 &&
 		!shouldCloseShort && (s.BP.View == t.ViewNeutral || s.BP.View == t.ViewShort)
 
 	if shouldOpenLong && shouldOpenShort {
@@ -169,7 +139,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 
 	if shouldOpenLong {
 		openPrice := h.CalcStopLowerTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
-		if openPrice < mma3rd_0 {
+		if openPrice < hma_0 {
 			_qo := qo
 			_qo.Side = t.OrderSideBuy
 			_qo.OpenPrice = openPrice
@@ -194,7 +164,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 
 	if shouldOpenShort {
 		openPrice := h.CalcStopUpperTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
-		if openPrice > mma3rd_0 {
+		if openPrice > lma_0 {
 			_qo := qo
 			_qo.Side = t.OrderSideSell
 			_qo.OpenPrice = openPrice
