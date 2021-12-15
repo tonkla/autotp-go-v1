@@ -112,7 +112,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	lma3rd_0 := lma3rd[len(lma3rd)-1]
 	mma3rd_0 := lma3rd_0 + ((hma3rd_0 - lma3rd_0) / 2)
 
-	atr := hma3rd_0 - lma3rd_0
+	atr3rd := hma3rd_0 - lma3rd_0
 
 	qo.Qty = h.NormalizeDouble(s.BP.BaseQty, s.BP.QtyDigits)
 	qty := h.NormalizeDouble(s.BP.QuoteQty/ticker.Price, s.BP.QtyDigits)
@@ -121,14 +121,14 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	}
 
 	if s.BP.AutoSL {
-		closeOrders = append(closeOrders, common.SLLong(s.DB, s.BP, qo, ticker, atr)...)
-		closeOrders = append(closeOrders, common.SLShort(s.DB, s.BP, qo, ticker, atr)...)
+		closeOrders = append(closeOrders, common.SLLong(s.DB, s.BP, qo, ticker, atr3rd)...)
+		closeOrders = append(closeOrders, common.SLShort(s.DB, s.BP, qo, ticker, atr3rd)...)
 		closeOrders = append(closeOrders, common.TimeSL(s.DB, s.BP, qo, ticker)...)
 	}
 
 	if s.BP.AutoTP {
-		closeOrders = append(closeOrders, common.TPLong(s.DB, s.BP, qo, ticker, atr)...)
-		closeOrders = append(closeOrders, common.TPShort(s.DB, s.BP, qo, ticker, atr)...)
+		closeOrders = append(closeOrders, common.TPLong(s.DB, s.BP, qo, ticker, atr3rd)...)
+		closeOrders = append(closeOrders, common.TPShort(s.DB, s.BP, qo, ticker, atr3rd)...)
 		closeOrders = append(closeOrders, common.TimeTP(s.DB, s.BP, qo, ticker)...)
 	}
 
@@ -151,7 +151,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		closeOrders = append(closeOrders, common.CloseShort(s.DB, s.BP, qo, ticker)...)
 	}
 
-	if len(closeOrders) > 0 || len(cancelOrders) > 0 {
+	if len(cancelOrders) > 0 || len(closeOrders) > 0 {
 		return &t.TradeOrders{
 			CancelOrders: cancelOrders,
 			CloseOrders:  closeOrders,
@@ -169,12 +169,12 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 
 	if shouldOpenLong {
 		openPrice := h.CalcStopLowerTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
-		if openPrice < mma3rd_0 {
+		if openPrice < mma3rd_0-(s.BP.MoS*atr3rd) {
 			_qo := qo
 			_qo.Side = t.OrderSideBuy
 			_qo.OpenPrice = openPrice
 			norder := s.DB.GetNearestOrder(_qo)
-			if norder == nil || math.Abs(norder.OpenPrice-openPrice) >= s.BP.OrderGapATR*atr {
+			if norder == nil || math.Abs(norder.OpenPrice-openPrice) >= s.BP.OrderGapATR*atr3rd {
 				o := t.Order{
 					ID:        h.GenID(),
 					BotID:     s.BP.BotID,
@@ -194,12 +194,12 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 
 	if shouldOpenShort {
 		openPrice := h.CalcStopUpperTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
-		if openPrice > mma3rd_0 {
+		if openPrice > mma3rd_0+(s.BP.MoS*atr3rd) {
 			_qo := qo
 			_qo.Side = t.OrderSideSell
 			_qo.OpenPrice = openPrice
 			norder := s.DB.GetNearestOrder(_qo)
-			if norder == nil || math.Abs(openPrice-norder.OpenPrice) >= s.BP.OrderGapATR*atr {
+			if norder == nil || math.Abs(openPrice-norder.OpenPrice) >= s.BP.OrderGapATR*atr3rd {
 				o := t.Order{
 					ID:        h.GenID(),
 					BotID:     s.BP.BotID,
