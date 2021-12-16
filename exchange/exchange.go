@@ -19,6 +19,7 @@ type Repository interface {
 	CountOpenOrders(symbol string) (int, error)
 	GetOrder(t.Order) (*t.Order, error)
 	GetOpenOrders(symbol string) []t.Order
+	GetTradeList(symbol string, limit int, startTime int, endTime int) ([]t.TradeOrder, error)
 	GetAllOrders(symbol string, limit int, startTime int, endTime int) []t.Order
 	GetCommission(symbol string, orderRefID string) *float64
 	GetOrderBook(symbol string, limit int) *t.OrderBook

@@ -175,8 +175,10 @@ func syncTPOrder(p *app.AppParams) {
 		return
 	}
 
-	syncStatus(*tpo, p)
-	syncTPLong(*tpo, p)
+	isTraded := syncStatus(*tpo, p)
+	if isTraded {
+		syncTPLong(*tpo, p)
+	}
 }
 
 func syncLimitLongOrder(p *app.AppParams) {
@@ -203,8 +205,10 @@ func syncSLLongOrder(p *app.AppParams) {
 		return
 	}
 
-	syncStatus(*slo, p)
-	syncSLLong(*slo, p)
+	isTraded := syncStatus(*slo, p)
+	if isTraded {
+		syncSLLong(*slo, p)
+	}
 }
 
 func syncSLShortOrder(p *app.AppParams) {
@@ -213,8 +217,10 @@ func syncSLShortOrder(p *app.AppParams) {
 		return
 	}
 
-	syncStatus(*slo, p)
-	syncSLShort(*slo, p)
+	isTraded := syncStatus(*slo, p)
+	if isTraded {
+		syncSLShort(*slo, p)
+	}
 }
 
 func syncTPLongOrder(p *app.AppParams) {
@@ -223,8 +229,10 @@ func syncTPLongOrder(p *app.AppParams) {
 		return
 	}
 
-	syncStatus(*tpo, p)
-	syncTPLong(*tpo, p)
+	isTraded := syncStatus(*tpo, p)
+	if isTraded {
+		syncTPLong(*tpo, p)
+	}
 }
 
 func syncTPShortOrder(p *app.AppParams) {
@@ -233,15 +241,17 @@ func syncTPShortOrder(p *app.AppParams) {
 		return
 	}
 
-	syncStatus(*tpo, p)
-	syncTPShort(*tpo, p)
+	isTraded := syncStatus(*tpo, p)
+	if isTraded {
+		syncTPShort(*tpo, p)
+	}
 }
 
-func syncStatus(o t.Order, p *app.AppParams) {
+func syncStatus(o t.Order, p *app.AppParams) bool {
 	exo, err := p.EX.GetOrder(o)
 	if err != nil || exo == nil {
 		h.Log(err)
-		return
+		return false
 	}
 
 	if exo.Status == t.OrderStatusNew {
@@ -249,7 +259,7 @@ func syncStatus(o t.Order, p *app.AppParams) {
 			exo, err = p.EX.CancelOrder(o)
 			if err != nil || exo == nil {
 				h.Log(err)
-				return
+				return false
 			}
 
 			o.Status = exo.Status
@@ -258,7 +268,7 @@ func syncStatus(o t.Order, p *app.AppParams) {
 			err = p.DB.UpdateOrder(o)
 			if err != nil {
 				h.Log(err)
-				return
+				return false
 			}
 
 			if o.PosSide != "" {
@@ -267,7 +277,7 @@ func syncStatus(o t.Order, p *app.AppParams) {
 				h.LogCanceled(o)
 			}
 		}
-		return
+		return false
 	}
 
 	if o.Status != exo.Status {
@@ -293,7 +303,7 @@ func syncStatus(o t.Order, p *app.AppParams) {
 		err := p.DB.UpdateOrder(o)
 		if err != nil {
 			h.Log(err)
-			return
+			return false
 		}
 
 		if exo.Status == t.OrderStatusFilled {
@@ -312,13 +322,17 @@ func syncStatus(o t.Order, p *app.AppParams) {
 			}
 		}
 	}
+
+	orders, _ := p.EX.GetTradeList(o.Symbol, 5, 0, 0)
+	for _, to := range orders {
+		if o.RefID == to.RefID && o.CloseTime == 0 && o.Status == t.OrderStatusFilled {
+			return true
+		}
+	}
+	return false
 }
 
 func syncSLLong(slo t.Order, p *app.AppParams) {
-	if !(p.TK.Price < slo.OpenPrice && slo.CloseTime == 0 && slo.Status == t.OrderStatusFilled) {
-		return
-	}
-
 	o := p.DB.GetOrderByID(slo.OpenOrderID)
 	if o == nil {
 		slo.CloseTime = h.Now13()
@@ -350,10 +364,6 @@ func syncSLLong(slo t.Order, p *app.AppParams) {
 }
 
 func syncSLShort(slo t.Order, p *app.AppParams) {
-	if !(p.TK.Price > slo.OpenPrice && slo.CloseTime == 0 && slo.Status == t.OrderStatusFilled) {
-		return
-	}
-
 	o := p.DB.GetOrderByID(slo.OpenOrderID)
 	if o == nil {
 		slo.CloseTime = h.Now13()
@@ -385,10 +395,6 @@ func syncSLShort(slo t.Order, p *app.AppParams) {
 }
 
 func syncTPLong(tpo t.Order, p *app.AppParams) {
-	if !(p.TK.Price > tpo.OpenPrice && tpo.CloseTime == 0 && tpo.Status == t.OrderStatusFilled) {
-		return
-	}
-
 	o := p.DB.GetOrderByID(tpo.OpenOrderID)
 	if o == nil {
 		tpo.CloseTime = h.Now13()
@@ -424,10 +430,6 @@ func syncTPLong(tpo t.Order, p *app.AppParams) {
 }
 
 func syncTPShort(tpo t.Order, p *app.AppParams) {
-	if !(p.TK.Price < tpo.OpenPrice && tpo.CloseTime == 0 && tpo.Status == t.OrderStatusFilled) {
-		return
-	}
-
 	o := p.DB.GetOrderByID(tpo.OpenOrderID)
 	if o == nil {
 		tpo.CloseTime = h.Now13()

@@ -17,24 +17,6 @@ type Client struct {
 	secretKey string
 }
 
-type TradeOrder struct {
-	Symbol          string
-	ID              string
-	OrderID         string
-	Side            string
-	Price           float64
-	Qty             float64
-	RealizedPnL     float64
-	MarginAsset     string
-	QuoteQty        float64
-	Commission      float64
-	CommissionAsset string
-	Time            int64
-	PositionSide    string
-	Buyer           bool
-	Maker           bool
-}
-
 // NewFuturesClient returns Binance USDⓈ-M Futures client
 func NewFuturesClient(apiKey string, secretKey string) Client {
 	return Client{
@@ -156,11 +138,22 @@ func (c Client) OpenStopOrder(o t.Order) (*t.Order, error) {
 }
 
 // GetTradeList returns trades list for a specified symbol
-func (c Client) GetTradeList(symbol string, limit int64) ([]t.Order, error) {
+func (c Client) GetTradeList(symbol string, limit int, startTime int, endTime int) ([]t.TradeOrder, error) {
 	var payload, url strings.Builder
 
 	b.BuildBaseQS(&payload, symbol)
-	fmt.Fprintf(&payload, "&limit=%d", limit)
+
+	if limit > 0 {
+		fmt.Fprintf(&payload, "&limit=%d", limit)
+	} else {
+		fmt.Fprintf(&payload, "&limit=10")
+	}
+	if startTime > 0 {
+		fmt.Fprintf(&payload, "&startTime=%d", startTime)
+	}
+	if endTime > 0 {
+		fmt.Fprintf(&payload, "&endTime=%d", endTime)
+	}
 
 	signature := b.Sign(payload.String(), c.secretKey)
 
@@ -177,17 +170,20 @@ func (c Client) GetTradeList(symbol string, limit int64) ([]t.Order, error) {
 		return nil, errors.New(rs.Get("msg").String())
 	}
 
-	var orders []t.Order
+	var orders []t.TradeOrder
 	for _, r := range rs.Array() {
-		order := t.Order{
-			Symbol:     symbol,
-			RefID:      r.Get("orderId").String(),
-			Side:       r.Get("side").String(),
-			PosSide:    r.Get("positionSide").String(),
-			Qty:        r.Get("qty").Float(),
-			OpenPrice:  r.Get("price").Float(),
-			OpenTime:   r.Get("time").Int(),
-			Commission: r.Get("commission").Float(),
+		order := t.TradeOrder{
+			Symbol:          r.Get("symbol").String(),
+			RefID:           r.Get("orderId").String(),
+			Price:           r.Get("price").Float(),
+			Qty:             r.Get("qty").Float(),
+			QuoteQty:        r.Get("quoteQty").Float(),
+			Commission:      r.Get("commission").Float(),
+			CommissionAsset: r.Get("commissionAsset").String(),
+			RealizedPnL:     r.Get("realizedPnl").Float(),
+			Time:            r.Get("time").Int(),
+			IsBuyer:         r.Get("buyer").Bool(),
+			IsMaker:         r.Get("maker").Bool(),
 		}
 		orders = append(orders, order)
 	}
@@ -269,63 +265,6 @@ func (c Client) GetOpenOrders(symbol string) []t.Order {
 	return orders
 }
 
-// GetTradeOrders returns trade orders list
-func (c Client) GetTradeOrders(symbol string, limit int, startTime int, endTime int) []TradeOrder {
-	var payload, url strings.Builder
-
-	b.BuildBaseQS(&payload, symbol)
-
-	if limit > 0 {
-		fmt.Fprintf(&payload, "&limit=%d", limit)
-	} else {
-		fmt.Fprintf(&payload, "&limit=10")
-	}
-	if startTime > 0 {
-		fmt.Fprintf(&payload, "&startTime=%d", startTime)
-	}
-	if endTime > 0 {
-		fmt.Fprintf(&payload, "&endTime=%d", endTime)
-	}
-
-	signature := b.Sign(payload.String(), c.secretKey)
-
-	fmt.Fprintf(&url, "%s/userTrades?%s&signature=%s", c.baseURL, payload.String(), signature)
-	data, err := h.GetH(url.String(), b.NewHeader(c.apiKey))
-	if err != nil {
-		return nil
-	}
-
-	rs := gjson.ParseBytes(data)
-
-	if rs.Get("code").Int() < 0 {
-		h.Log("GetTradeOrders", rs)
-		return nil
-	}
-
-	var orders []TradeOrder
-	for _, r := range rs.Array() {
-		order := TradeOrder{
-			Symbol:          r.Get("symbol").String(),
-			ID:              r.Get("id").String(),
-			OrderID:         r.Get("orderId").String(),
-			Side:            r.Get("side").String(),
-			Price:           r.Get("price").Float(),
-			Qty:             r.Get("qty").Float(),
-			RealizedPnL:     r.Get("realizedPnl").Float(),
-			MarginAsset:     r.Get("marginAsset").String(),
-			QuoteQty:        r.Get("quoteQty").Float(),
-			Commission:      r.Get("commission").Float(),
-			CommissionAsset: r.Get("commissionAsset").String(),
-			Time:            r.Get("time").Int(),
-			PositionSide:    r.Get("positionSide").String(),
-			Buyer:           r.Get("buyer").Bool(),
-			Maker:           r.Get("maker").Bool(),
-		}
-		orders = append(orders, order)
-	}
-	return orders
-}
-
 // GetAllOrders returns all account orders; active, canceled, or filled
 func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime int) []t.Order {
 	var payload, url strings.Builder
@@ -377,6 +316,7 @@ func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime in
 	return orders
 }
 
+// GetCommission returns order commission
 func (c Client) GetCommission(symbol string, orderRefID string) *float64 {
 	var payload, url strings.Builder
 

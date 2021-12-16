@@ -157,6 +157,20 @@ type TradeOrders struct {
 	CancelOrders []Order
 }
 
+type TradeOrder struct {
+	Symbol          string
+	RefID           string
+	Price           float64
+	Qty             float64
+	QuoteQty        float64
+	Commission      float64
+	CommissionAsset string
+	RealizedPnL     float64
+	Time            int64
+	IsBuyer         bool
+	IsMaker         bool
+}
+
 type ExOrder struct {
 	Symbol string
 	Price  float64

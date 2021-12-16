@@ -18,22 +18,6 @@ type Client struct {
 	secretKey string
 }
 
-type TradeOrder struct {
-	Symbol          string
-	ID              string
-	OrderID         string
-	OrderListID     int64
-	Price           float64
-	Qty             float64
-	QuoteQty        float64
-	Commission      float64
-	CommissionAsset string
-	Time            int64
-	IsBuyer         bool
-	IsMaker         bool
-	IsBestMatch     bool
-}
-
 // NewSpotClient returns Binance Spot client
 func NewSpotClient(apiKey string, secretKey string) Client {
 	return Client{
@@ -151,8 +135,8 @@ func (c Client) GetOpenOrders(symbol string) []t.Order {
 	return orders
 }
 
-// GetTradeOrders returns trade orders list
-func (c Client) GetTradeOrders(symbol string, limit int, startTime int, endTime int) []TradeOrder {
+// GetTradeList returns trades list for a specified symbol
+func (c Client) GetTradeList(symbol string, limit int, startTime int, endTime int) ([]t.TradeOrder, error) {
 	var payload, url strings.Builder
 
 	b.BuildBaseQS(&payload, symbol)
@@ -174,23 +158,21 @@ func (c Client) GetTradeOrders(symbol string, limit int, startTime int, endTime 
 	fmt.Fprintf(&url, "%s/myTrades?%s&signature=%s", c.baseURL, payload.String(), signature)
 	data, err := h.GetH(url.String(), b.NewHeader(c.apiKey))
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	rs := gjson.ParseBytes(data)
 
 	if rs.Get("code").Int() < 0 {
 		h.Log("GetTradeOrders", rs)
-		return nil
+		return nil, errors.New(rs.Get("msg").String())
 	}
 
-	var orders []TradeOrder
+	var orders []t.TradeOrder
 	for _, r := range rs.Array() {
-		order := TradeOrder{
+		order := t.TradeOrder{
 			Symbol:          r.Get("symbol").String(),
-			ID:              r.Get("id").String(),
-			OrderID:         r.Get("orderId").String(),
-			OrderListID:     r.Get("orderListId").Int(),
+			RefID:           r.Get("orderId").String(),
 			Price:           r.Get("price").Float(),
 			Qty:             r.Get("qty").Float(),
 			QuoteQty:        r.Get("quoteQty").Float(),
@@ -199,11 +181,10 @@ func (c Client) GetTradeOrders(symbol string, limit int, startTime int, endTime 
 			Time:            r.Get("time").Int(),
 			IsBuyer:         r.Get("isBuyer").Bool(),
 			IsMaker:         r.Get("isMaker").Bool(),
-			IsBestMatch:     r.Get("isBestMatch").Bool(),
 		}
 		orders = append(orders, order)
 	}
-	return orders
+	return orders, nil
 }
 
 // GetAllOrders returns all account orders; active, canceled, or filled
@@ -258,6 +239,7 @@ func (c Client) GetAllOrders(symbol string, limit int, startTime int, endTime in
 	return orders
 }
 
+// GetCommission returns order commission
 func (c Client) GetCommission(symbol string, orderRefID string) *float64 {
 	var payload, url strings.Builder
 
