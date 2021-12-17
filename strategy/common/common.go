@@ -560,10 +560,9 @@ func TPSpot(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr f
 			continue
 		}
 
-		stopPrice := h.CalcTPStop(t.OrderSideBuy, tpPrice, float64(bp.Gap.TPStop), bp.PriceDigits)
-		if ticker.Price+(tpPrice-stopPrice) > stopPrice {
+		if ticker.Price > tpPrice {
 			tpPrice = h.CalcStopUpperTicker(ticker.Price, float64(bp.Gap.TPLimit), bp.PriceDigits)
-			stopPrice = h.CalcStopUpperTicker(ticker.Price, float64(bp.Gap.TPStop), bp.PriceDigits)
+			stopPrice := h.CalcStopUpperTicker(ticker.Price, float64(bp.Gap.TPStop), bp.PriceDigits)
 			tpo := t.Order{
 				ID:          h.GenID(),
 				BotID:       bp.BotID,
@@ -610,10 +609,9 @@ func TPLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr f
 			continue
 		}
 
-		stopPrice := h.CalcTPStop(o.Side, tpPrice, float64(bp.Gap.TPStop), bp.PriceDigits)
-		if ticker.Price+(tpPrice-stopPrice) > stopPrice {
+		if ticker.Price > tpPrice {
 			tpPrice = h.CalcStopUpperTicker(ticker.Price, float64(bp.Gap.TPLimit), bp.PriceDigits)
-			stopPrice = h.CalcStopUpperTicker(ticker.Price, float64(bp.Gap.TPStop), bp.PriceDigits)
+			stopPrice := h.CalcStopUpperTicker(ticker.Price, float64(bp.Gap.TPStop), bp.PriceDigits)
 			tpo := t.Order{
 				ID:          h.GenID(),
 				BotID:       bp.BotID,
@@ -661,10 +659,9 @@ func TPShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr 
 			continue
 		}
 
-		stopPrice := h.CalcTPStop(o.Side, tpPrice, float64(bp.Gap.TPStop), bp.PriceDigits)
-		if ticker.Price-(stopPrice-tpPrice) < stopPrice {
+		if ticker.Price < tpPrice {
 			tpPrice = h.CalcStopLowerTicker(ticker.Price, float64(bp.Gap.TPLimit), bp.PriceDigits)
-			stopPrice = h.CalcStopLowerTicker(ticker.Price, float64(bp.Gap.TPStop), bp.PriceDigits)
+			stopPrice := h.CalcStopLowerTicker(ticker.Price, float64(bp.Gap.TPStop), bp.PriceDigits)
 			tpo := t.Order{
 				ID:          h.GenID(),
 				BotID:       bp.BotID,
