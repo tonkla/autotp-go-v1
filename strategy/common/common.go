@@ -323,6 +323,20 @@ func CloseLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []
 	return orders
 }
 
+// CloseProfitLong creates STOP orders for profitable LONG orders at the ticker price
+func CloseProfitLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.Order {
+	var orders []t.Order
+	for _, o := range db.GetFilledLimitLongOrders(qo) {
+		if ticker.Price > o.OpenPrice {
+			order := TPLongNow(db, bp, ticker, o)
+			if order != nil {
+				orders = append(orders, *order)
+			}
+		}
+	}
+	return orders
+}
+
 // CloseShort creates STOP orders for active SHORT orders at the ticker price
 func CloseShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.Order {
 	var orders []t.Order
@@ -334,6 +348,20 @@ func CloseShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) [
 			}
 		} else if ticker.Price > o.OpenPrice {
 			order := SLShortNow(db, bp, ticker, o)
+			if order != nil {
+				orders = append(orders, *order)
+			}
+		}
+	}
+	return orders
+}
+
+// CloseProfitShort creates STOP orders for profitable SHORT orders at the ticker price
+func CloseProfitShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.Order {
+	var orders []t.Order
+	for _, o := range db.GetFilledLimitShortOrders(qo) {
+		if ticker.Price < o.OpenPrice {
+			order := TPShortNow(db, bp, ticker, o)
 			if order != nil {
 				orders = append(orders, *order)
 			}
