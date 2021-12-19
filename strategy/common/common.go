@@ -308,7 +308,7 @@ func CloseProfitSpot(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Tick
 func CloseProfitLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.Order {
 	var orders []t.Order
 	for _, o := range db.GetFilledLimitLongOrders(qo) {
-		if ticker.Price > o.OpenPrice && (h.Now13()-o.UpdateTime)/1000.0 > bp.TimeSecTP {
+		if ticker.Price > o.OpenPrice && (h.Now13()-o.UpdateTime)/1000.0 > 600 {
 			order := TPLongNow(db, bp, ticker, o)
 			if order != nil {
 				orders = append(orders, *order)
@@ -322,7 +322,7 @@ func CloseProfitLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Tick
 func CloseProfitShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.Order {
 	var orders []t.Order
 	for _, o := range db.GetFilledLimitShortOrders(qo) {
-		if ticker.Price < o.OpenPrice && (h.Now13()-o.UpdateTime)/1000.0 > bp.TimeSecTP {
+		if ticker.Price < o.OpenPrice && (h.Now13()-o.UpdateTime)/1000.0 > 600 {
 			order := TPShortNow(db, bp, ticker, o)
 			if order != nil {
 				orders = append(orders, *order)
