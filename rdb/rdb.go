@@ -153,8 +153,8 @@ func (d DB) GetLimitOrders(o t.QueryOrder) []t.Order {
 	return orders
 }
 
-// GetFilledLimitBuyOrders returns the LIMIT BUY orders that their status is FILLED
-func (d DB) GetFilledLimitBuyOrders(o t.QueryOrder) []t.Order {
+// GetFilledLimitOrders returns the LIMIT orders that their status is FILLED
+func (d DB) GetFilledLimitOrders(o t.QueryOrder) []t.Order {
 	var orders []t.Order
 	d.db.Where(
 		`bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND side = ? AND status = ? AND close_time = 0`,
@@ -179,6 +179,16 @@ func (d DB) GetFilledLimitShortOrders(o t.QueryOrder) []t.Order {
 	d.db.Where(
 		`bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND pos_side = ? AND status = ? AND close_time = 0`,
 		o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderPosSideShort, t.OrderStatusFilled).
+		Order("open_time desc").Find(&orders)
+	return orders
+}
+
+// GetNewLimitOrders returns the LIMIT orders that their status is NEW
+func (d DB) GetNewLimitOrders(o t.QueryOrder) []t.Order {
+	var orders []t.Order
+	d.db.Where(
+		`bot_id = ? AND exchange = ? AND symbol = ? AND type = ? AND side = ? AND status = ? AND close_time = 0`,
+		o.BotID, o.Exchange, o.Symbol, t.OrderTypeLimit, t.OrderSideBuy, t.OrderStatusNew).
 		Order("open_time desc").Find(&orders)
 	return orders
 }

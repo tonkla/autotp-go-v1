@@ -111,18 +111,17 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	c3rd_2 := closes3rd[len(closes3rd)-3]
 	c3rd_3 := closes3rd[len(closes3rd)-4]
 
+	cma3rd := talib.WMA(closes3rd, int(s.BP.MAPeriod3rd))
+	cma3rd_0 := cma3rd[len(cma3rd)-1]
+	cma3rd_1 := cma3rd[len(cma3rd)-2]
+
 	hma3rd := talib.WMA(highs3rd, int(s.BP.MAPeriod3rd))
 	hma3rd_0 := hma3rd[len(hma3rd)-1]
-	hma3rd_1 := hma3rd[len(hma3rd)-2]
 	hma3rd_2 := hma3rd[len(hma3rd)-3]
 
 	lma3rd := talib.WMA(lows3rd, int(s.BP.MAPeriod3rd))
 	lma3rd_0 := lma3rd[len(lma3rd)-1]
-	lma3rd_1 := lma3rd[len(lma3rd)-2]
 	lma3rd_2 := lma3rd[len(lma3rd)-3]
-
-	mma3rd_0 := lma3rd_0 + ((hma3rd_0 - lma3rd_0) / 2)
-	mma3rd_1 := lma3rd_1 + ((hma3rd_1 - lma3rd_1) / 2)
 
 	atr3rd := hma3rd_0 - lma3rd_0
 
@@ -144,10 +143,10 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		closeOrders = append(closeOrders, common.TimeTP(s.DB, s.BP, qo, ticker)...)
 
 		if len(closeOrders) == 0 {
-			if c3rd_2 > hma3rd_2 && c3rd_2 > c3rd_3 && c3rd_2 > c3rd_1 {
+			if c3rd_2 > hma3rd_2 && c3rd_3 < c3rd_2 && c3rd_2 > c3rd_1 {
 				closeOrders = append(closeOrders, common.CloseProfitLong(s.DB, s.BP, qo, ticker)...)
 			}
-			if c3rd_2 < lma3rd_2 && c3rd_2 < c3rd_3 && c3rd_2 < c3rd_1 {
+			if c3rd_2 < lma3rd_2 && c3rd_3 > c3rd_2 && c3rd_2 < c3rd_1 {
 				closeOrders = append(closeOrders, common.CloseProfitShort(s.DB, s.BP, qo, ticker)...)
 			}
 		}
@@ -190,7 +189,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 
 	if shouldOpenLong {
 		openPrice := h.CalcStopLowerTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
-		if (mma3rd_1 < mma3rd_0 && openPrice < mma3rd_0-(s.BP.MoS*atr3rd)) || mma3rd_1 > mma3rd_0 {
+		if (cma3rd_1 < cma3rd_0 && openPrice < cma3rd_0-(s.BP.MoS*atr3rd)) || cma3rd_1 > cma3rd_0 {
 			_qo := qo
 			_qo.Side = t.OrderSideBuy
 			_qo.OpenPrice = openPrice
@@ -215,7 +214,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 
 	if shouldOpenShort {
 		openPrice := h.CalcStopUpperTicker(ticker.Price, float64(s.BP.Gap.OpenLimit), s.BP.PriceDigits)
-		if (mma3rd_1 > mma3rd_0 && openPrice > mma3rd_0+(s.BP.MoS*atr3rd)) || mma3rd_1 < mma3rd_0 {
+		if (cma3rd_1 > cma3rd_0 && openPrice > cma3rd_0+(s.BP.MoS*atr3rd)) || cma3rd_1 < cma3rd_0 {
 			_qo := qo
 			_qo.Side = t.OrderSideSell
 			_qo.OpenPrice = openPrice

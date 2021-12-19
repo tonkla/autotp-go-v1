@@ -265,6 +265,16 @@ func GetHighsLows(prices []t.HistoricalPrice) ([]float64, []float64) {
 	return h, l
 }
 
+// GetLowsCloses returns LOW,CLOSE prices of the historical prices
+func GetLowsCloses(prices []t.HistoricalPrice) ([]float64, []float64) {
+	var l, c []float64
+	for _, p := range prices {
+		l = append(l, p.Low)
+		c = append(c, p.Close)
+	}
+	return l, c
+}
+
 // GetHighsLowsCloses returns HIGH,LOW,CLOSE prices of the historical prices
 func GetHighsLowsCloses(prices []t.HistoricalPrice) ([]float64, []float64, []float64) {
 	var h, l, c []float64
@@ -293,8 +303,8 @@ func GetHLRatio(prices []t.HistoricalPrice, ticker t.Ticker) float64 {
 // CloseProfitSpot creates STOP orders for profitable SPOT orders at the ticker price
 func CloseProfitSpot(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.Order {
 	var orders []t.Order
-	for _, o := range db.GetFilledLimitBuyOrders(qo) {
-		if ticker.Price > o.OpenPrice && (h.Now13()-o.UpdateTime)/1000.0 > bp.TimeSecTP {
+	for _, o := range db.GetFilledLimitOrders(qo) {
+		if ticker.Price > o.OpenPrice && (h.Now13()-o.UpdateTime)/1000.0 > 600 {
 			order := TPLongNow(db, bp, ticker, o)
 			if order != nil {
 				orders = append(orders, *order)
@@ -570,7 +580,7 @@ func TPSpot(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, atr f
 
 	var closeOrders []t.Order
 
-	for _, o := range db.GetFilledLimitBuyOrders(qo) {
+	for _, o := range db.GetFilledLimitOrders(qo) {
 		if db.GetTPOrder(o.ID) != nil {
 			continue
 		}
