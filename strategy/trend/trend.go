@@ -110,13 +110,11 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	c3rd_1 := closes3rd[len(closes3rd)-2]
 	c3rd_2 := closes3rd[len(closes3rd)-3]
 
-	h3rd_2 := highs3rd[len(highs3rd)-3]
 	hma3rd := talib.WMA(highs3rd, int(s.BP.MAPeriod3rd))
 	hma3rd_0 := hma3rd[len(hma3rd)-1]
 	hma3rd_1 := hma3rd[len(hma3rd)-2]
 	hma3rd_2 := hma3rd[len(hma3rd)-3]
 
-	l3rd_2 := lows3rd[len(lows3rd)-3]
 	lma3rd := talib.WMA(lows3rd, int(s.BP.MAPeriod3rd))
 	lma3rd_0 := lma3rd[len(lma3rd)-1]
 	lma3rd_1 := lma3rd[len(lma3rd)-2]
@@ -145,10 +143,10 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		closeOrders = append(closeOrders, common.TimeTP(s.DB, s.BP, qo, ticker)...)
 
 		if len(closeOrders) == 0 {
-			if hma3rd_2 < h3rd_2 && c3rd_2 > c3rd_1 {
+			if c3rd_2 > hma3rd_2 && c3rd_1 > mma3rd_1 && c3rd_2 > c3rd_1 {
 				closeOrders = append(closeOrders, common.CloseProfitLong(s.DB, s.BP, qo, ticker)...)
 			}
-			if lma3rd_2 > l3rd_2 && c3rd_2 < c3rd_1 {
+			if c3rd_2 < lma3rd_2 && c3rd_1 < mma3rd_1 && c3rd_2 < c3rd_1 {
 				closeOrders = append(closeOrders, common.CloseProfitShort(s.DB, s.BP, qo, ticker)...)
 			}
 		}

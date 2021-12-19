@@ -49,7 +49,6 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	c1 := closes[len(closes)-2]
 	c2 := closes[len(closes)-3]
 
-	h2 := highs[len(highs)-3]
 	hma := talib.WMA(highs, int(s.BP.MAPeriod2nd))
 	hma_0 := hma[len(hma)-1]
 	hma_1 := hma[len(hma)-2]
@@ -79,7 +78,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	if s.BP.AutoTP {
 		closeOrders = append(closeOrders, common.TPSpot(s.DB, s.BP, qo, ticker, atr)...)
 
-		if len(closeOrders) == 0 && hma_2 < h2 && c2 > c1 {
+		if len(closeOrders) == 0 && c2 > hma_2 && c1 > mma_1 && c2 > c1 {
 			closeOrders = append(closeOrders, common.CloseProfitSpot(s.DB, s.BP, qo, ticker)...)
 		}
 
