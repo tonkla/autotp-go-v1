@@ -143,11 +143,12 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		closeOrders = append(closeOrders, common.TimeTP(s.DB, s.BP, qo, ticker)...)
 
 		if len(closeOrders) == 0 {
+			t0 := prices3rd[len(prices3rd)-1].Time
 			if c3rd_2 > hma3rd_2 && c3rd_2 > c3rd_3 && c3rd_2 > c3rd_1 && ticker.Price >= c3rd_1 {
-				closeOrders = append(closeOrders, common.CloseProfitLong(s.DB, s.BP, qo, ticker)...)
+				closeOrders = append(closeOrders, common.CloseProfitLong(s.DB, s.BP, qo, ticker, t0)...)
 			}
 			if c3rd_2 < lma3rd_2 && c3rd_2 < c3rd_3 && c3rd_2 < c3rd_1 && ticker.Price <= c3rd_1 {
-				closeOrders = append(closeOrders, common.CloseProfitShort(s.DB, s.BP, qo, ticker)...)
+				closeOrders = append(closeOrders, common.CloseProfitShort(s.DB, s.BP, qo, ticker, t0)...)
 			}
 		}
 	}

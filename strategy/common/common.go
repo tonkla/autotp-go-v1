@@ -226,7 +226,7 @@ func GetGridZones(target float64, lowerNum float64, upperNum float64, gridSize f
 
 	start, _, gridWidth := GetGridRange(target, lowerNum, upperNum, gridSize)
 
-	var zones []float64
+	zones := make([]float64, int(gridSize))
 	for i := 0.0; i < gridSize; i++ {
 		num := start + i*gridWidth
 		if num >= upperNum {
@@ -239,7 +239,7 @@ func GetGridZones(target float64, lowerNum float64, upperNum float64, gridSize f
 
 // GetCloses returns CLOSE prices of the historical prices
 func GetCloses(prices []t.HistoricalPrice) []float64 {
-	var c []float64
+	c := make([]float64, len(prices))
 	for _, p := range prices {
 		c = append(c, p.Close)
 	}
@@ -248,7 +248,7 @@ func GetCloses(prices []t.HistoricalPrice) []float64 {
 
 // GetLows returns LOW prices of the historical prices
 func GetLows(prices []t.HistoricalPrice) []float64 {
-	var l []float64
+	l := make([]float64, len(prices))
 	for _, p := range prices {
 		l = append(l, p.Low)
 	}
@@ -257,7 +257,9 @@ func GetLows(prices []t.HistoricalPrice) []float64 {
 
 // GetHighsLows returns HIGH,LOW prices of the historical prices
 func GetHighsLows(prices []t.HistoricalPrice) ([]float64, []float64) {
-	var h, l []float64
+	n := len(prices)
+	h := make([]float64, n)
+	l := make([]float64, n)
 	for _, p := range prices {
 		h = append(h, p.High)
 		l = append(l, p.Low)
@@ -267,7 +269,9 @@ func GetHighsLows(prices []t.HistoricalPrice) ([]float64, []float64) {
 
 // GetLowsCloses returns LOW,CLOSE prices of the historical prices
 func GetLowsCloses(prices []t.HistoricalPrice) ([]float64, []float64) {
-	var l, c []float64
+	n := len(prices)
+	l := make([]float64, n)
+	c := make([]float64, n)
 	for _, p := range prices {
 		l = append(l, p.Low)
 		c = append(c, p.Close)
@@ -277,7 +281,10 @@ func GetLowsCloses(prices []t.HistoricalPrice) ([]float64, []float64) {
 
 // GetHighsLowsCloses returns HIGH,LOW,CLOSE prices of the historical prices
 func GetHighsLowsCloses(prices []t.HistoricalPrice) ([]float64, []float64, []float64) {
-	var h, l, c []float64
+	n := len(prices)
+	h := make([]float64, n)
+	l := make([]float64, n)
+	c := make([]float64, n)
 	for _, p := range prices {
 		h = append(h, p.High)
 		l = append(l, p.Low)
@@ -301,11 +308,18 @@ func GetHLRatio(prices []t.HistoricalPrice, ticker t.Ticker) float64 {
 }
 
 // CloseProfitSpot creates STOP orders for profitable SPOT orders at the ticker price
-func CloseProfitSpot(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.Order {
+func CloseProfitSpot(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, t0 int64) []t.Order {
 	var orders []t.Order
+	var order *t.Order
 	for _, o := range db.GetFilledLimitOrders(qo) {
-		if ticker.Price > o.OpenPrice && (h.Now13()-o.UpdateTime)/1000.0 > 600 {
-			order := TPLongNow(db, bp, ticker, o)
+		if ticker.Price > o.OpenPrice {
+			if t0 > 0 {
+				if t0 > o.OpenTime {
+					order = TPLongNow(db, bp, ticker, o)
+				}
+			} else if (h.Now13()-o.UpdateTime)/1000.0 > 600 {
+				order = TPLongNow(db, bp, ticker, o)
+			}
 			if order != nil {
 				orders = append(orders, *order)
 			}
@@ -315,11 +329,18 @@ func CloseProfitSpot(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Tick
 }
 
 // CloseProfitLong creates STOP orders for profitable LONG orders at the ticker price
-func CloseProfitLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.Order {
+func CloseProfitLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, t0 int64) []t.Order {
 	var orders []t.Order
+	var order *t.Order
 	for _, o := range db.GetFilledLimitLongOrders(qo) {
-		if ticker.Price > o.OpenPrice && (h.Now13()-o.UpdateTime)/1000.0 > 600 {
-			order := TPLongNow(db, bp, ticker, o)
+		if ticker.Price > o.OpenPrice {
+			if t0 > 0 {
+				if t0 > o.OpenTime {
+					order = TPLongNow(db, bp, ticker, o)
+				}
+			} else if (h.Now13()-o.UpdateTime)/1000.0 > 600 {
+				order = TPLongNow(db, bp, ticker, o)
+			}
 			if order != nil {
 				orders = append(orders, *order)
 			}
@@ -329,11 +350,18 @@ func CloseProfitLong(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Tick
 }
 
 // CloseProfitShort creates STOP orders for profitable SHORT orders at the ticker price
-func CloseProfitShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker) []t.Order {
+func CloseProfitShort(db *rdb.DB, bp *t.BotParams, qo t.QueryOrder, ticker t.Ticker, t0 int64) []t.Order {
 	var orders []t.Order
+	var order *t.Order
 	for _, o := range db.GetFilledLimitShortOrders(qo) {
-		if ticker.Price < o.OpenPrice && (h.Now13()-o.UpdateTime)/1000.0 > 600 {
-			order := TPShortNow(db, bp, ticker, o)
+		if ticker.Price < o.OpenPrice {
+			if t0 > 0 {
+				if t0 > o.OpenTime {
+					order = TPShortNow(db, bp, ticker, o)
+				}
+			} else if (h.Now13()-o.UpdateTime)/1000.0 > 600 {
+				order = TPShortNow(db, bp, ticker, o)
+			}
 			if order != nil {
 				orders = append(orders, *order)
 			}

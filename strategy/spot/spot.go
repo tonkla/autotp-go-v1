@@ -93,7 +93,8 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		closeOrders = append(closeOrders, common.TPSpot(s.DB, s.BP, qo, ticker, atr)...)
 
 		if len(closeOrders) == 0 && c2 > hma_2 && c2 > c3 && c2 > c1 && ticker.Price >= c1 {
-			closeOrders = append(closeOrders, common.CloseProfitSpot(s.DB, s.BP, qo, ticker)...)
+			t0 := prices3rd[len(prices3rd)-1].Time
+			closeOrders = append(closeOrders, common.CloseProfitSpot(s.DB, s.BP, qo, ticker, t0)...)
 		}
 
 		if len(closeOrders) > 0 {
@@ -107,7 +108,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 
 	if shouldClose && s.BP.ForceClose {
 		cancelOrders = append(cancelOrders, s.DB.GetNewLimitOrders(qo)...)
-		closeOrders = append(closeOrders, common.CloseProfitSpot(s.DB, s.BP, qo, ticker)...)
+		closeOrders = append(closeOrders, common.CloseProfitSpot(s.DB, s.BP, qo, ticker, 0)...)
 
 		if len(cancelOrders) > 0 || len(closeOrders) > 0 {
 			return &t.TradeOrders{
