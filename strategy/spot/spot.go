@@ -92,7 +92,7 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 	if s.BP.AutoTP {
 		closeOrders = append(closeOrders, common.TPSpot(s.DB, s.BP, qo, ticker, atr)...)
 
-		if len(closeOrders) == 0 && c2 > hma_2 && c3 < c2 && c2 > c1 {
+		if len(closeOrders) == 0 && c2 > hma_2 && c2 > c3 && c2 > c1 && ticker.Price >= c1 {
 			closeOrders = append(closeOrders, common.CloseProfitSpot(s.DB, s.BP, qo, ticker)...)
 		}
 
