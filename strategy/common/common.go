@@ -226,7 +226,7 @@ func GetGridZones(target float64, lowerNum float64, upperNum float64, gridSize f
 
 	start, _, gridWidth := GetGridRange(target, lowerNum, upperNum, gridSize)
 
-	zones := make([]float64, int(gridSize))
+	var zones []float64
 	for i := 0.0; i < gridSize; i++ {
 		num := start + i*gridWidth
 		if num >= upperNum {
