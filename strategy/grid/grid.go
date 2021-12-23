@@ -115,6 +115,9 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 		openPrice := h.NormalizeDouble(lowerPrice, s.BP.PriceDigits)
 		zones, _ := common.GetGridZones(ticker.Price, s.BP.LowerPrice, s.BP.UpperPrice, s.BP.GridSize)
 		for _, zone := range zones {
+			if zone == 0 {
+				continue
+			}
 			zonePrice := h.NormalizeDouble(zone, s.BP.PriceDigits)
 			qo.ZonePrice = zonePrice
 			qo.Side = t.OrderSideBuy
