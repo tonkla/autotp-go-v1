@@ -8,6 +8,7 @@ import (
 	h "github.com/tonkla/autotp/helper"
 	"github.com/tonkla/autotp/rdb"
 	"github.com/tonkla/autotp/strategy/common"
+	"github.com/tonkla/autotp/talib"
 	t "github.com/tonkla/autotp/types"
 )
 
@@ -80,33 +81,25 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 					closeOrders = append(closeOrders, tpo)
 				}
 			}
+
+			if len(closeOrders) > 0 {
+				return &t.TradeOrders{
+					CloseOrders: closeOrders,
+				}
+			}
 		}
 
 		if s.BP.ApplyTA {
-			const numberOfBars = 50
+			const numberOfBars = 30
 			prices2nd := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATf2nd, numberOfBars)
-			if len(prices2nd) < numberOfBars {
-				return &t.TradeOrders{
-					CloseOrders: closeOrders,
-				}
+			if len(prices2nd) < numberOfBars || prices2nd[len(prices2nd)-1].Open == 0 {
+				return nil
 			}
-			atr2nd := common.GetSimpleATR(prices2nd, int(s.BP.MAPeriod2nd))
-			if !common.IsLowerMA(ticker.Price, prices2nd, s.BP.MAPeriod2nd, 0.4*atr2nd) {
-				return &t.TradeOrders{
-					CloseOrders: closeOrders,
-				}
-			}
-			prices3rd := s.EX.GetHistoricalPrices(s.BP.Symbol, s.BP.MATf3rd, numberOfBars)
-			if len(prices3rd) < numberOfBars {
-				return &t.TradeOrders{
-					CloseOrders: closeOrders,
-				}
-			}
-			atr3rd := common.GetSimpleATR(prices3rd, int(s.BP.MAPeriod3rd))
-			if !common.IsLowerMA(ticker.Price, prices3rd, s.BP.MAPeriod3rd, 0.4*atr3rd) {
-				return &t.TradeOrders{
-					CloseOrders: closeOrders,
-				}
+			lows := common.GetLows(prices2nd)
+			lma := talib.WMA(lows, int(s.BP.MAPeriod2nd))
+			lma_0 := lma[len(lma)-1]
+			if ticker.Price > lma_0 {
+				return nil
 			}
 		}
 
@@ -144,10 +137,13 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 				break
 			}
 		}
+
+		if len(openOrders) > 0 {
+			return &t.TradeOrders{
+				OpenOrders: openOrders,
+			}
+		}
 	}
 
-	return &t.TradeOrders{
-		OpenOrders:  openOrders,
-		CloseOrders: closeOrders,
-	}
+	return nil
 }
