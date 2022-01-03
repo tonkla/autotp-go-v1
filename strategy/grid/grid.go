@@ -103,6 +103,10 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 			}
 		}
 
+		if ticker.Price > lowerPrice+gridWidth/2 {
+			return nil
+		}
+
 		var count int64 = 0
 
 		openPrice := h.NormalizeDouble(lowerPrice, s.BP.PriceDigits)
@@ -137,13 +141,9 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 				break
 			}
 		}
-
-		if len(openOrders) > 0 {
-			return &t.TradeOrders{
-				OpenOrders: openOrders,
-			}
-		}
 	}
 
-	return nil
+	return &t.TradeOrders{
+		OpenOrders: openOrders,
+	}
 }
