@@ -95,16 +95,21 @@ func (s Strategy) OnTick(ticker t.Ticker) *t.TradeOrders {
 			if len(prices2nd) < numberOfBars || prices2nd[len(prices2nd)-1].Open == 0 {
 				return nil
 			}
+
 			lows := common.GetLows(prices2nd)
 			lma := talib.WMA(lows, int(s.BP.MAPeriod2nd))
 			lma_0 := lma[len(lma)-1]
 			if ticker.Price > lma_0 {
-				return nil
+				return &t.TradeOrders{
+					OpenOrders: openOrders,
+				}
 			}
 		}
 
 		if ticker.Price > lowerPrice+gridWidth/2 {
-			return nil
+			return &t.TradeOrders{
+				OpenOrders: openOrders,
+			}
 		}
 
 		var count int64 = 0
