@@ -62,7 +62,7 @@ testRand = numpy.array(%s)
 print(' '.join([str(p) for p in result]).replace('nan','0.0'))`,
 		a2s(testOpen), a2s(testHigh), a2s(testLow), a2s(testClose), a2s(testVolume), a2s(testRand), taCall)
 
-	pyOut, err := exec.Command("python", "-c", pyprog).Output()
+	pyOut, err := exec.Command("python3", "-c", pyprog).Output()
 	ok(t, err)
 
 	var pyResult []float64
@@ -106,7 +106,7 @@ print(' '.join([str(p) for p in result]).replace('nan','0.0'))`,
 
 // Ensure that Python and TALib are installed and in the PATH
 func TestMain(m *testing.M) {
-	pyout, _ := exec.Command("python", "-c", "import talib; print('success')").Output()
+	pyout, _ := exec.Command("python3", "-c", "import talib; print('success')").Output()
 	if string(pyout[0:7]) != "success" {
 		fmt.Println("python and talib must be installed to run tests")
 		os.Exit(-1)
